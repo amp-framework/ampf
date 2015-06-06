@@ -4,7 +4,9 @@ namespace ampf\database;
 
 class DefaultConfig implements Config
 {
-	use ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\access\BeanFactoryAccess;
+
+	protected $_config = null;
 
 	public function getDsn()
 	{
