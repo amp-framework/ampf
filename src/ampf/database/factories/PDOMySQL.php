@@ -5,8 +5,7 @@ namespace ampf\database\factories;
 class PDOMySQL implements Factory
 {
 	use \ampf\beans\access\BeanFactoryAccess;
-
-	protected $_config = null;
+	use \ampf\beans\access\DatabaseConfigAccess;
 
 	protected $pdo = null;
 
@@ -14,19 +13,12 @@ class PDOMySQL implements Factory
 	{
 		if ($this->pdo === null)
 		{
-			$dsn = (
-				'mysql'
-				. ':host=' . $this->getConfig()['host']
-				. ';dbname=' . $this->getConfig()['dbname']
-				. ';charset=UTF8'
-				. ';port=' . $this->getConfig()['port']
-				. ';unix_socket=' . $this->getConfig()['socket']
-			);
+			$dsn = $this->getDatabaseConfig()->getDsn();
 			// Throws a \PDOException on error
 			$this->pdo = new \PDO(
 				$dsn,
-				$this->getConfig()['username'],
-				$this->getConfig()['password']
+				$this->getDatabaseConfig()->getUsername(),
+				$this->getDatabaseConfig()->getPassword()
 			);
 			$this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 			// make sure the database connection is UTF8
@@ -37,28 +29,5 @@ class PDOMySQL implements Factory
 			$sth->execute(array('timezone' => date_default_timezone_get()));
 		}
 		return $this->pdo;
-	}
-
-	// Bean getters
-
-	public function getConfig()
-	{
-		if (is_null($this->_config))
-		{
-			$this->setConfig($this->getBeanFactory()->get('Config'));
-		}
-		return $this->_config;
-	}
-
-	// Bean setters
-
-	public function setConfig($config)
-	{
-		if (!is_array($config) || count($config) < 1) throw new \Exception();
-		if (!isset($config['database']) || !is_array($config['database']) || count($config['database']) < 1)
-		{
-			throw new \Exception();
-		}
-		$this->_config = $config['database'];
 	}
 }

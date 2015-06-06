@@ -12,6 +12,12 @@ return array(
 				'BeanFactory' => 'beanFactory',
 			),
 		),
+		'DatabaseConfig' => array(
+			'class' => '\ampf\database\DefaultConfig',
+			'properties' => array(
+				'BeanFactory' => 'beanFactory',
+			),
+		),
 		'AbstractMapper' => array(
 			'class' => '\ampf\database\mapper\AbstractMapper',
 			'abstract' => true,
