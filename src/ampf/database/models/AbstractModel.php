@@ -28,6 +28,32 @@ abstract class AbstractModel implements Model
 	public function fillByStdClass($obj)
 	{
 		if ($this->_initialized) throw new \Exception();
+		$this->update($obj, true);
+		$this->_initialized = true;
+	}
+
+	public function getAllProperties()
+	{
+		$result = array();
+		foreach (array_keys($this->_properties) as $property)
+		{
+			$result[$property] = $this->{$property};
+		}
+		return $result;
+	}
+
+	/**
+	 * @param stdclass $obj
+	 * @param boolean overwrite_id
+	 * @throws \Exception
+	 */
+	public function update($obj, $overwrite_id = false)
+	{
+		if (!$overwrite_id && isset($obj->{self::$_ID_KEY}))
+		{
+			throw new \Exception();
+		}
+
 		// Fill the normal properties
 		foreach (array_keys($this->_properties) as $property)
 		{
@@ -44,17 +70,6 @@ abstract class AbstractModel implements Model
 				$this->{$property} = $obj->{$property};
 			}
 		}
-		$this->_initialized = true;
-	}
-
-	public function getAllProperties()
-	{
-		$result = array();
-		foreach (array_keys($this->_properties) as $property)
-		{
-			$result[$property] = $this->{$property};
-		}
-		return $result;
 	}
 
 	// Magic methods

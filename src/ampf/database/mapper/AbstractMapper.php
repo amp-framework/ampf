@@ -147,6 +147,26 @@ abstract class AbstractMapper implements Mapper
 	 */
 	protected function getModels($query, $params = null)
 	{
+		$rows = $this->getObjects($query, $params);
+		$return = array();
+		foreach ($rows as $row)
+		{
+			$model = $this->getBeanFactory()->get($this->MODEL);
+			$model->fillByStdClass($row);
+			$return[] = $model;
+		}
+
+		return $return;
+	}
+
+	/**
+	 * @param string $query
+	 * @param array $params
+	 * @return array
+	 * @throws \Exception
+	 */
+	protected function getObjects($query, $params = null)
+	{
 		if ($params === null) $params = array();
 		if (!is_array($params)) throw new \Exception();
 		if (trim($query) == '') throw new \Exception('Query is empty.');
@@ -156,9 +176,7 @@ abstract class AbstractMapper implements Mapper
 		$return = array();
 		while (($row = $sth->fetchObject()) !== false)
 		{
-			$model = $this->getBeanFactory()->get($this->MODEL);
-			$model->fillByStdClass($row);
-			$return[] = $model;
+			$return[] = $row;
 		}
 
 		return $return;
