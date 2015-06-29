@@ -5,6 +5,12 @@ namespace ampf\services\translator;
 interface TranslatorService
 {
 	/**
+	 * @param string $translation
+	 * @return string
+	 */
+	public function getKey($translation);
+
+	/**
 	 * @return string
 	 * @throws \Exception
 	 */

@@ -19,6 +19,23 @@ class DefaultTranslatorService implements TranslatorService
 	protected $language = null;
 
 	/**
+	 * @param string $translation
+	 * @return string
+	 */
+	public function getKey($translation)
+	{
+		$config = $this->getConfig();
+		foreach ($config as $key => $value)
+		{
+			if ($value === $translation)
+			{
+				return $key;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * @return string
 	 * @throws \Exception
 	 */
