@@ -19,10 +19,10 @@ abstract class AbstractModel implements Model
 		if ($myClass !== $hisClass) return false;
 
 		// I have not been saved yet - I cannot be the same as another object
-		if ($this->{self::$_ID_KEY} === null) return false;
+		if ($this->{static::$_ID_KEY} === null) return false;
 
 		// Finally compare our IDs, if they are the same, we are the same
-		return ($this->{self::$_ID_KEY} === $model->{self::$_ID_KEY});
+		return ($this->{static::$_ID_KEY} === $model->{static::$_ID_KEY});
 	}
 
 	public function fillByStdClass($obj)
@@ -49,7 +49,7 @@ abstract class AbstractModel implements Model
 	 */
 	public function update($obj, $overwrite_id = false)
 	{
-		if (!$overwrite_id && isset($obj->{self::$_ID_KEY}))
+		if (!$overwrite_id && isset($obj->{static::$_ID_KEY}))
 		{
 			throw new \Exception();
 		}
@@ -85,9 +85,9 @@ abstract class AbstractModel implements Model
 		{
 			$property = lcfirst(substr($method, 3));
 			// special handling for ID
-			if (strtolower($property) === strtolower(self::$_ID_KEY))
+			if (strtolower($property) === strtolower(static::$_ID_KEY))
 			{
-				$property = self::$_ID_KEY;
+				$property = static::$_ID_KEY;
 			}
 			return $this->__get($property);
 		}
@@ -95,9 +95,9 @@ abstract class AbstractModel implements Model
 		{
 			$property = lcfirst(substr($method, 3));
 			// special handling for ID
-			if (strtolower($property) === strtolower(self::$_ID_KEY))
+			if (strtolower($property) === strtolower(static::$_ID_KEY))
 			{
-				$property = self::$_ID_KEY;
+				$property = static::$_ID_KEY;
 			}
 			return $this->__set($property, reset($params));
 		}
