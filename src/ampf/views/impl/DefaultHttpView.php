@@ -57,6 +57,23 @@ class DefaultHttpView extends AbstractView implements HttpView
 		return $response;
 	}
 
+	/**
+	 * Protected methods
+	 */
+
+	protected function getParam($param)
+	{
+		if ($this->getRequest()->hasPostParam($param))
+		{
+			return $this->getRequest()->getPostParam($param);
+		}
+		elseif ($this->getRequest()->hasGetParam($param))
+		{
+			return $this->getRequest()->getGetParam($param);
+		}
+		return '';
+	}
+
 	protected function solveSymbolicPath($path)
 	{
 		// strip of trailing slashes
