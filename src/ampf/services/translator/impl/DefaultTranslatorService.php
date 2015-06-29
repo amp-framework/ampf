@@ -8,13 +8,72 @@ class DefaultTranslatorService implements TranslatorService
 {
 	use \ampf\beans\access\BeanFactoryAccess;
 
+	/**
+	 * @var array
+	 */
 	protected $_config = null;
 
-	public function translate($key)
+	/**
+	 * @var string
+	 */
+	protected $language = null;
+
+	/**
+	 * @return string
+	 * @throws \Exception
+	 */
+	public function getLanguage()
+	{
+		if ($this->language === null)
+		{
+			throw new \Exception('No language set');
+		}
+		return $this->language;
+	}
+
+	/**
+	 * @param string $language
+	 * @throws \Exception
+	 */
+	public function setLanguage($language)
+	{
+		if (trim($language) == '') throw new \Exception();
+		$this->language = $language;
+	}
+
+	/**
+	 * @param string $key
+	 * @param array $args
+	 * @return string
+	 * @throws \Exception
+	 */
+	public function translate($key, $args = null)
 	{
 		if (trim($key) == '') throw new \Exception();
-		if (!isset($this->getConfig()[$key])) return null;
-		return $this->getConfig()[$key];
+
+		$value = $this->getValue($key);
+		if ($value === null) return null;
+
+		if (is_array($args) && count($args) > 0)
+		{
+			$value = sprintf($value, $args);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Protected methods
+	 */
+
+	protected function getValue($key)
+	{
+		$config = $this->getConfig();
+		if (!isset($config[$key]))
+		{
+			return $key;
+		}
+		return $config[$key];
 	}
 
 	// Bean getters
@@ -34,9 +93,8 @@ class DefaultTranslatorService implements TranslatorService
 	{
 		if (!is_array($config) || count($config) < 1) throw new \Exception();
 
-		if (!isset($config['translation.file'])) throw new \Exception();
-		$transFile = $config['translation.file'];
-		if (trim($transFile) == '') throw new \Exception();
+		if (!isset($config['translation.dir'])) throw new \Exception();
+		$transFile = ($config['translation.dir'] . '/' . $this->getLanguage() . '.php');
 		if (!file_exists($transFile)) throw new \Exception();
 
 		ob_start();

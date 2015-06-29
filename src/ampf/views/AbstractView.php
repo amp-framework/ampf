@@ -79,8 +79,8 @@ abstract class AbstractView implements View
 		return strftime($format, $time);
 	}
 
-	public function t($key)
+	public function t($key, $args = null)
 	{
-		return $this->getTranslatorService()->translate($key);
+		return $this->getTranslatorService()->translate($key, $args);
 	}
 }

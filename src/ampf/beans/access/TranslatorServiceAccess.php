@@ -8,6 +8,9 @@ trait TranslatorServiceAccess
 {
 	protected $__translatorService = null;
 
+	/**
+	 * @return TranslatorService
+	 */
 	public function getTranslatorService()
 	{
 		if ($this->__translatorService === null)
@@ -17,6 +20,9 @@ trait TranslatorServiceAccess
 		return $this->__translatorService;
 	}
 
+	/**
+	 * @param TranslatorService $translatorService
+	 */
 	public function setTranslatorService(TranslatorService $translatorService)
 	{
 		$this->__translatorService = $translatorService;

@@ -8,6 +8,9 @@ trait XsrfTokenServiceAccess
 {
 	protected $__xsrfTokenService = null;
 
+	/**
+	 * @return XsrfTokenService
+	 */
 	public function getXsrfTokenService()
 	{
 		if ($this->__xsrfTokenService === null)
@@ -17,6 +20,9 @@ trait XsrfTokenServiceAccess
 		return $this->__xsrfTokenService;
 	}
 
+	/**
+	 * @param XsrfTokenService $xsrfTokenService
+	 */
 	public function setXsrfTokenService(XsrfTokenService $xsrfTokenService)
 	{
 		$this->__xsrfTokenService = $xsrfTokenService;

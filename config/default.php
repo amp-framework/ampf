@@ -89,5 +89,5 @@ return array(
 		'socket' => ini_get("mysqli.default_socket"),
 	),
 
-	'translation.file' => realpath(__DIR__ . '/translations/de.php'),
+	'translation.dir' => realpath(__DIR__ . '/translations/'),
 );
