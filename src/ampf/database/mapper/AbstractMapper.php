@@ -37,7 +37,7 @@ abstract class AbstractMapper implements Mapper
 
 		$query = "
 			DELETE FROM `{$this->TABLE}`
-			WHERE `" . static::_ID_KEY . "` = :ID
+			WHERE `" . static::$_ID_KEY . "` = :ID
 			LIMIT 1
 		";
 		$sth = $this->getPDO()->prepare($query);
@@ -46,7 +46,7 @@ abstract class AbstractMapper implements Mapper
 		{
 			throw new \Exception();
 		}
-		$model->{static::_ID_KEY} = null;
+		$model->{static::$_ID_KEY} = null;
 	}
 
 	public function getAll()
@@ -64,7 +64,7 @@ abstract class AbstractMapper implements Mapper
 		$query = "
 			SELECT *
 			FROM `{$this->TABLE}`
-			WHERE `" . static::_ID_KEY . "` = :ID
+			WHERE `" . static::$_ID_KEY . "` = :ID
 			LIMIT 1
 		";
 		$result = $this->getModels($query, array('ID' => $ID));
@@ -86,8 +86,8 @@ abstract class AbstractMapper implements Mapper
 		}
 
 		$properties = $model->getAllProperties();
-		$ID = $properties[static::_ID_KEY];
-		unset($properties[static::_ID_KEY]);
+		$ID = $properties[static::$_ID_KEY];
+		unset($properties[static::$_ID_KEY]);
 
 		$set = array();
 		$params = array();
@@ -106,7 +106,7 @@ abstract class AbstractMapper implements Mapper
 			";
 			$sth = $this->getPDO()->prepare($query);
 			$sth->execute($params);
-			$model->{static::_ID_KEY} = $this->getPDO()->lastInsertId();
+			$model->{static::$_ID_KEY} = $this->getPDO()->lastInsertId();
 		}
 		else
 		{
@@ -114,7 +114,7 @@ abstract class AbstractMapper implements Mapper
 			$query = "
 				UPDATE `{$this->TABLE}`
 				SET {$set}
-				WHERE `" . static::_ID_KEY . "` = :ID
+				WHERE `" . static::$_ID_KEY . "` = :ID
 			";
 			$sth = $this->getPDO()->prepare($query);
 			$sth->execute($params);
