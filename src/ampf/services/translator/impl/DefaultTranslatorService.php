@@ -73,7 +73,7 @@ class DefaultTranslatorService implements TranslatorService
 
 		if (is_array($args) && count($args) > 0)
 		{
-			$value = sprintf($value, $args);
+			$value = vsprintf($value, $args);
 		}
 
 		return $value;
