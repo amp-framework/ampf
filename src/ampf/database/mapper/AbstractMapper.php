@@ -41,7 +41,7 @@ abstract class AbstractMapper implements Mapper
 			LIMIT 1
 		";
 		$sth = $this->getPDO()->prepare($query);
-		$sth->execute(array('ID' => $model->ID));
+		$sth->execute(array('ID' => $model->{static::$_ID_KEY}));
 		if ($sth->rowCount() != 1)
 		{
 			throw new \Exception();
