@@ -56,6 +56,12 @@ return array(
 		'HasherService' => array(
 			'class' => '\ampf\services\hasher\impl\DefaultHasherService',
 		),
+		'StringCacheService' => array(
+			'class' => '\ampf\services\cache\string\impl\FileBased',
+			'properties' => array(
+				'Config' => 'config',
+			),
+		),
 		'SessionService' => array(
 			'class' => '\ampf\services\session\impl\DefaultSessionService',
 		),
@@ -90,4 +96,9 @@ return array(
 	),
 
 	'translation.dir' => realpath(__DIR__ . '/translations/'),
+
+	'stringfilecache' => array(
+		'cachedir' => realpath(__DIR__ . '/../cache/'),
+		'defaultttl' => 3600,
+	),
 );
