@@ -126,7 +126,19 @@ abstract class AbstractModel implements Model
 
 	public function __get($key)
 	{
+		// try with camelcase both sides
 		$getter = ('get' . ucfirst($key));
+		if (isset($this->_methods[$getter]))
+		{
+			return $this->{$getter}();
+		}
+
+		// try with given underscore but method camelcase
+		$getter = ('get' . preg_replace_callback(
+			'/(?:^|_)(.?)/',
+			function ($matches) { return strtoupper($matches[1]); },
+			$key
+		));
 		if (isset($this->_methods[$getter]))
 		{
 			return $this->{$getter}();
@@ -145,11 +157,23 @@ abstract class AbstractModel implements Model
 
 	public function __set($key, $value)
 	{
+		// try with camelcase both sides
 		$setter = ('set' . ucfirst($key));
 		if (isset($this->_methods[$setter]))
 		{
 			$this->{$setter}($value);
 			return;
+		}
+
+		// try with given underscore but method camelcase
+		$setter = ('set' . preg_replace_callback(
+			'/(?:^|_)(.?)/',
+			function ($matches) { return strtoupper($matches[1]); },
+			$key
+		));
+		if (isset($this->_methods[$setter]))
+		{
+			return $this->{$setter}($value);
 		}
 
 		if (!isset($this->_properties[$key]))
