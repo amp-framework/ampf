@@ -7,13 +7,10 @@ error_reporting(E_ALL | E_STRICT);
 ini_set('display_errors', 1);
 mb_internal_encoding("UTF-8");
 
-// require applicationcontext
-require_once(realpath(__DIR__) . '/../src/ampf/ApplicationContext.php');
+// require composer autoloader
+require (__DIR__ . '/../vendor/autoload.php');
 // boot the applicationcontext and get merged config
 $config = \ampf\ApplicationContext::boot(
-	array(
-		(realpath((realpath(__DIR__) . '/../src/')) . '/'),
-	),
 	array(
 		(realpath(__DIR__) . '/../config/default.php'),
 		(realpath(__DIR__) . '/../config/cli.php'),

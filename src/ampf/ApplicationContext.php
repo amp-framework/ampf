@@ -4,41 +4,8 @@ namespace ampf;
 
 class ApplicationContext
 {
-	static public function boot($baseSrcDirs, $configFiles = null)
+	static public function boot($configFiles = null)
 	{
-		if (!is_array($baseSrcDirs) || count($baseSrcDirs) == 0) throw new \Exception();
-		foreach ($baseSrcDirs as $dir)
-		{
-			if (!is_dir($dir))
-			{
-				throw new \Exception();
-			}
-		}
-
-		// set up autoloader
-		spl_autoload_register(function($class) use ($baseSrcDirs) {
-			$classArray = explode('\\', $class);
-			foreach ($classArray as $value)
-			{
-				if (!preg_match('/^[A-Za-z0-9]+$/', $value)) return;
-			}
-			$finalPath = null;
-			foreach ($baseSrcDirs as $dir)
-			{
-				$path = ($dir . implode('/', $classArray) . '.php');
-				if (file_exists($path))
-				{
-					$finalPath = $path;
-					break;
-				}
-			}
-			if (is_null($finalPath)) return;
-
-			ob_start();
-			require_once($path);
-			ob_end_clean();
-		});
-
 		$config = array();
 		if ($configFiles != null)
 		{
