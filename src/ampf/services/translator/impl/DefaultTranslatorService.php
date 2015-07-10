@@ -20,14 +20,15 @@ class DefaultTranslatorService implements TranslatorService
 
 	/**
 	 * @param string $translation
+	 * @param bool $ignoreCase
 	 * @return string
 	 */
-	public function getKey($translation)
+	public function getKey($translation, $ignoreCase = true)
 	{
 		$config = $this->getConfig();
 		foreach ($config as $key => $value)
 		{
-			if ($value === $translation)
+			if (mb_strtolower($value) === mb_strtolower($translation))
 			{
 				return $key;
 			}

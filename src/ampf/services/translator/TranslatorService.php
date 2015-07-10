@@ -6,9 +6,10 @@ interface TranslatorService
 {
 	/**
 	 * @param string $translation
+	 * @param bool $ignoreCase
 	 * @return string
 	 */
-	public function getKey($translation);
+	public function getKey($translation, $ignoreCase = true);
 
 	/**
 	 * @return string
