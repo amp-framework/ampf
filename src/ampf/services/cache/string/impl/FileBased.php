@@ -65,7 +65,7 @@ class FileBased implements StringCacheService
 		{
 			$ttl = $this->defaultTTL;
 		}
-		if (((int)$ttl) != $ttl || $ttl < 1)
+		if (((int)$ttl) != $ttl)
 		{
 			throw new \Exception();
 		}
