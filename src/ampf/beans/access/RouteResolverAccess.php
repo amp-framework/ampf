@@ -8,6 +8,9 @@ trait RouteResolverAccess
 {
 	protected $__routeResolver = null;
 
+	/**
+	 * @return RouteResolver
+	 */
 	public function getRouteResolver()
 	{
 		if ($this->__routeResolver === null)
@@ -17,6 +20,9 @@ trait RouteResolverAccess
 		return $this->__routeResolver;
 	}
 
+	/**
+	 * @param RouteResolver $routeResolver
+	 */
 	public function setRouteResolver(RouteResolver $routeResolver)
 	{
 		$this->__routeResolver = $routeResolver;
