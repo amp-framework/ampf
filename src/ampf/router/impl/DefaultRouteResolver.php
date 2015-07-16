@@ -17,7 +17,7 @@ class DefaultRouteResolver implements RouteResolver
 	public function getRoutePatternByRouteID($routeID, $params = null)
 	{
 		$routePattern = $this->getRoutePattern($routeID);
-		if ($routePattern == null)
+		if ($routePattern === null)
 		{
 			return null;
 		}
@@ -32,12 +32,12 @@ class DefaultRouteResolver implements RouteResolver
 	public function getNotDefinedParams($routeID, $params)
 	{
 		$routePattern = $this->getRoutePattern($routeID);
-		if ($routePattern == null)
+		if ($routePattern === null)
 		{
 			return null;
 		}
 
-		if ($params == null || !is_array($params))
+		if ($params === null || !is_array($params))
 		{
 			$params = array();
 		}
@@ -101,7 +101,7 @@ class DefaultRouteResolver implements RouteResolver
 
 	protected function getAdjustedRouteParams($regex, $params = null)
 	{
-		if ($params == null)
+		if ($params === null || !is_array($params))
 		{
 			$params = array();
 		}
