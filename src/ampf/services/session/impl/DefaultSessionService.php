@@ -14,32 +14,9 @@ class DefaultSessionService implements SessionService
 		}
 	}
 
-	public function setAttribute($key, $value)
-	{
-		if (!is_string($key) || trim($key) == '') throw new \Exception();
-		$_SESSION[$key] = $value;
-	}
-
-	public function hasAttribute($key)
-	{
-		return isset($_SESSION[$key]);
-	}
-
-	public function getAttribute($key)
-	{
-		if (!$this->hasAttribute($key)) return null;
-		return $_SESSION[$key];
-	}
-
-	public function removeAttribute($key)
-	{
-		if (!$this->hasAttribute($key)) return;
-		// dereference possible objects
-		$_SESSION[$key] = null;
-		// and unset it completely
-		unset($_SESSION[$key]);
-	}
-
+	/**
+	 * @return void
+	 */
 	public function destroy()
 	{
 		$_SESSION = array();
@@ -56,5 +33,49 @@ class DefaultSessionService implements SessionService
 			);
 		}
 		session_destroy();
+	}
+
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getAttribute($key)
+	{
+		if (!$this->hasAttribute($key)) return null;
+		return $_SESSION[$key];
+	}
+
+	/**
+	 * @param string $key
+	 * @return bool
+	 */
+	public function hasAttribute($key)
+	{
+		return isset($_SESSION[$key]);
+	}
+
+	/**
+	 * @param string $key
+	 * @return void
+	 */
+	public function removeAttribute($key)
+	{
+		if (!$this->hasAttribute($key)) return;
+		// dereference possible objects
+		$_SESSION[$key] = null;
+		// and unset it completely
+		unset($_SESSION[$key]);
+	}
+
+	/**
+	 * @param string $key
+	 * @param mixed $value
+	 * @return void
+	 * @throws \Exception
+	 */
+	public function setAttribute($key, $value)
+	{
+		if (!is_string($key) || trim($key) == '') throw new \Exception();
+		$_SESSION[$key] = $value;
 	}
 }

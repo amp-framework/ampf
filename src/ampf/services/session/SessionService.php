@@ -4,13 +4,34 @@ namespace ampf\services\session;
 
 interface SessionService
 {
-	public function setAttribute($key, $value);
+	/**
+	 * @return void
+	 */
+	public function destroy();
 
-	public function hasAttribute($key);
-
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
 	public function getAttribute($key);
 
+	/**
+	 * @param string $key
+	 * @return bool
+	 */
+	public function hasAttribute($key);
+
+	/**
+	 * @param string $key
+	 * @return void
+	 */
 	public function removeAttribute($key);
 
-	public function destroy();
+	/**
+	 * @param string $key
+	 * @param mixed $value
+	 * @return void
+	 * @throws \Exception
+	 */
+	public function setAttribute($key, $value);
 }
