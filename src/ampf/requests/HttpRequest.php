@@ -8,6 +8,11 @@ interface HttpRequest
 
 	public function flush();
 
+	/**
+	 * @return \stdClass[]
+	 */
+	public function getAcceptedLanguages();
+
 	public function getActionLink($routeID, $params = null, $addToken = false);
 
 	public function getController();

@@ -34,6 +34,56 @@ class DefaultHttp implements HttpRequest
 		$this->addHeader('Expires', gmdate('D, d M Y H:i:s \G\M\T', 0));
 	}
 
+	/**
+	 * @return \stdClass[]
+	 */
+	public function getAcceptedLanguages()
+	{
+		if (!$this->hasServerParam('HTTP_ACCEPT_LANGUAGE'))
+		{
+			return array();
+		}
+		$serverParam = explode(
+			',',
+			$this->getServerParam('HTTP_ACCEPT_LANGUAGE')
+		);
+
+		$results = array();
+		foreach ($serverParam as $language)
+		{
+			$language = trim($language);
+			$quality = ((float)1);
+			if ($language == '')
+			{
+				continue;
+			}
+			if (strpos($language, ';') !== false)
+			{
+				list($language, $quality) = explode(';', $language);
+				$language = trim($language);
+				$quality = trim($quality);
+				if ($language == '' || $quality == '' || strpos($quality, 'q=') !== 0)
+				{
+					continue;
+				}
+				$quality = trim(substr($quality, strlen('q=')));
+				if (((float)$quality) != $quality || $quality > 1 || $quality <= 0)
+				{
+					continue;
+				}
+				$quality = ((float)$quality);
+			}
+
+			$cresult = new \stdClass();
+			$cresult->language = $language;
+			$cresult->quality = $quality;
+
+			$results[] = $cresult;
+		}
+
+		return $results;
+	}
+
 	public function getRouteID()
 	{
 		return $this->getRouteResolver()->getRouteIDByRoutePattern(
