@@ -53,6 +53,12 @@ return array(
 		/**
 		 * Services
 		 */
+		'ConfigurationService' => array(
+			'class' => '\ampf\services\configuration\impl\DefaultConfigurationService',
+			'properties' => array(
+				'Config' => 'config',
+			),
+		),
 		'HasherService' => array(
 			'class' => '\ampf\services\hasher\impl\DefaultHasherService',
 		),
@@ -100,5 +106,9 @@ return array(
 	'stringfilecache' => array(
 		'cachedir' => realpath(__DIR__ . '/../cache/'),
 		'defaultttl' => 3600,
+	),
+
+	'configuration.service' => array(
+		'.ampf' => array(),
 	),
 );
