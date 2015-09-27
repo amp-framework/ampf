@@ -158,14 +158,15 @@ class DefaultHttp implements HttpRequest
 		return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
 	}
 
-	public function setRedirect($routeID, $params = null, $code = null)
+	public function setRedirect($routeID, $params = null, $code = null, $addToken = null)
 	{
 		if ($this->responseBody !== null) throw new \Exception();
 		if ($params === null || !is_array($params)) $params = array();
 		if ($code === null || trim($code) === '') $code = '301';
+		if ($addToken === null) $addToken = false;
 
 		$this->responseRedirect = array(
-			'target' => $this->getActionLink($routeID, $params),
+			'target' => $this->getActionLink($routeID, $params, $addToken),
 			'code' => ((string)$code),
 		);
 	}

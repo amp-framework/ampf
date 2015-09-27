@@ -45,7 +45,7 @@ interface HttpRequest
 
 	public function isRedirect();
 
-	public function setRedirect($routeID, $params = null, $code = null);
+	public function setRedirect($routeID, $params = null, $code = null, $addToken = null);
 
 	public function setStatusCode($statusCode);
 
