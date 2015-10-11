@@ -49,12 +49,45 @@ abstract class AbstractMapper implements Mapper
 		$model->{static::$_ID_KEY} = null;
 	}
 
-	public function getAll()
+	/**
+	 * @param int $limit
+	 * @param int $start
+	 * @return \ampf\database\models\AbstractModel[]
+	 */
+	public function getAll($limit = null, $start = null)
 	{
 		$query = "
 			SELECT * FROM `{$this->TABLE}`
 		";
+		if ($limit !== null && is_int($limit))
+		{
+			$limit = ((int)$limit);
+			if ($start === null || !is_int($start))
+			{
+				$start = 0;
+			}
+			$query .= "
+				LIMIT {$limit},{$start}
+			";
+		}
 		return $this->getModels($query);
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getAllCount()
+	{
+		$query = "
+			SELECT COUNT(*) as `count`
+			FROM `{$this->TABLE}`
+		";
+		$objects = $this->getObjects($query);
+		if (!is_array($objects) || count($objects) < 1)
+		{
+			return 0;
+		}
+		return reset($objects)->count;
 	}
 
 	public function getByID($ID)
