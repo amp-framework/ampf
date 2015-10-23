@@ -13,9 +13,18 @@ class DefaultXsrfTokenService implements XsrfTokenService
 	static protected $TOKEN_ID_SESSION = '_xsrfToken';
 	static protected $TOKEN_LEN = 6;
 
+	/**
+	 * @var string
+	 */
 	protected $oldToken = null;
+	/**
+	 * @var string
+	 */
 	protected $tokenCache = null;
 
+	/**
+	 * @return string
+	 */
 	public function getOldToken()
 	{
 		if (is_null($this->oldToken))
@@ -33,6 +42,9 @@ class DefaultXsrfTokenService implements XsrfTokenService
 		return $this->oldToken;
 	}
 
+	/**
+	 * @return string
+	 */
 	public function getToken()
 	{
 		if (is_null($this->tokenCache))
@@ -40,13 +52,9 @@ class DefaultXsrfTokenService implements XsrfTokenService
 			// do this to make sure we do not override the old token in the session
 			$this->getOldToken();
 
-			// generate a new random token
-			$random = mcrypt_create_iv(256, \MCRYPT_DEV_URANDOM);
-			$random = base64_encode($random);
-			$random = str_replace('+', '-', $random);
-			$random = str_replace('/', '_', $random);
-			$random = str_replace('=', '', $random);
-			$this->tokenCache = substr($random, 0, self::$TOKEN_LEN);
+			$random = mcrypt_create_iv(static::$TOKEN_LEN);
+			$random = bin2hex($random);
+			$this->tokenCache = substr($random, 0, static::$TOKEN_LEN);
 
 			// and store it in the session
 			$this->getSessionService()->setAttribute(
@@ -57,16 +65,23 @@ class DefaultXsrfTokenService implements XsrfTokenService
 		return $this->tokenCache;
 	}
 
+	/**
+	 * @return string
+	 */
 	public function getTokenIDForRequest()
 	{
 		return self::$TOKEN_ID_REQUEST;
 	}
 
+	/**
+	 * @param string $token
+	 * @return boolean
+	 */
 	public function isCorrectToken($token)
 	{
 		if (trim($token) == '') return false;
 		if (strlen($token) != self::$TOKEN_LEN) return false;
 
-		return ($token === $this->getOldToken());
+		return hash_equals($this->getOldToken(), $token);
 	}
 }
