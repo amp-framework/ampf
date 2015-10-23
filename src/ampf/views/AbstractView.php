@@ -10,6 +10,15 @@ abstract class AbstractView implements View
 
 	protected $memory = array();
 
+	public function get($key)
+	{
+		if (!isset($this->memory[$key]))
+		{
+			return null;
+		}
+		return $this->memory[$key];
+	}
+
 	public function set($key, $value)
 	{
 		$this->memory[$key] = $value;

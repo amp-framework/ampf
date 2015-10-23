@@ -4,6 +4,8 @@ namespace ampf\views;
 
 interface View
 {
+	public function get($key);
+
 	public function set($key, $value);
 
 	public function render($viewID);
