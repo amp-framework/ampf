@@ -74,6 +74,37 @@ abstract class AbstractMapper implements Mapper
 	}
 
 	/**
+	 * @param array $ids
+	 * @return \ampf\database\models\AbstractModel[]
+	 * @throws \Exception
+	 */
+	public function getAllByID($ids)
+	{
+		if (!is_array($ids)) throw new \Exception();
+		if (count($ids) < 1) return array();
+
+		$where = array();
+		$params = array();
+		$i = 0;
+		foreach ($ids as $id)
+		{
+			$where[] = "`" . static::$_ID_KEY . "` = :id{$i}";
+			$params['id' . $i] = $id;
+			$i++;
+		}
+
+		$query = "
+			SELECT *
+			FROM `{$this->TABLE}`
+			WHERE " . implode(" OR ", $where) . "
+		";
+
+		$result = $this->getModels($query, $params);
+		if (count($result) < 1) return array();
+		return $result;
+	}
+
+	/**
 	 * @return int
 	 */
 	public function getAllCount()
