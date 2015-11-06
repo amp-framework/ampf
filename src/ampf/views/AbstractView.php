@@ -74,7 +74,11 @@ abstract class AbstractView implements View
 	public function formatTime($time = null, $format = null)
 	{
 		if (is_null($time)) $time = time();
-		if (!is_numeric($time))
+		if ($time instanceof \DateTime)
+		{
+			$time = $time->format('U');
+		}
+		elseif (!is_numeric($time))
 		{
 			$time = @strtotime($time);
 			// fallback (1st january 1970)
