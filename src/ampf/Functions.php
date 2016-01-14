@@ -5,6 +5,25 @@ namespace ampf;
 abstract class Functions
 {
 	/**
+	 * @param string $str
+	 * @param int $l
+	 * @return string[]
+	 */
+	static public function mb_str_split($str, $l = 0)
+	{
+		if ($l > 0)
+		{
+			$ret = array();
+			$len = mb_strlen($str);
+			for ($i = 0; $i < $len; $i += $l) {
+				$ret[] = mb_substr($str, $i, $l);
+			}
+			return $ret;
+		}
+		return preg_split("//u", $str, -1, PREG_SPLIT_NO_EMPTY);
+	}
+
+	/**
 	 * @param string $string
 	 * @return string
 	 * @throws \Exception
