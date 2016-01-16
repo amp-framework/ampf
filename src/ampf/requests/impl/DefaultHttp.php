@@ -116,9 +116,10 @@ class DefaultHttp implements HttpRequest
 		return $route;
 	}
 
-	public function getActionLink($routeID, $params = null, $addToken = false)
+	public function getActionLink($routeID, $params = null, $addToken = false, $hashParam = null)
 	{
-		if (is_null($params)) $params = array();
+		if ($params === null) $params = array();
+		if ($hashParam === null) $hashParam = '';
 
 		if ($addToken === true)
 		{
@@ -140,6 +141,11 @@ class DefaultHttp implements HttpRequest
 			$routePattern .= ('?' . implode('&', $additionalParams));
 		}
 
+		if (trim($hashParam) != '')
+		{
+			$routePattern .= ('#' . rawurlencode($hashParam));
+		}
+
 		$routePattern = $this->getLink($routePattern);
 		return $routePattern;
 	}
@@ -158,15 +164,16 @@ class DefaultHttp implements HttpRequest
 		return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
 	}
 
-	public function setRedirect($routeID, $params = null, $code = null, $addToken = null)
+	public function setRedirect($routeID, $params = null, $code = null, $addToken = null, $hashParam = null)
 	{
 		if ($this->responseBody !== null) throw new \Exception();
 		if ($params === null || !is_array($params)) $params = array();
 		if ($code === null || trim($code) === '') $code = '301';
 		if ($addToken === null) $addToken = false;
+		if ($hashParam === null) $hashParam = '';
 
 		$this->responseRedirect = array(
-			'target' => $this->getActionLink($routeID, $params, $addToken),
+			'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
 			'code' => ((string)$code),
 		);
 	}
