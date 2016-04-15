@@ -35,6 +35,27 @@ class DefaultHttp implements HttpRequest
 	}
 
 	/**
+	 * @param string $key
+	 * @return void
+	 */
+	public function destroyCookieParam($key)
+	{
+		if (!$this->hasCookieParam($key))
+		{
+			return;
+		}
+		// Delete the cookie in the browser
+		setcookie(
+			$key,
+			'',
+			0,
+			'/'
+		);
+		// And in our object
+		unset($this->cookie[$key]);
+	}
+
+	/**
 	 * @return \stdClass[]
 	 */
 	public function getAcceptedLanguages()

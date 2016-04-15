@@ -6,6 +6,12 @@ interface HttpRequest
 {
 	public function addHeader($key, $value);
 
+	/**
+	 * @param string $key
+	 * @return void
+	 */
+	public function destroyCookieParam($key);
+
 	public function flush();
 
 	/**
