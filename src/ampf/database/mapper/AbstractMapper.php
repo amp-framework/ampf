@@ -50,11 +50,11 @@ abstract class AbstractMapper implements Mapper
 	}
 
 	/**
-	 * @param int $limit
 	 * @param int $start
+	 * @param int $limit
 	 * @return \ampf\database\models\AbstractModel[]
 	 */
-	public function getAll($limit = null, $start = null)
+	public function getAll($start = null, $limit = null)
 	{
 		$query = "
 			SELECT * FROM `{$this->TABLE}`
@@ -67,7 +67,7 @@ abstract class AbstractMapper implements Mapper
 				$start = 0;
 			}
 			$query .= "
-				LIMIT {$limit},{$start}
+				LIMIT {$start},{$limit}
 			";
 		}
 		return $this->getModels($query);
