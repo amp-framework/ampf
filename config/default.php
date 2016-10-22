@@ -6,32 +6,18 @@ return array(
 		/**
 		 * Database stuff
 		 */
-		'DatabaseFactory' => array(
-			'class' => '\ampf\database\factories\PDOMySQL',
+		'DoctrineConfig' => array(
+			'class' => '\ampf\doctrine\impl\DefaultConfig',
 			'properties' => array(
 				'BeanFactory' => 'beanFactory',
 			),
 		),
-		'DatabaseConfig' => array(
-			'class' => '\ampf\database\DefaultConfig',
+		'EntityManagerFactory' => array(
+			'class' => '\ampf\doctrine\impl\DefaultEntityManagerFactory',
+			'initMethod' => 'init',
 			'properties' => array(
 				'BeanFactory' => 'beanFactory',
 			),
-		),
-		'AbstractMapper' => array(
-			'class' => '\ampf\database\mapper\AbstractMapper',
-			'abstract' => true,
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
-		),
-		'TestMapper' => array(
-			'class' => '\ampf\database\mapper\TestMapper',
-			'parent' => 'AbstractMapper',
-		),
-		'TestModel' => array(
-			'class' => '\ampf\database\models\TestModel',
-			'scope' => 'prototype',
 		),
 
 		/**
@@ -92,13 +78,23 @@ return array(
 	),
 
 	// This should be overriden by the unversioned local.php config file
-	'database' => array(
-		'host' => 'host',
-		'username' => 'username',
-		'password' => 'password',
-		'dbname' => 'dbname',
-		'port' => ini_get("mysqli.default_port"),
-		'socket' => ini_get("mysqli.default_socket"),
+	'doctrine' => array(
+		'cacheDir' => (__DIR__ . '/../cache/doctrine/'),
+		'connectionParams' => array(
+			'driver' => 'pdo_mysql',
+			'host' => 'host',
+			'user' => 'user',
+			'password' => 'password',
+			'dbname' => 'dbname',
+			'charset' => 'utf8mb4',
+			'driverOptions' => array(),
+		),
+		'entities' => array(
+			__DIR__ . '/../src/ampf/doctrine/entities/'
+		),
+		'isDevMode' => false,
+		'proxyDir' => null,
+		'useSimpleAnnotationReader' => false,
 	),
 
 	'translation.dir' => realpath(__DIR__ . '/translations/'),

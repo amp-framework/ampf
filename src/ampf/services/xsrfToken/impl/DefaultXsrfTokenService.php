@@ -82,6 +82,10 @@ class DefaultXsrfTokenService implements XsrfTokenService
 		if (trim($token) == '') return false;
 		if (strlen($token) != self::$TOKEN_LEN) return false;
 
+		$oldToken = $this->getOldToken();
+		if (trim($oldToken) == '') return false;
+		if (strlen($oldToken) != self::$TOKEN_LEN) return false;
+
 		return hash_equals($this->getOldToken(), $token);
 	}
 }

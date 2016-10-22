@@ -1,2 +1,5 @@
 /cache/*
 !/cache/empty
+!/cache/doctrine/empty
+/vendor/*
+!/vendor/empty

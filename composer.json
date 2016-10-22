@@ -1,7 +1,13 @@
 {
+	"name": "amp-framework/ampf",
+	"description": "ampf MVC PHP framework",
 	"autoload": {
 		"psr-4": {
 			"ampf\\": "src/ampf/"
 		}
+	},
+	"require": {
+		"php": ">=7.0.0",
+		"doctrine/orm": "^2.5"
 	}
 }

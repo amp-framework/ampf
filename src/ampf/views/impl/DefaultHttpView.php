@@ -43,7 +43,7 @@ class DefaultHttpView extends AbstractView implements HttpView
 	{
 		if (is_null($params)) $params = array();
 		// get a stub request
-		$request = $this->getBeanFacotry()->get('RequestStub');
+		$request = $this->getBeanFactory()->get('RequestStub');
 		// get the controller bean and inject the request
 		$controller = $this->getBeanFactory()->get($controllerBean);
 		$controller->setRequest($request);
