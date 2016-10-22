@@ -1,3 +1,5 @@
+/config/local.php
+
 /cache/*
 !/cache/empty
 !/cache/doctrine/empty
