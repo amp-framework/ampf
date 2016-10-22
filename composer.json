@@ -1,6 +1,7 @@
 {
 	"name": "amp-framework/ampf",
 	"description": "ampf MVC PHP framework",
+	"license": "MIT",
 	"autoload": {
 		"psr-4": {
 			"ampf\\": "src/ampf/"
