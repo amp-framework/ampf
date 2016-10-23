@@ -8,16 +8,10 @@ return array(
 		 */
 		'DoctrineConfig' => array(
 			'class' => '\ampf\doctrine\impl\DefaultConfig',
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
 		),
 		'EntityManagerFactory' => array(
 			'class' => '\ampf\doctrine\impl\DefaultEntityManagerFactory',
 			'initMethod' => 'init',
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
 		),
 
 		/**
@@ -25,15 +19,6 @@ return array(
 		 */
 		'ViewResolver' => array(
 			'class' => '\ampf\views\impl\DefaultViewResolver',
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
-		),
-		'AbstractView' => array(
-			'abstract' => true,
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
 		),
 
 		/**
@@ -62,15 +47,9 @@ return array(
 		),
 		'TranslatorService' => array(
 			'class' => '\ampf\services\translator\impl\DefaultTranslatorService',
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
 		),
 		'XsrfTokenService' => array(
 			'class' => '\ampf\services\xsrfToken\impl\DefaultXsrfTokenService',
-			'properties' => array(
-				'BeanFactory' => 'beanFactory',
-			),
 		),
 	),
 
@@ -79,29 +58,29 @@ return array(
 
 	// This should be overriden by the unversioned local.php config file
 	'doctrine' => array(
-		'cacheDir' => (__DIR__ . '/../cache/doctrine/'),
+		'cacheDir' => null,
 		'connectionParams' => array(
-			'driver' => 'pdo_mysql',
-			'host' => 'host',
-			'user' => 'user',
-			'password' => 'password',
-			'dbname' => 'dbname',
-			'charset' => 'utf8mb4',
-			'driverOptions' => array(),
+			'driver' => null,
+			'host' => null,
+			'user' => null,
+			'password' => null,
+			'dbname' => null,
+			'charset' => null,
+			'driverOptions' => null,
 		),
 		'entities' => array(
-			__DIR__ . '/../src/ampf/doctrine/entities/'
+			null,
 		),
-		'isDevMode' => false,
+		'isDevMode' => null,
 		'proxyDir' => null,
-		'useSimpleAnnotationReader' => false,
+		'useSimpleAnnotationReader' => null,
 	),
 
-	'translation.dir' => realpath(__DIR__ . '/translations/'),
+	'translation.dir' => null,
 
 	'stringfilecache' => array(
-		'cachedir' => realpath(__DIR__ . '/../cache/'),
-		'defaultttl' => 3600,
+		'cachedir' => null,
+		'defaultttl' => null,
 	),
 
 	'configuration.service' => array(

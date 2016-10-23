@@ -2,11 +2,12 @@
 
 namespace ampf\views\impl;
 
-use ampf\views\ViewResolver;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\views\ViewResolver;
 
-class DefaultViewResolver implements ViewResolver
+class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
 	protected $_viewDirectory = null;
 

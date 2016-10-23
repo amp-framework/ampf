@@ -2,18 +2,26 @@
 
 namespace ampf\services\cache\string\impl;
 
-use ampf\services\cache\string\StringCacheService;
+use \ampf\services\cache\string\StringCacheService;
 
 class FileBased implements StringCacheService
 {
+	/**
+	 * @var string
+	 */
 	protected $cacheDir = null;
+
+	/**
+	 *
+	 * @var int
+	 */
 	protected $defaultTTL = null;
 
 	/**
 	 * @param string $key
 	 * @return mixed False or the cache contents
 	 */
-	public function get($key)
+	public function get(string $key)
 	{
 		$path = $this->getPath($key);
 		if (!file_exists($path))
@@ -55,7 +63,7 @@ class FileBased implements StringCacheService
 	 * @return boolean
 	 * @throws \Exception
 	 */
-	public function set($key, $string, $ttl = null)
+	public function set(string $key, string $string, int $ttl = null)
 	{
 		if (trim($string) == '')
 		{
@@ -86,7 +94,7 @@ class FileBased implements StringCacheService
 	 * Protected methods
 	 */
 
-	protected function getPath($key)
+	protected function getPath(string $key)
 	{
 		if (!$this->isCorrectKey($key))
 		{
@@ -95,7 +103,7 @@ class FileBased implements StringCacheService
 		return ($this->cacheDir . '/' . $key . '.asc');
 	}
 
-	protected function isCorrectKey($key)
+	protected function isCorrectKey(string $key)
 	{
 		return preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key);
 	}
@@ -104,7 +112,7 @@ class FileBased implements StringCacheService
 	 * Bean setters
 	 */
 
-	public function setConfig($config)
+	public function setConfig(array $config)
 	{
 		if (!is_array($config) || count($config) < 1) throw new \Exception();
 

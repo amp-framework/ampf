@@ -2,11 +2,12 @@
 
 namespace ampf\services\xsrfToken\impl;
 
+use \ampf\beans\BeanFactoryAccess;
 use ampf\services\xsrfToken\XsrfTokenService;
 
-class DefaultXsrfTokenService implements XsrfTokenService
+class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 	use \ampf\beans\access\SessionServiceAccess;
 
 	static protected $TOKEN_ID_REQUEST = 'stkn';
@@ -77,7 +78,7 @@ class DefaultXsrfTokenService implements XsrfTokenService
 	 * @param string $token
 	 * @return boolean
 	 */
-	public function isCorrectToken($token)
+	public function isCorrectToken(string $token)
 	{
 		if (trim($token) == '') return false;
 		if (strlen($token) != self::$TOKEN_LEN) return false;

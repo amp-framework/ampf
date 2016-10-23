@@ -4,13 +4,35 @@ namespace ampf\router;
 
 interface RouteResolver
 {
-	public function getRoutePatternByRouteID($routeID, $params = null);
+	/**
+	 * @param string $routePattern
+	 * @return string
+	 */
+	public function getControllerByRoutePattern(string $routePattern);
 
-	public function getRouteIDByRoutePattern($routePattern);
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @return array
+	 */
+	public function getNotDefinedParams(string $routeID, array $params);
 
-	public function getControllerByRoutePattern($routePattern);
+	/**
+	 * @param string $routePattern
+	 * @return array
+	 */
+	public function getParamsByRoutePattern(string $routePattern);
 
-	public function getParamsByRoutePattern($routePattern);
+	/**
+	 * @param string $routePattern
+	 * @return string
+	 */
+	public function getRouteIDByRoutePattern(string $routePattern);
 
-	public function getNotDefinedParams($routeID, $params);
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @return string
+	 */
+	public function getRoutePatternByRouteID(string $routeID, array $params = null);
 }

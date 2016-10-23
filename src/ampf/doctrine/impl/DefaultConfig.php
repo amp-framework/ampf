@@ -3,10 +3,11 @@
 namespace ampf\doctrine\impl;
 
 use \ampf\doctrine\Config;
+use \ampf\beans\BeanFactoryAccess;
 
-class DefaultConfig implements Config
+class DefaultConfig implements BeanFactoryAccess, Config
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
 	/**
 	 * @var array

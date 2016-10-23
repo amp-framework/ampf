@@ -6,7 +6,14 @@ use \ampf\services\configuration\ConfigurationService;
 
 class DefaultConfigurationService implements ConfigurationService
 {
+	/**
+	 * @var array
+	 */
 	protected $config = array();
+
+	/**
+	 * @var string
+	 */
 	protected $domain = null;
 
 	/**
@@ -14,7 +21,7 @@ class DefaultConfigurationService implements ConfigurationService
 	 * @param string|null $domain
 	 * @return string|null
 	 */
-	public function get($key, $domain = null)
+	public function get(string $key, string $domain = null)
 	{
 		if ($domain === null)
 		{
@@ -40,9 +47,9 @@ class DefaultConfigurationService implements ConfigurationService
 
 	/**
 	 * @param string $domain
-	 * @return void
+	 * @return ConfigurationService
 	 */
-	public function setDomain($domain)
+	public function setDomain(string $domain)
 	{
 		$this->domain = $domain;
 	}

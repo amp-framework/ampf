@@ -8,7 +8,7 @@ interface StringCacheService
 	 * @param string $key
 	 * @return mixed False or the cache contents
 	 */
-	public function get($key);
+	public function get(string $key);
 
 	/**
 	 * @param string $key
@@ -17,5 +17,5 @@ interface StringCacheService
 	 * @return boolean
 	 * @throws \Exception
 	 */
-	public function set($key, $string, $ttl = null);
+	public function set(string $key, string $string, int $ttl = null);
 }

@@ -2,34 +2,35 @@
 
 namespace ampf\router\impl;
 
-use ampf\router\RouteResolver;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\router\RouteResolver;
 
-class DefaultRouteResolver implements RouteResolver
+class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
+	/**
+	 * @var array
+	 */
 	protected $_config = null;
 
 	/**
-	 * Implementing the interface
+	 * @param string $routePattern
+	 * @return string
 	 */
-
-	public function getRoutePatternByRouteID($routeID, $params = null)
+	public function getControllerByRoutePattern(string $routePattern)
 	{
-		$routePattern = $this->getRoutePattern($routeID);
-		if ($routePattern === null)
-		{
-			return null;
-		}
-
-		if ($params == null || !is_array($params))
-		{
-			$params = array();
-		}
-		return $this->getAdjustedRouteParams($routePattern, $params)['route'];
+		$array = $this->getControllerParamsByRoutePattern($routePattern);
+		if (is_null($array)) return null;
+		return $array[1];
 	}
 
-	public function getNotDefinedParams($routeID, $params)
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @return array
+	 */
+	public function getNotDefinedParams(string $routeID, array $params)
 	{
 		$routePattern = $this->getRoutePattern($routeID);
 		if ($routePattern === null)
@@ -44,21 +45,11 @@ class DefaultRouteResolver implements RouteResolver
 		return $this->getAdjustedRouteParams($routePattern, $params)['notUsedParams'];
 	}
 
-	public function getRouteIDByRoutePattern($routePattern)
-	{
-		$array = $this->getControllerParamsByRoutePattern($routePattern);
-		if (is_null($array)) return null;
-		return $array[0];
-	}
-
-	public function getControllerByRoutePattern($routePattern)
-	{
-		$array = $this->getControllerParamsByRoutePattern($routePattern);
-		if (is_null($array)) return null;
-		return $array[1];
-	}
-
-	public function getParamsByRoutePattern($routePattern)
+	/**
+	 * @param string $routePattern
+	 * @return array
+	 */
+	public function getParamsByRoutePattern(string $routePattern)
 	{
 		$array = $this->getControllerParamsByRoutePattern($routePattern);
 		if (is_null($array)) return null;
@@ -66,10 +57,45 @@ class DefaultRouteResolver implements RouteResolver
 	}
 
 	/**
+	 * @param string $routePattern
+	 * @return string
+	 */
+	public function getRouteIDByRoutePattern(string $routePattern)
+	{
+		$array = $this->getControllerParamsByRoutePattern($routePattern);
+		if (is_null($array)) return null;
+		return $array[0];
+	}
+
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @return string
+	 */
+	public function getRoutePatternByRouteID(string $routeID, array $params = null)
+	{
+		$routePattern = $this->getRoutePattern($routeID);
+		if ($routePattern === null)
+		{
+			return null;
+		}
+
+		if ($params == null || !is_array($params))
+		{
+			$params = array();
+		}
+		return $this->getAdjustedRouteParams($routePattern, $params)['route'];
+	}
+
+	/**
 	 * Protected methods
 	 */
 
-	protected function getControllerParamsByRoutePattern($routePattern)
+	/**
+	 * @param string $routePattern
+	 * @return array
+	 */
+	protected function getControllerParamsByRoutePattern(string $routePattern)
 	{
 		foreach ($this->getConfig() as $routeID => $value)
 		{
@@ -86,7 +112,12 @@ class DefaultRouteResolver implements RouteResolver
 		return null;
 	}
 
-	protected function cleanMatches($matches, $allowedParams)
+	/**
+	 * @param array $matches
+	 * @param array $allowedParams
+	 * @return array
+	 */
+	protected function cleanMatches(array $matches, array $allowedParams)
 	{
 		$result = array();
 		foreach ($matches as $key => $value)
@@ -99,7 +130,13 @@ class DefaultRouteResolver implements RouteResolver
 		return $result;
 	}
 
-	protected function getAdjustedRouteParams($regex, $params = null)
+	/**
+	 * @param string $regex
+	 * @param array $params
+	 * @return array
+	 * @throws \Exception
+	 */
+	protected function getAdjustedRouteParams(string $regex, array $params = null)
 	{
 		if ($params === null || !is_array($params))
 		{
@@ -120,7 +157,11 @@ class DefaultRouteResolver implements RouteResolver
 		return array('route' => $regex, 'notUsedParams' => $params);
 	}
 
-	protected function getRouteParams($regex)
+	/**
+	 * @param string $regex
+	 * @return array
+	 */
+	protected function getRouteParams(string $regex)
 	{
 		$matches = array();
 		$catch = '/\(\?P\<(.+)\>[^\)]+\)/';
@@ -128,27 +169,31 @@ class DefaultRouteResolver implements RouteResolver
 		return $matches[1];
 	}
 
-	protected function getRoutePattern($routeID)
+	/**
+	 * @param string $routeID
+	 * @return string
+	 * @throws \Exception
+	 */
+	protected function getRoutePattern(string $routeID)
 	{
-		if (!is_scalar($routeID)) throw new \Exception();
-		$routeID = ((string)$routeID);
 		if (trim($routeID) == '') throw new \Exception();
 
-		$routePattern = null;
 		foreach ($this->getConfig() as $_routeID => $value)
 		{
 			if ($_routeID === $routeID)
 			{
-				$routePattern = $value['pattern'];
-				break 1;
+				return $value['pattern'];
 			}
 		}
 
-		return $routePattern;
+		return null;
 	}
 
 	// Bean getters
 
+	/**
+	 * @return array
+	 */
 	public function getConfig()
 	{
 		if (is_null($this->_config))
@@ -160,7 +205,12 @@ class DefaultRouteResolver implements RouteResolver
 
 	// Bean setters
 
-	public function setConfig($config)
+	/**
+	 * @param array $config
+	 * @return RouteResolver
+	 * @throws \Exception
+	 */
+	public function setConfig(array $config)
 	{
 		if (!is_array($config) || !isset($config['routes'])) throw new \Exception();
 		$config = $config['routes'];
@@ -176,5 +226,6 @@ class DefaultRouteResolver implements RouteResolver
 		}
 
 		$this->_config = $config;
+		return $this;
 	}
 }

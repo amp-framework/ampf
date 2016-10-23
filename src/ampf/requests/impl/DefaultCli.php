@@ -2,14 +2,22 @@
 
 namespace ampf\requests\impl;
 
-use ampf\requests\CliRequest;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\requests\CliRequest;
 
-class DefaultCli implements CliRequest
+class DefaultCli implements BeanFactoryAccess, CliRequest
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 	use \ampf\beans\access\RouteResolverAccess;
 
+	/**
+	 * @var array
+	 */
 	protected $argv = null;
+
+	/**
+	 * @var string
+	 */
 	protected $responseBody = null;
 
 	public function __construct()
@@ -17,6 +25,9 @@ class DefaultCli implements CliRequest
 		$this->argv = $GLOBALS['argv'];
 	}
 
+	/**
+	 * @return string
+	 */
 	public function getController()
 	{
 		if (!isset($this->argv[1]) || empty($this->argv[1])) $arg = '*';
@@ -25,6 +36,9 @@ class DefaultCli implements CliRequest
 		return $this->getRouteResolver()->getControllerByRoutePattern($arg);
 	}
 
+	/**
+	 * @return array
+	 */
 	public function getRouteParams()
 	{
 		$arg = $this->argv;
@@ -37,30 +51,45 @@ class DefaultCli implements CliRequest
 		return $arg;
 	}
 
-	public function getCmd($routeID)
+	/**
+	 * @param string $routeID
+	 * @return string
+	 */
+	public function getCmd(string $routeID)
 	{
-		$route = ($this->argv[0] . ' ' . $routeID);
-
-		return $route;
+		return ($this->argv[0] . ' ' . $routeID);
 	}
 
-	public function getActionCmd($routeID, $params = null)
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @return string
+	 */
+	public function getActionCmd(string $routeID, array $params = null)
 	{
 		if (is_null($params)) $params = array();
 
 		$routeID = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
-		$route = $this->getCmd($routeID);
-		return $route;
+		return $this->getCmd($routeID);
 	}
 
-	public function setResponse($response)
+	/**
+	 * @param string $response
+	 * @return CliRequest
+	 */
+	public function setResponse(string $response)
 	{
 		$this->responseBody = $response;
+		return $this;
 	}
 
+	/**
+	 * @return CliRequest
+	 */
 	public function flush()
 	{
 		echo $this->responseBody;
 		$this->responseBody = null;
+		return $this;
 	}
 }

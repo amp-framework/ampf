@@ -2,7 +2,7 @@
 
 namespace ampf\services\timel10n\impl;
 
-use ampf\services\timel10n\TimeL10nService;
+use \ampf\services\timel10n\TimeL10nService;
 
 class DefaultTimeL10nService implements TimeL10nService
 {

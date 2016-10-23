@@ -4,11 +4,12 @@ namespace ampf\doctrine\impl;
 
 use \Doctrine\ORM\Tools\Setup;
 use \Doctrine\ORM\EntityManager;
+use \ampf\beans\BeanFactoryAccess;
 use \ampf\doctrine\EntityManagerFactory;
 
-class DefaultEntityManagerFactory implements EntityManagerFactory
+class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFactory
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 	use \ampf\beans\access\DoctrineConfigAccess;
 
 	/**

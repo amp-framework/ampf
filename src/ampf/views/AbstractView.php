@@ -2,9 +2,11 @@
 
 namespace ampf\views;
 
-abstract class AbstractView implements View
+use \ampf\beans\BeanFactoryAccess;
+
+abstract class AbstractView implements BeanFactoryAccess, View
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 	use \ampf\beans\access\TranslatorServiceAccess;
 	use \ampf\beans\access\ViewResolverAccess;
 

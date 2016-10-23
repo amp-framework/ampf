@@ -2,7 +2,7 @@
 
 namespace ampf\services\session\impl;
 
-use ampf\services\session\SessionService;
+use \ampf\services\session\SessionService;
 
 class DefaultSessionService implements SessionService
 {
@@ -39,7 +39,7 @@ class DefaultSessionService implements SessionService
 	 * @param string $key
 	 * @return mixed
 	 */
-	public function getAttribute($key)
+	public function getAttribute(string $key)
 	{
 		if (!$this->hasAttribute($key)) return null;
 		return $_SESSION[$key];
@@ -49,7 +49,7 @@ class DefaultSessionService implements SessionService
 	 * @param string $key
 	 * @return bool
 	 */
-	public function hasAttribute($key)
+	public function hasAttribute(string $key)
 	{
 		return isset($_SESSION[$key]);
 	}
@@ -58,7 +58,7 @@ class DefaultSessionService implements SessionService
 	 * @param string $key
 	 * @return void
 	 */
-	public function removeAttribute($key)
+	public function removeAttribute(string $key)
 	{
 		if (!$this->hasAttribute($key)) return;
 		// dereference possible objects
@@ -73,7 +73,7 @@ class DefaultSessionService implements SessionService
 	 * @return void
 	 * @throws \Exception
 	 */
-	public function setAttribute($key, $value)
+	public function setAttribute(string $key, $value)
 	{
 		if (!is_string($key) || trim($key) == '') throw new \Exception();
 		$_SESSION[$key] = $value;

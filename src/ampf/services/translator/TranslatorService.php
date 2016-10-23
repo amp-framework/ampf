@@ -9,7 +9,7 @@ interface TranslatorService
 	 * @param bool $ignoreCase
 	 * @return string
 	 */
-	public function getKey($translation, $ignoreCase = true);
+	public function getKey(string $translation, bool $ignoreCase = true);
 
 	/**
 	 * @return string
@@ -21,7 +21,7 @@ interface TranslatorService
 	 * @param string $language
 	 * @throws \Exception
 	 */
-	public function setLanguage($language);
+	public function setLanguage(string $language);
 
 	/**
 	 * @param string $key
@@ -29,5 +29,5 @@ interface TranslatorService
 	 * @return string
 	 * @throws \Exception
 	 */
-	public function translate($key, $args = null);
+	public function translate(string $key, array $args = null);
 }

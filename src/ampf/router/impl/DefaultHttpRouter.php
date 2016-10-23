@@ -2,15 +2,21 @@
 
 namespace ampf\router\impl;
 
-use ampf\router\HttpRouter;
-use ampf\requests\HttpRequest;
-use ampf\controller\Controller;
-use ampf\exceptions\ControllerInterruptedException;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\router\HttpRouter;
+use \ampf\requests\HttpRequest;
+use \ampf\controller\Controller;
+use \ampf\exceptions\ControllerInterruptedException;
 
-class DefaultHttpRouter implements HttpRouter
+class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
+	/**
+	 * @param HttpRequest $request
+	 * @return HttpRouter
+	 * @throws \Exception
+	 */
 	public function route(HttpRequest $request)
 	{
 		$controller = $request->getController();
@@ -25,9 +31,16 @@ class DefaultHttpRouter implements HttpRouter
 
 		$bean = $this->getBeanFactory()->get($controller);
 		$this->routeBean($bean, $params);
+
+		return $this;
 	}
 
-	public function routeBean(Controller $controller, $params = null)
+	/**
+	 * @param Controller $controller
+	 * @param array $params
+	 * @return HttpRouter
+	 */
+	public function routeBean(Controller $controller, array $params = null)
 	{
 		if (is_null($params)) $params = array();
 
@@ -41,5 +54,6 @@ class DefaultHttpRouter implements HttpRouter
 		{
 			// do nothing.
 		}
+		return $this;
 	}
 }

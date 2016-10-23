@@ -2,11 +2,12 @@
 
 namespace ampf\services\translator\impl;
 
-use ampf\services\translator\TranslatorService;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\services\translator\TranslatorService;
 
-class DefaultTranslatorService implements TranslatorService
+class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
 	/**
 	 * @var array
@@ -23,7 +24,7 @@ class DefaultTranslatorService implements TranslatorService
 	 * @param bool $ignoreCase
 	 * @return string
 	 */
-	public function getKey($translation, $ignoreCase = true)
+	public function getKey(string $translation, bool $ignoreCase = true)
 	{
 		$config = $this->getConfig();
 		foreach ($config as $key => $value)
@@ -53,7 +54,7 @@ class DefaultTranslatorService implements TranslatorService
 	 * @param string $language
 	 * @throws \Exception
 	 */
-	public function setLanguage($language)
+	public function setLanguage(string $language)
 	{
 		if (trim($language) == '') throw new \Exception();
 		$this->language = $language;
@@ -65,7 +66,7 @@ class DefaultTranslatorService implements TranslatorService
 	 * @return string
 	 * @throws \Exception
 	 */
-	public function translate($key, $args = null)
+	public function translate(string $key, array $args = null)
 	{
 		if (trim($key) == '') throw new \Exception();
 

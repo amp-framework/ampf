@@ -13,19 +13,19 @@ interface SessionService
 	 * @param string $key
 	 * @return mixed
 	 */
-	public function getAttribute($key);
+	public function getAttribute(string $key);
 
 	/**
 	 * @param string $key
 	 * @return bool
 	 */
-	public function hasAttribute($key);
+	public function hasAttribute(string $key);
 
 	/**
 	 * @param string $key
 	 * @return void
 	 */
-	public function removeAttribute($key);
+	public function removeAttribute(string $key);
 
 	/**
 	 * @param string $key
@@ -33,5 +33,5 @@ interface SessionService
 	 * @return void
 	 * @throws \Exception
 	 */
-	public function setAttribute($key, $value);
+	public function setAttribute(string $key, $value);
 }

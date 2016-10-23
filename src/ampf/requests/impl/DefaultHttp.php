@@ -2,22 +2,53 @@
 
 namespace ampf\requests\impl;
 
-use ampf\requests\HttpRequest;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\requests\HttpRequest;
 
-class DefaultHttp implements HttpRequest
+class DefaultHttp implements BeanFactoryAccess, HttpRequest
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 	use \ampf\beans\access\RouteResolverAccess;
 	use \ampf\beans\access\XsrfTokenServiceAccess;
 
+	/**
+	 * @var array
+	 */
 	protected $get = null;
+
+	/**
+	 * @var array
+	 */
 	protected $post = null;
+
+	/**
+	 * @var array
+	 */
 	protected $cookie = null;
+
+	/**
+	 * @var array
+	 */
 	protected $server = null;
 
+	/**
+	 * @var string
+	 */
 	protected $responseBody = null;
+
+	/**
+	 * @var array
+	 */
 	protected $responseRedirect = null;
-	protected $responseStatusCode = 200;
+
+	/**
+	 * @var string
+	 */
+	protected $responseStatusCode = '200';
+
+	/**
+	 * @var array
+	 */
 	protected $headers = array();
 
 	public function __construct()
@@ -36,9 +67,23 @@ class DefaultHttp implements HttpRequest
 
 	/**
 	 * @param string $key
-	 * @return void
+	 * @param string $value
+	 * @return HttpRequest
+	 * @throws \Exception
 	 */
-	public function destroyCookieParam($key)
+	public function addHeader(string $key, string $value)
+	{
+		if (trim($key) == '') throw new \Exception();
+		if (trim($value) == '') throw new \Exception();
+		$this->headers[] = "{$key}: {$value}";
+		return $this;
+	}
+
+	/**
+	 * @param string $key
+	 * @return HttpRequest
+	 */
+	public function destroyCookieParam(string $key)
 	{
 		if (!$this->hasCookieParam($key))
 		{
@@ -53,6 +98,35 @@ class DefaultHttp implements HttpRequest
 		);
 		// And in our object
 		unset($this->cookie[$key]);
+		return $this;
+	}
+
+	/**
+	 * @return HttpRequest
+	 */
+	public function flush()
+	{
+		http_response_code($this->responseStatusCode);
+
+		foreach ($this->headers as $header)
+		{
+			header($header);
+		}
+		$this->headers = array();
+
+		if (!is_null($this->responseRedirect))
+		{
+			header('Location: ' . $this->responseRedirect['target'], true, $this->responseRedirect['code']);
+			$this->responseRedirect = null;
+		}
+
+		if (!is_null($this->responseBody))
+		{
+			echo $this->responseBody;
+			$this->responseBody = null;
+		}
+
+		return $this;
 	}
 
 	/**
@@ -105,39 +179,19 @@ class DefaultHttp implements HttpRequest
 		return $results;
 	}
 
-	public function getRouteID()
-	{
-		return $this->getRouteResolver()->getRouteIDByRoutePattern(
-			$this->getRoute()
-		);
-	}
-
-	public function getController()
-	{
-		return $this->getRouteResolver()->getControllerByRoutePattern(
-			$this->getRoute()
-		);
-	}
-
-	public function getRouteParams()
-	{
-		return $this->getRouteResolver()->getParamsByRoutePattern(
-			$this->getRoute()
-		);
-	}
-
-	public function getLink($relative)
-	{
-		$path = $this->getDirname($this->server['PHP_SELF']);
-
-		$route = '';
-		if (!empty($path)) $route .= ('/' . $path);
-		$route .= ('/' . $relative);
-
-		return $route;
-	}
-
-	public function getActionLink($routeID, $params = null, $addToken = false, $hashParam = null)
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @param bool $addToken
+	 * @param string $hashParam
+	 * @return string
+	 */
+	public function getActionLink(
+		string $routeID,
+		array $params = null,
+		bool $addToken = false,
+		string $hashParam = null
+	)
 	{
 		if ($params === null) $params = array();
 		if ($hashParam === null) $hashParam = '';
@@ -171,6 +225,111 @@ class DefaultHttp implements HttpRequest
 		return $routePattern;
 	}
 
+	/**
+	 * @return string
+	 */
+	public function getController()
+	{
+		return $this->getRouteResolver()->getControllerByRoutePattern(
+			$this->getRoute()
+		);
+	}
+
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getCookieParam(string $key)
+	{
+		if (!$this->hasCookieParam($key)) return null;
+		return $this->cookie[$key];
+	}
+
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getGetParam(string $key)
+	{
+		if (!$this->hasGetParam($key)) return null;
+		return $this->get[$key];
+	}
+
+	/**
+	 * @param string $relative
+	 * @return string
+	 */
+	public function getLink(string $relative)
+	{
+		$path = $this->getDirname($this->server['PHP_SELF']);
+
+		$route = '';
+		if (!empty($path)) $route .= ('/' . $path);
+		$route .= ('/' . $relative);
+
+		return $route;
+	}
+
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getPostParam(string $key)
+	{
+		if (!$this->hasPostParam($key)) return null;
+		return $this->post[$key];
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getResponse()
+	{
+		return $this->responseBody;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getRouteID()
+	{
+		return $this->getRouteResolver()->getRouteIDByRoutePattern(
+			$this->getRoute()
+		);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRouteParams()
+	{
+		return $this->getRouteResolver()->getParamsByRoutePattern(
+			$this->getRoute()
+		);
+	}
+
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getServerParam(string $key)
+	{
+		if (!$this->hasServerParam($key)) return null;
+		return $this->server[$key];
+	}
+
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasCookieParam(string $key)
+	{
+		return isset($this->cookie[$key]);
+	}
+
+	/**
+	 * @return boolean
+	 */
 	public function hasCorrectToken()
 	{
 		$tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
@@ -185,7 +344,68 @@ class DefaultHttp implements HttpRequest
 		return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
 	}
 
-	public function setRedirect($routeID, $params = null, $code = null, $addToken = null, $hashParam = null)
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasGetParam(string $key)
+	{
+		return isset($this->get[$key]);
+	}
+
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasPostParam(string $key)
+	{
+		return isset($this->post[$key]);
+	}
+
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasServerParam(string $key)
+	{
+		return isset($this->server[$key]);
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function isPostRequest()
+	{
+		return (
+			$this->hasServerParam('REQUEST_METHOD')
+			&& $this->getServerParam('REQUEST_METHOD') == 'POST'
+		);
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function isRedirect()
+	{
+		return (!is_null($this->responseRedirect));
+	}
+
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @param string $code
+	 * @param bool $addToken
+	 * @param string $hashParam
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setRedirect(
+		string $routeID,
+		array $params = null,
+		string $code = null,
+		bool $addToken = null,
+		string $hashParam = null
+	)
 	{
 		if ($this->responseBody !== null) throw new \Exception();
 		if ($params === null || !is_array($params)) $params = array();
@@ -195,127 +415,43 @@ class DefaultHttp implements HttpRequest
 
 		$this->responseRedirect = array(
 			'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
-			'code' => ((string)$code),
+			'code' => $code,
 		);
+		return $this;
 	}
 
-	public function setResponse($response)
+	/**
+	 * @param string $response
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setResponse(string $response)
 	{
 		if (!is_null($this->responseRedirect)) throw new \Exception();
-
 		$this->responseBody = $response;
+		return $this;
 	}
 
-	public function setStatusCode($statusCode)
+	/**
+	 * @param string $statusCode
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setStatusCode(string $statusCode)
 	{
-		if (!is_scalar($statusCode)) throw new \Exception();
 		$statusCode = ((int)$statusCode);
 		if ($statusCode < 100 || $statusCode > 599) throw new \Exception();
-		$this->responseStatusCode = $statusCode;
-	}
-
-	public function addHeader($key, $value)
-	{
-		if (!is_scalar($key)) throw new \Exception();
-		if (!is_scalar($value)) throw new \Exception();
-		$key = ((string)$key);
-		$value = ((string)$value);
-		if (trim($key) == '') throw new \Exception();
-		if (trim($value) == '') throw new \Exception();
-
-		$this->headers[] = "{$key}: {$value}";
-	}
-
-
-	public function getResponse()
-	{
-		return $this->responseBody;
-	}
-
-	public function isRedirect()
-	{
-		return (!is_null($this->responseRedirect));
-	}
-
-	public function flush()
-	{
-		http_response_code($this->responseStatusCode);
-
-		foreach ($this->headers as $header)
-		{
-			header($header);
-		}
-		$this->headers = array();
-
-		if (!is_null($this->responseRedirect))
-		{
-			header('Location: ' . $this->responseRedirect['target'], true, $this->responseRedirect['code']);
-			$this->responseRedirect = null;
-		}
-
-		if (!is_null($this->responseBody))
-		{
-			echo $this->responseBody;
-			$this->responseBody = null;
-		}
-	}
-
-	public function isPostRequest()
-	{
-		return (
-			$this->hasServerParam('REQUEST_METHOD')
-			&& $this->getServerParam('REQUEST_METHOD') == 'POST'
-		);
-	}
-
-	public function hasGetParam($key)
-	{
-		return isset($this->get[$key]);
-	}
-
-	public function hasPostParam($key)
-	{
-		return isset($this->post[$key]);
-	}
-
-	public function hasCookieParam($key)
-	{
-		return isset($this->cookie[$key]);
-	}
-
-	public function hasServerParam($key)
-	{
-		return isset($this->server[$key]);
-	}
-
-	public function getGetParam($key)
-	{
-		if (!$this->hasGetParam($key)) return null;
-		return $this->get[$key];
-	}
-
-	public function getPostParam($key)
-	{
-		if (!$this->hasPostParam($key)) return null;
-		return $this->post[$key];
-	}
-
-	public function getCookieParam($key)
-	{
-		if (!$this->hasCookieParam($key)) return null;
-		return $this->cookie[$key];
-	}
-
-	public function getServerParam($key)
-	{
-		if (!$this->hasServerParam($key)) return null;
-		return $this->server[$key];
+		$this->responseStatusCode = ((string)$statusCode);
+		return $this;
 	}
 
 	/**
 	 * Protected methods
 	 */
 
+	/**
+	 * @return string
+	 */
 	protected function getRoute()
 	{
 		$route = $this->server['REQUEST_URI'];
@@ -345,7 +481,12 @@ class DefaultHttp implements HttpRequest
 		return $route;
 	}
 
-	protected function getDirname($path)
+	/**
+	 * @param string $path
+	 * @return string
+	 * @throws \Exception
+	 */
+	protected function getDirname(string $path)
 	{
 		// replace backslashes with slashes (windows)
 		$path = str_replace('\\', '/', $path);

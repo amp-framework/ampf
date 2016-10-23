@@ -4,14 +4,23 @@ namespace ampf\requests;
 
 interface HttpRequest
 {
-	public function addHeader($key, $value);
+	/**
+	 * @param string $key
+	 * @param string $value
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function addHeader(string $key, string $value);
 
 	/**
 	 * @param string $key
-	 * @return void
+	 * @return HttpRequest
 	 */
-	public function destroyCookieParam($key);
+	public function destroyCookieParam(string $key);
 
+	/**
+	 * @return HttpRequest
+	 */
 	public function flush();
 
 	/**
@@ -19,41 +28,137 @@ interface HttpRequest
 	 */
 	public function getAcceptedLanguages();
 
-	public function getActionLink($routeID, $params = null, $addToken = false);
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @param bool $addToken
+	 * @param string $hashParam
+	 * @return string
+	 */
+	public function getActionLink(
+		string $routeID,
+		array $params = null,
+		bool $addToken = false,
+		string $hashParam = null
+	);
 
+	/**
+	 * @return string
+	 */
 	public function getController();
 
-	public function getCookieParam($key);
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getCookieParam(string $key);
 
-	public function getGetParam($key);
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getGetParam(string $key);
 
-	public function getLink($relative);
+	/**
+	 * @param string $relative
+	 * @return string
+	 */
+	public function getLink(string $relative);
 
-	public function getPostParam($key);
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getPostParam(string $key);
 
+	/**
+	 * @return string
+	 */
 	public function getResponse();
 
+	/**
+	 * @return string
+	 */
 	public function getRouteID();
 
-	public function getServerParam($key);
+	/**
+	 * @return array
+	 */
+	public function getRouteParams();
 
-	public function hasCookieParam($key);
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function getServerParam(string $key);
 
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasCookieParam(string $key);
+
+	/**
+	 * @return boolean
+	 */
 	public function hasCorrectToken();
 
-	public function hasGetParam($key);
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasGetParam(string $key);
 
-	public function hasPostParam($key);
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasPostParam(string $key);
 
-	public function hasServerParam($key);
+	/**
+	 * @param string $key
+	 * @return boolean
+	 */
+	public function hasServerParam(string $key);
 
+	/**
+	 * @return boolean
+	 */
 	public function isPostRequest();
 
+	/**
+	 * @return boolean
+	 */
 	public function isRedirect();
 
-	public function setRedirect($routeID, $params = null, $code = null, $addToken = null);
+	/**
+	 * @param string $routeID
+	 * @param array $params
+	 * @param string $code
+	 * @param bool $addToken
+	 * @param string $hashParam
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setRedirect(
+		string $routeID,
+		array $params = null,
+		string $code = null,
+		bool $addToken = null,
+		string $hashParam = null
+	);
 
-	public function setStatusCode($statusCode);
+	/**
+	 * @param string $response
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setResponse(string $response);
 
-	public function setResponse($response);
+	/**
+	 * @param string $statusCode
+	 * @return HttpRequest
+	 * @throws \Exception
+	 */
+	public function setStatusCode(string $statusCode);
 }

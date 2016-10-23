@@ -1,10 +1,10 @@
 <?php
 
-namespace ampf\beans\access;
+namespace ampf\beans\impl;
 
-use ampf\beans\BeanFactory;
+use \ampf\beans\BeanFactory;
 
-trait BeanFactoryAccess
+trait DefaultBeanFactoryAccess
 {
 	protected $__beanFactory = null;
 

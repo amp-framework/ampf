@@ -23,5 +23,5 @@ interface XsrfTokenService
 	 * @param string $token
 	 * @return boolean
 	 */
-	public function isCorrectToken($token);
+	public function isCorrectToken(string $token);
 }

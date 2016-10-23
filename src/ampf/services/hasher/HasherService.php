@@ -4,7 +4,18 @@ namespace ampf\services\hasher;
 
 interface HasherService
 {
-	public function hash($string);
+	/**
+	 * @param string $string
+	 * @param string $storedHash
+	 * @return boolean
+	 * @throws \Exception
+	 */
+	public function check(string $string, string $storedHash);
 
-	public function check($string, $storedHash);
+	/**
+	 * @param string $string
+	 * @return string
+	 * @throws \Exception
+	 */
+	public function hash(string $string);
 }

@@ -2,14 +2,21 @@
 
 namespace ampf\router\impl;
 
-use ampf\router\CliRouter;
-use ampf\requests\CliRequest;
-use ampf\controller\Controller;
+use \ampf\beans\BeanFactoryAccess;
+use \ampf\router\CliRouter;
+use \ampf\requests\CliRequest;
+use \ampf\controller\Controller;
+use \ampf\exceptions\ControllerInterruptedException;
 
-class DefaultCliRouter implements CliRouter
+class DefaultCliRouter implements BeanFactoryAccess, CliRouter
 {
-	use \ampf\beans\access\BeanFactoryAccess;
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
 
+	/**
+	 * @param CliRequest $request
+	 * @return CliRouter
+	 * @throws \Exception
+	 */
 	public function route(CliRequest $request)
 	{
 		$controller = $request->getController();
@@ -20,14 +27,29 @@ class DefaultCliRouter implements CliRouter
 
 		$bean = $this->getBeanFactory()->get($controller);
 		$this->routeBean($bean, $params);
+
+		return $this;
 	}
 
-	public function routeBean(Controller $controller, $params = null)
+	/**
+	 * @param Controller $controller
+	 * @param array $params
+	 * @return CliRouter
+	 */
+	public function routeBean(Controller $controller, array $params = null)
 	{
 		if (is_null($params)) $params = array();
 
-		$controller->beforeAction();
-		call_user_func_array(array($controller, 'execute'), $params);
-		$controller->afterAction();
+		try
+		{
+			$controller->beforeAction();
+			call_user_func_array(array($controller, 'execute'), $params);
+			$controller->afterAction();
+		}
+		catch (ControllerInterruptedException $e)
+		{
+			// do nothing.
+		}
+		return $this;
 	}
 }

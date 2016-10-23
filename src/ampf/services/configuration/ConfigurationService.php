@@ -11,7 +11,7 @@ interface ConfigurationService
 	 * @param string|null $domain
 	 * @return string|null
 	 */
-	public function get($key, $domain = null);
+	public function get(string $key, string $domain = null);
 
 	/**
 	 * Sets a domain for the used configuration. This should be a string in the form
@@ -21,7 +21,7 @@ interface ConfigurationService
 	 * as the used domain - if e.g. ".a.b.d" is set as the domain, the value of ".a.b" is being used.
 	 *
 	 * @param string $domain
-	 * @return void
+	 * @return ConfigurationService
 	 */
-	public function setDomain($domain);
+	public function setDomain(string $domain);
 }
