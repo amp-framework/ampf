@@ -42,6 +42,10 @@ class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFac
 			$doctrine->getConnectionParams(),
 			$config
 		);
+
+		// Change mySQL enum internally to string
+		$platform = $this->_em->getConnection()->getDatabasePlatform();
+		$platform->registerDoctrineTypeMapping('enum', 'string');
 	}
 
 	/**
