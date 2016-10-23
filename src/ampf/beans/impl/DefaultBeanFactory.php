@@ -139,7 +139,7 @@ class DefaultBeanFactory implements BeanFactory
 			$parent = $beanConfig['parent'];
 			$config = $this->get('Config');
 			$parentConfig = $config['beans'][$parent];
-			$this->evalConfig(null, $bean, $parentConfig);
+			$this->evalConfig('', $bean, $parentConfig);
 		}
 		return $this;
 	}
@@ -203,7 +203,7 @@ class DefaultBeanFactory implements BeanFactory
 	 */
 	protected function evalConfigScope(string $beanID, $bean, array $beanConfig)
 	{
-		if ($beanID == null) return;
+		if (trim($beanID) == '') return;
 
 		$scope = 'singleton';
 		if (isset($beanConfig['scope'])) $scope = $beanConfig['scope'];
