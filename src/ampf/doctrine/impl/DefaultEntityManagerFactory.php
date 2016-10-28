@@ -2,7 +2,7 @@
 
 namespace ampf\doctrine\impl;
 
-use \Doctrine\ORM\Tools\Setup;
+use \Doctrine\DBAL\Types\Type;
 use \Doctrine\ORM\EntityManager;
 use \ampf\beans\BeanFactoryAccess;
 use \ampf\doctrine\EntityManagerFactory;
@@ -21,31 +21,24 @@ class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFac
 	{
 		$doctrine = $this->getDoctrineConfig();
 
-		$cache = null;
-		if ($doctrine->isDevMode())
+		foreach ($doctrine->getTypeOverrides() as $type => $override)
 		{
-			$cache = new \Doctrine\Common\Cache\ArrayCache();
-		}
-		else
-		{
-			$cache = new \Doctrine\Common\Cache\FilesystemCache($doctrine->getCacheDir());
+			Type::overrideType($type, $override);
 		}
 
-		$config = Setup::createAnnotationMetadataConfiguration(
-			$doctrine->getEntities(),
-			$doctrine->isDevMode(),
-			$doctrine->getProxyDir(),
-			$cache,
-			$doctrine->useSimpleAnnotationReader()
-		);
 		$this->_em = EntityManager::create(
 			$doctrine->getConnectionParams(),
-			$config
+			$doctrine->getConfiguration()
 		);
 
-		// Change mySQL enum internally to string
-		$platform = $this->_em->getConnection()->getDatabasePlatform();
-		$platform->registerDoctrineTypeMapping('enum', 'string');
+		if (count($doctrine->getMappingOverrides()) > 0)
+		{
+			$platform = $this->_em->getConnection()->getDatabasePlatform();
+			foreach ($doctrine->getMappingOverrides() as $mapping => $override)
+			{
+				$platform->registerDoctrineTypeMapping($mapping, $override);
+			}
+		}
 	}
 
 	/**

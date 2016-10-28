@@ -5,9 +5,9 @@ namespace ampf\doctrine;
 interface Config
 {
 	/**
-	 * @return string
+	 * @return \Doctrine\ORM\Configuration
 	 */
-	public function getCacheDir();
+	public function getConfiguration();
 
 	/**
 	 * @return array
@@ -17,20 +17,10 @@ interface Config
 	/**
 	 * @return array
 	 */
-	public function getEntities();
+	public function getMappingOverrides();
 
 	/**
-	 * @return string
+	 * @return array
 	 */
-	public function getProxyDir();
-
-	/**
-	 * @return boolean
-	 */
-	public function isDevMode();
-
-	/**
-	 * @return boolean
-	 */
-	public function useSimpleAnnotationReader();
+	public function getTypeOverrides();
 }

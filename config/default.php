@@ -58,22 +58,31 @@ return array(
 
 	// This should be overriden by the unversioned local.php config file
 	'doctrine' => array(
-		'cacheDir' => null,
+		'configuration' => \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration(
+			array(null),// Entity paths
+			true,// Is dev mode?
+			null,// Proxy directory
+			null,// Cache, instance of \Doctrine\Common\Cache\Cache
+			false// Use simple annotation reader?
+		),
 		'connectionParams' => array(
-			'driver' => null,
-			'host' => null,
-			'user' => null,
-			'password' => null,
-			'dbname' => null,
-			'charset' => null,
-			'driverOptions' => null,
+			'driver' => 'pdo_mysql',
+			'host' => 'localhost',
+			'user' => 'user',
+			'password' => '',
+			'dbname' => 'ampf',
+			'charset' => 'utf8mb4',
+			'driverOptions' => array(
+				\PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = 'UTC';",
+			),
 		),
-		'entities' => array(
-			null,
+		'typeOverrides' => array(
+			'datetime' => \ampf\doctrine\types\UTCDateTimeType::class,
+			'datetimetz' => \ampf\doctrine\types\UTCDateTimeType::class,
 		),
-		'isDevMode' => null,
-		'proxyDir' => null,
-		'useSimpleAnnotationReader' => null,
+		'mappingOverrides' => array(
+			'enum' => 'string',
+		),
 	),
 
 	'translation.dir' => null,

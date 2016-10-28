@@ -3,52 +3,64 @@
 namespace ampf\doctrine\impl;
 
 use \ampf\doctrine\Config;
-use \ampf\beans\BeanFactoryAccess;
 
-class DefaultConfig implements BeanFactoryAccess, Config
+class DefaultConfig implements Config
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
-
-	/**
-	 * @var array
-	 */
 	protected $_config = null;
 
-	public function getCacheDir()
+	/**
+	 * @return \Doctrine\ORM\Configuration
+	 */
+	public function getConfiguration()
 	{
-		return $this->getConfig()['cacheDir'];
+		return $this->getConfigValue('configuration');
 	}
 
+	/**
+	 * @return array
+	 */
 	public function getConnectionParams()
 	{
-		return $this->getConfig()['connectionParams'];
+		return $this->getConfigValue('connectionParams');
 	}
 
-	public function getEntities()
+	/**
+	 * @return array
+	 */
+	public function getMappingOverrides()
 	{
-		return $this->getConfig()['entities'];
+		return $this->getConfigValue('mappingOverrides');
 	}
 
-	public function getProxyDir()
+	/**
+	 * @return array
+	 */
+	public function getTypeOverrides()
 	{
-		return $this->getConfig()['proxyDir'];
+		return $this->getConfigValue('typeOverrides');
 	}
 
-	public function isDevMode()
-	{
-		return ((bool)$this->getConfig()['isDevMode']);
-	}
+	// Protected
 
-	public function useSimpleAnnotationReader()
+	/**
+	 * @param string $value
+	 * @return mixed
+	 */
+	protected function getConfigValue(string $value)
 	{
-		return ((bool)$this->getConfig()['useSimpleAnnotationReader']);
+		$config = $this->getConfig();
+		if (!isset($config[$value]))
+		{
+			return null;
+		}
+		return $config[$value];
 	}
 
 	// Bean getters
 
 	public function getConfig()
 	{
-		if (is_null($this->_config))
+		if ($this->_config === null)
 		{
 			$this->setConfig($this->getBeanFactory()->get('Config'));
 		}
