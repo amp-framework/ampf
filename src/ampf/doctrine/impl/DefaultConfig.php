@@ -2,10 +2,13 @@
 
 namespace ampf\doctrine\impl;
 
+use \ampf\beans\BeanFactoryAccess;
 use \ampf\doctrine\Config;
 
-class DefaultConfig implements Config
+class DefaultConfig implements BeanFactoryAccess, Config
 {
+	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+
 	protected $_config = null;
 
 	/**
