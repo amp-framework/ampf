@@ -6,10 +6,11 @@ interface BeanFactory
 {
 	/**
 	 * @param string $beanID
+	 * @param callable|null $creatorFunc function(BeanFactory $b, array &$c)
 	 * @return object
 	 * @throws \Exception
 	 */
-	public function get(string $beanID);
+	public function get(string $beanID, $creatorFunc = null);
 
 	/**
 	 * @param string $beanID

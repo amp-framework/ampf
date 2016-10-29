@@ -27,10 +27,11 @@ class DefaultBeanFactory implements BeanFactory
 
 	/**
 	 * @param string $beanID
+	 * @param callable|null $creatorFunc function(BeanFactory $b, array &$c)
 	 * @return object
 	 * @throws \Exception
 	 */
-	public function get(string $beanID)
+	public function get(string $beanID, $creatorFunc = null)
 	{
 		if (isset($this->memory[$beanID]))
 		{
@@ -39,17 +40,26 @@ class DefaultBeanFactory implements BeanFactory
 		else
 		{
 			$config = $this->get('Config');
-			if (!isset($config['beans'][$beanID]))
+
+			$beanConfig = null;
+			$bean = null;
+			if (isset($config['beans'][$beanID]))
+			{
+				$beanConfig = $config['beans'][$beanID];
+				$_tclass = $beanConfig['class'];
+				$bean = new $_tclass();
+			}
+			elseif (is_callable($creatorFunc))
+			{
+				$beanConfig = array();
+				$bean = $creatorFunc($this, $beanConfig);
+			}
+			else
 			{
 				throw new \Exception("No configuration for bean {$beanID} found");
 			}
 
-			$beanConfig = $config['beans'][$beanID];
-			$class = $beanConfig['class'];
-			$bean = new $class();
-
 			$this->evalConfig($beanID, $bean, $beanConfig);
-
 			$this->statistics['beansCreated']++;
 		}
 		return $bean;
