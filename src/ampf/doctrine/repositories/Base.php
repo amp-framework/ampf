@@ -30,4 +30,16 @@ abstract class Base extends EntityRepository
 		$this->getEntityManager()->persist($entity);
 		return $this;
 	}
+
+	/**
+	 * @param string $entityName
+	 * @return Base
+	 */
+	protected function getRepository($entityName)
+	{
+		return $this
+			->getEntityManager()
+			->getRepository($entityName)
+		;
+	}
 }
