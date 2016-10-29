@@ -18,6 +18,7 @@ abstract class Base extends EntityRepository
 
 	/**
 	 * @see \Doctrine\ORM\EntityManager::flush()
+	 * @return Base
 	 */
 	public function flush(BaseEntity $entity = null)
 	{
@@ -25,9 +26,23 @@ abstract class Base extends EntityRepository
 		return $this;
 	}
 
+	/**
+	 * @see \Doctrine\ORM\EntityManager::persist()
+	 * @return Base
+	 */
 	public function persist(BaseEntity $entity)
 	{
 		$this->getEntityManager()->persist($entity);
+		return $this;
+	}
+
+	/**
+	 * @see \Doctrine\ORM\EntityManager::remove()
+	 * @return Base
+	 */
+	public function remove(BaseEntity $entity)
+	{
+		$this->getEntityManager()->remove($entity);
 		return $this;
 	}
 
