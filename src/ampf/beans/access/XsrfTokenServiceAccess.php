@@ -27,4 +27,9 @@ trait XsrfTokenServiceAccess
 	{
 		$this->__xsrfTokenService = $xsrfTokenService;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

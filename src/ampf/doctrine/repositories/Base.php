@@ -64,7 +64,10 @@ abstract class Base extends EntityRepository
 	 */
 	public function persist(BaseEntity $entity)
 	{
-		$this->getEntityManager()->persist($entity);
+		if (!$this->getEntityManager()->contains($entity))
+		{
+			$this->getEntityManager()->persist($entity);
+		}
 		return $this;
 	}
 

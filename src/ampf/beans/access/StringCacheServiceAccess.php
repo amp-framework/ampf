@@ -20,8 +20,16 @@ trait StringCacheServiceAccess
 		return $this->__stringCacheService;
 	}
 
+	/**
+	 * @param StringCacheService $stringCacheService
+	 */
 	public function setStringCacheService(StringCacheService $stringCacheService)
 	{
 		$this->__stringCacheService = $stringCacheService;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

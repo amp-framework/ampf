@@ -27,4 +27,9 @@ trait RouteResolverAccess
 	{
 		$this->__routeResolver = $routeResolver;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

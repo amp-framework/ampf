@@ -27,4 +27,9 @@ trait DoctrineConfigAccess
 	{
 		$this->__doctrineConfig = $config;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

@@ -27,4 +27,9 @@ trait ConfigurationServiceAccess
 	{
 		$this->__configurationService = $configurationService;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

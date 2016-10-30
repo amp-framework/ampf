@@ -20,8 +20,16 @@ trait HasherServiceAccess
 		return $this->__hasherService;
 	}
 
+	/**
+	 * @param HasherService $hasherService
+	 */
 	public function setHasherService(HasherService $hasherService)
 	{
 		$this->__hasherService = $hasherService;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }

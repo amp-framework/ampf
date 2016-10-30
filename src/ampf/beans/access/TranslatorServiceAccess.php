@@ -27,4 +27,9 @@ trait TranslatorServiceAccess
 	{
 		$this->__translatorService = $translatorService;
 	}
+
+	/**
+	 * @return \ampf\beans\BeanFactory
+	 */
+	abstract public function getBeanFactory();
 }
