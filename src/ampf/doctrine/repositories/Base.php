@@ -13,7 +13,9 @@ abstract class Base extends EntityRepository
 	public function create()
 	{
 		$class = $this->getClassName();
-		return new $class();
+		$obj = new $class();
+		$this->getEntityManager()->persist($obj);
+		return $obj;
 	}
 
 	/**
