@@ -148,6 +148,10 @@ class DefaultBeanFactory implements BeanFactory
 		{
 			$parent = $beanConfig['parent'];
 			$config = $this->get('Config');
+			if (!isset($config['beans'][$parent]))
+			{
+				throw new \Exception();
+			}
 			$parentConfig = $config['beans'][$parent];
 			$this->evalConfig('', $bean, $parentConfig);
 		}
