@@ -8,6 +8,24 @@ use \ampf\doctrine\entities\Base as BaseEntity;
 abstract class Base extends EntityRepository
 {
 	/**
+	 * @return Base
+	 */
+	public function beginTransaction()
+	{
+		$this->getEntityManager()->beginTransaction();
+		return $this;
+	}
+
+	/**
+	 * @return Base
+	 */
+	public function commit()
+	{
+		$this->getEntityManager()->commit();
+		return $this;
+	}
+
+	/**
 	 * @return BaseEntity
 	 */
 	public function create()
@@ -57,6 +75,15 @@ abstract class Base extends EntityRepository
 	public function remove(BaseEntity $entity)
 	{
 		$this->getEntityManager()->remove($entity);
+		return $this;
+	}
+
+	/**
+	 * @return Base
+	 */
+	public function rollback()
+	{
+		$this->getEntityManager()->rollback();
 		return $this;
 	}
 
