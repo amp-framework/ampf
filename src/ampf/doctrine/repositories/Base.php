@@ -8,24 +8,6 @@ use \ampf\doctrine\entities\Base as BaseEntity;
 abstract class Base extends EntityRepository
 {
 	/**
-	 * @return Base
-	 */
-	public function beginTransaction()
-	{
-		$this->getEntityManager()->beginTransaction();
-		return $this;
-	}
-
-	/**
-	 * @return Base
-	 */
-	public function commit()
-	{
-		$this->getEntityManager()->commit();
-		return $this;
-	}
-
-	/**
 	 * @return BaseEntity
 	 */
 	public function create()
@@ -46,48 +28,6 @@ abstract class Base extends EntityRepository
 			)
 			->getQuery()->getSingleScalarResult()
 		);
-	}
-
-	/**
-	 * @see \Doctrine\ORM\EntityManager::flush()
-	 * @return Base
-	 */
-	public function flush(BaseEntity $entity = null)
-	{
-		$this->getEntityManager()->flush($entity);
-		return $this;
-	}
-
-	/**
-	 * @see \Doctrine\ORM\EntityManager::persist()
-	 * @return Base
-	 */
-	public function persist(BaseEntity $entity)
-	{
-		if (!$this->getEntityManager()->contains($entity))
-		{
-			$this->getEntityManager()->persist($entity);
-		}
-		return $this;
-	}
-
-	/**
-	 * @see \Doctrine\ORM\EntityManager::remove()
-	 * @return Base
-	 */
-	public function remove(BaseEntity $entity)
-	{
-		$this->getEntityManager()->remove($entity);
-		return $this;
-	}
-
-	/**
-	 * @return Base
-	 */
-	public function rollback()
-	{
-		$this->getEntityManager()->rollback();
-		return $this;
 	}
 
 	/**
