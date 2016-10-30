@@ -17,6 +17,20 @@ abstract class Base extends EntityRepository
 	}
 
 	/**
+	 * @return int
+	 */
+	public function findAllCount()
+	{
+		$qb = $this->createQueryBuilder('t');
+		return ((int)$qb
+			->select($qb->expr()->count(
+				('t.' . $this->getClassMetadata()->getSingleIdentifierFieldName()))
+			)
+			->getQuery()->getSingleScalarResult()
+		);
+	}
+
+	/**
 	 * @see \Doctrine\ORM\EntityManager::flush()
 	 * @return Base
 	 */
