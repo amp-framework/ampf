@@ -6,6 +6,24 @@ use ampf\services\hasher\HasherService;
 
 class DefaultHasherService implements HasherService
 {
+	static protected $TOKEN_TIMING_ATT = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
+
+	/**
+	 * @param string $input
+	 * @return void
+	 * @throws \Exception
+	 */
+	public function avoidTimingAttack(string $input)
+	{
+		// Add a random delay between 1 and 20 miliseconds
+		usleep(mt_rand(
+			(1 * 1000),
+			(20 * 1000)
+		));
+		// Burn some CPU time by doing an useless check
+		$this->check($input, static::$TOKEN_TIMING_ATT);
+	}
+
 	/**
 	 * @param string $string
 	 * @param string $storedHash
