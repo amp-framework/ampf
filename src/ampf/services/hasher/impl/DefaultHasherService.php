@@ -15,11 +15,6 @@ class DefaultHasherService implements HasherService
 	 */
 	public function avoidTimingAttack(string $input)
 	{
-		// Add a random delay between 1 and 20 miliseconds
-		usleep(mt_rand(
-			(1 * 1000),
-			(20 * 1000)
-		));
 		// Burn some CPU time by doing an useless check
 		$this->check($input, static::$TOKEN_TIMING_ATT);
 	}
@@ -35,6 +30,9 @@ class DefaultHasherService implements HasherService
 		if (trim($string) == '') throw new \Exception('String to check needs to be not-blank.');
 		if (strlen($storedHash) != 60) throw new \Exception('No valid bcrypt hash given.');
 
+		// Randomly sleep some milliseconds
+		$this->sleep();
+
 		return password_verify($string, $storedHash);
 	}
 
@@ -47,9 +45,24 @@ class DefaultHasherService implements HasherService
 	{
 		if (trim($string) == '') throw new \Exception();
 
+		// Randomly sleep some milliseconds
+		$this->sleep();
+
 		$hash = password_hash($string, \PASSWORD_BCRYPT, array('cost' => '12'));
 		if (strlen($hash) != 60) throw new \Exception();
 
 		return $hash;
+	}
+
+	/**
+	 * Sleeps randomly between 1 and 5 milliseconds to avoid timing attacks
+	 * and to mask the real runtime of the HasherService.
+	 */
+	protected function sleep()
+	{
+		usleep(mt_rand(
+			(1 * 1000),
+			(5 * 1000)
+		));
 	}
 }
