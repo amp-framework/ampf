@@ -20,5 +20,9 @@ interface View
 
 	public function formatNumber($number, $decimals = null, $decPoint = null, $thousandsSep = null);
 
-	public function formatTime($time = null, $format = null);
+	/**
+	 * @param \DateTime|numeric|null $time Either a \DateTime instance or a numeric representing an UNIX timestamp
+	 * @param string $format A \DateTime::format compatible string
+	 */
+	public function formatTime($time = null, string $format = null);
 }
