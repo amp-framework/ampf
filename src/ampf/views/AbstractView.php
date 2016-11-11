@@ -12,6 +12,16 @@ abstract class AbstractView implements BeanFactoryAccess, View
 
 	protected $memory = array();
 
+	/**
+	 * @var \DateTimeZone
+	 */
+	protected $timezone_utc = null;
+
+	/**
+	 * @var \DateTimeZone
+	 */
+	protected $timezone_local = null;
+
 	public function get($key)
 	{
 		if (!isset($this->memory[$key]))
@@ -73,29 +83,54 @@ abstract class AbstractView implements BeanFactoryAccess, View
 		return number_format($number, $decimals, $decPoint, $thousandsSep);
 	}
 
-	public function formatTime($time = null, $format = null)
+	public function formatTime($time = null, string $format = null)
 	{
-		if (is_null($time)) $time = time();
-		if ($time instanceof \DateTime)
+		// If not instanceof DateTime, try to create from unix timestamp
+		if (!($time instanceof \DateTime))
 		{
-			$time = $time->format('U');
-		}
-		elseif (!is_numeric($time))
-		{
-			$time = @strtotime($time);
-			// fallback (1st january 1970)
-			if ($time == false) $time = 0;
-		}
-		if (is_null($format))
-		{
-			$format = '%d.%m.%Y %H:%M';
+			$time = \DateTime::createFromFormat('U', $time, $this->getTimeZoneUTC());
+			if (!$time) throw new \Exception();
 		}
 
-		return strftime($format, $time);
+		if (is_null($format))
+		{
+			$format = 'd.m.Y H:i';
+		}
+
+		// Convert to local timezone
+		$datetime = clone($time);
+		/* @var $datetime \DateTime */
+		$datetime->setTimezone($this->getTimeZoneLocal());
+
+		return $datetime->format($format);
 	}
 
 	public function t($key, $args = null)
 	{
 		return $this->getTranslatorService()->translate($key, $args);
+	}
+
+	/**
+	 * @return \DateTimeZone
+	 */
+	protected function getTimeZoneLocal()
+	{
+		if ($this->timezone_local === null)
+		{
+			$this->timezone_local = new \DateTimeZone(date_default_timezone_get());
+		}
+		return $this->timezone_local;
+	}
+
+	/**
+	 * @return \DateTimeZone
+	 */
+	protected function getTimeZoneUTC()
+	{
+		if ($this->timezone_utc === null)
+		{
+			$this->timezone_utc = new \DateTimeZone('UTC');
+		}
+		return $this->timezone_utc;
 	}
 }
