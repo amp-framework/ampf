@@ -33,6 +33,16 @@ abstract class Base extends EntityRepository
 	}
 
 	/**
+	 * @param mixed $model
+	 * @return bool
+	 */
+	public function is($model)
+	{
+		$class = $this->getClassName();
+		return ($model instanceof $class);
+	}
+
+	/**
 	 * @param string $entityName
 	 * @return Base
 	 */
