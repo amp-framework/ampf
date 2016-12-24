@@ -204,6 +204,10 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 		}
 
 		$routePattern = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
+		if ($routePattern === null)
+		{
+			throw new \Exception("Route pattern not found for routeID {$routeID}");
+		}
 
 		$notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
 		if (count($notDefinedParams) > 0)
