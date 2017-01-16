@@ -29,11 +29,21 @@ abstract class Base extends EntityRepository
 			{
 				throw new \Exception("criteria keys must always be strings");
 			}
-			$where->add($qb->expr()->eq(
-				('t.' . $key),
-				(':' . $key)
-			));
-			$qb->setParameter($key, $value);
+
+			if ($value === null)
+			{
+				$where->add($qb->expr()->isNull(
+					('t.' . $key)
+				));
+			}
+			else
+			{
+				$where->add($qb->expr()->eq(
+					('t.' . $key),
+					(':' . $key)
+				));
+				$qb->setParameter($key, $value);
+			}
 		}
 		$qb->where($where);
 
