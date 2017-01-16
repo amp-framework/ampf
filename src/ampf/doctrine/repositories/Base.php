@@ -19,8 +19,8 @@ abstract class Base extends EntityRepository
 			throw new \Exception("You may not use this method to truncate a whole table.");
 		}
 
-		$qb = $this->_em->createQueryBuilder();
-		$qb->delete($this->getClassName(), 't');
+		$qb = $this->getEntityManager()->createQueryBuilder();
+		$qb->select('t')->from($this->getClassName(), 't');
 
 		$where = $qb->expr()->andX();
 		foreach ($criteria as $key => $value)
@@ -47,7 +47,7 @@ abstract class Base extends EntityRepository
 		}
 		$qb->where($where);
 
-		return $qb->getQuery()->execute();
+		return $this->bulkRemoveQuery($qb->getQuery());
 	}
 
 	/**
@@ -83,6 +83,30 @@ abstract class Base extends EntityRepository
 	{
 		$class = $this->getClassName();
 		return ($model instanceof $class);
+	}
+
+	/**
+	 * @param \Doctrine\ORM\Query $query
+	 * @return int
+	 */
+	protected function bulkRemoveQuery(\Doctrine\ORM\Query $query)
+	{
+		$i = 0;
+		$result = $query->iterate();
+		while (($row = $result->next()) !== false)
+		{
+			$i++;
+			$this->getEntityManager()->remove($row[0]);
+
+			// Flush every 20 objects. This aint a big number, maybe we need to increase it
+			if (($i % 20) === 0)
+			{
+				$this->getEntityManager()->flush();
+				$this->getEntityManager()->clear();
+			}
+		}
+		$this->getEntityManager()->flush();
+		return $i;
 	}
 
 	/**
