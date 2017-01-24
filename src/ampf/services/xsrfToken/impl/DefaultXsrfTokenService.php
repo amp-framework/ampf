@@ -53,7 +53,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 			// do this to make sure we do not override the old token in the session
 			$this->getOldToken();
 
-			$random = mcrypt_create_iv(static::$TOKEN_LEN);
+			$random = random_bytes(static::$TOKEN_LEN);
 			$random = bin2hex($random);
 			$this->tokenCache = substr($random, 0, static::$TOKEN_LEN);
 
