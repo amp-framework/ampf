@@ -10,6 +10,9 @@ abstract class AbstractView implements BeanFactoryAccess, View
 	use \ampf\beans\access\TranslatorServiceAccess;
 	use \ampf\beans\access\ViewResolverAccess;
 
+	/**
+	 * @var array
+	 */
 	protected $memory = array();
 
 	/**
@@ -22,21 +25,42 @@ abstract class AbstractView implements BeanFactoryAccess, View
 	 */
 	protected $timezone_local = null;
 
-	public function get($key)
+	/**
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function get(string $key)
 	{
-		if (!isset($this->memory[$key]))
+		if (!$this->has($key))
 		{
 			return null;
 		}
 		return $this->memory[$key];
 	}
 
-	public function set($key, $value)
+	/**
+	 * @param string $key
+	 * @param mixed $value
+	 */
+	public function set(string $key, $value)
 	{
 		$this->memory[$key] = $value;
 	}
 
-	public function render($view)
+	/**
+	 * @param string $key
+	 * @return bool
+	 */
+	public function has(string $key)
+	{
+		return isset($this->memory[$key]);
+	}
+
+	/**
+	 * @param string $view
+	 * @return string
+	 */
+	public function render(string $view)
 	{
 		$path = $this->getViewResolver()->getViewFilename($view);
 
@@ -60,7 +84,12 @@ abstract class AbstractView implements BeanFactoryAccess, View
 		$this->memory = array();
 	}
 
-	public function subRender($viewID, $params = null)
+	/**
+	 * @param string $viewID
+	 * @param array $params
+	 * @return string
+	 */
+	public function subRender(string $viewID, array $params = null)
 	{
 		if (is_null($params)) $params = array();
 		// get a new view
@@ -74,7 +103,14 @@ abstract class AbstractView implements BeanFactoryAccess, View
 		return $view->render($viewID);
 	}
 
-	public function formatNumber($number, $decimals = null, $decPoint = null, $thousandsSep = null)
+	/**
+	 * @param numeric $number
+	 * @param int $decimals
+	 * @param string $decPoint
+	 * @param string $thousandsSep
+	 * @return string
+	 */
+	public function formatNumber($number, int $decimals = null, string $decPoint = null, string $thousandsSep = null)
 	{
 		if (is_null($decimals)) $decimals = 0;
 		if (is_null($decPoint)) $decPoint = '.';
@@ -83,6 +119,12 @@ abstract class AbstractView implements BeanFactoryAccess, View
 		return number_format($number, $decimals, $decPoint, $thousandsSep);
 	}
 
+	/**
+	 * @param \DateTime|string $time
+	 * @param string $format
+	 * @return string
+	 * @throws \Exception
+	 */
 	public function formatTime($time = null, string $format = null)
 	{
 		// If not instanceof DateTime, try to create from unix timestamp
@@ -105,7 +147,12 @@ abstract class AbstractView implements BeanFactoryAccess, View
 		return $datetime->format($format);
 	}
 
-	public function t($key, $args = null)
+	/**
+	 * @param string $key
+	 * @param array $args
+	 * @return string
+	 */
+	public function t(string $key, array $args = null)
 	{
 		return $this->getTranslatorService()->translate($key, $args);
 	}
