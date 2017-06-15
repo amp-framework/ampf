@@ -120,8 +120,8 @@ abstract class AbstractView implements BeanFactoryAccess, View
 	}
 
 	/**
-	 * @param \DateTime|string $time
-	 * @param string $format
+	 * @param \DateTime|numeric|null $time Either a \DateTime instance or a numeric representing an UNIX timestamp
+	 * @param string $format A \DateTime::format compatible string
 	 * @return string
 	 * @throws \Exception
 	 */
