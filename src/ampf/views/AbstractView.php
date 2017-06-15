@@ -27,13 +27,14 @@ abstract class AbstractView implements BeanFactoryAccess, View
 
 	/**
 	 * @param string $key
+	 * @param mixed $default
 	 * @return mixed
 	 */
-	public function get(string $key)
+	public function get(string $key, $default = null)
 	{
 		if (!$this->has($key))
 		{
-			return null;
+			return $default;
 		}
 		return $this->memory[$key];
 	}
