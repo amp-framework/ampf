@@ -110,7 +110,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
 		foreach ($this->headers as $header)
 		{
-			header($header);
+			header($header, true);
 		}
 		$this->headers = array();
 
