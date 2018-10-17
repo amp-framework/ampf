@@ -199,7 +199,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 		if ($addToken === true)
 		{
 			$tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
-			$tokenValue = $this->getXsrfTokenService()->getToken();
+			$tokenValue = $this->getXsrfTokenService()->getNewToken();
 			$params[$tokenKey] = $tokenValue;
 		}
 

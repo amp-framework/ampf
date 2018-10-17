@@ -7,12 +7,7 @@ interface XsrfTokenService
 	/**
 	 * @return string
 	 */
-	public function getOldToken();
-
-	/**
-	 * @return string
-	 */
-	public function getToken();
+	public function getNewToken();
 
 	/**
 	 * @return string
