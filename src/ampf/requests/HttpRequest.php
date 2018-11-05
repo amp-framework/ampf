@@ -72,6 +72,21 @@ interface HttpRequest
 	public function getPostParam(string $key);
 
 	/**
+	 * Returns the HTTP referer of this request (if any) localized, which here means
+	 * cleared by the HTTP host and subdirectory.
+	 *
+	 * @return string|null
+	 */
+	public function getRefererLocalized(): ?string;
+
+	/**
+	 * Returns the HTTP referer of this request (if any).
+	 *
+	 * @return string|null
+	 */
+	public function getRefererRaw(): ?string;
+
+	/**
 	 * @return string
 	 */
 	public function getResponse();

@@ -285,6 +285,52 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 	}
 
 	/**
+	 * @return null|string
+	 */
+	public function getRefererLocalized(): ?string
+	{
+		// Get the raw referer
+		$referer = $this->getRefererRaw();
+		if (!$referer) return null;
+
+		// Get the HTTP host, aka domain name of this project
+		$domain = ('://' . $this->server['HTTP_HOST'] . '/');
+		// Do we have $domain as a domain name in the referer?
+		if (($i = mb_strpos($referer, $domain)) !== false) {
+			// Yes, so remove it from the referer
+			$referer = mb_substr($referer, ($i + mb_strlen($domain)));
+		}
+		// Trim beginning slashes of the resulting referer...
+		$referer = ltrim($referer, '/');
+
+		// Get our app prefix, aka the webserver document root prefix of our app
+		$prefix = ltrim($this->getDirname($this->server['PHP_SELF']), '/');
+		// Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
+		if ($prefix != '' && ($i = mb_strpos($referer, $prefix)) === 0) {
+			// Yes, so remove it from the referer
+			$referer = mb_substr($referer, ($i + mb_strlen($prefix)));
+		}
+		// Trim beginning slashes of the resulting referer...
+		$referer = ltrim($referer, '/');
+
+		// And return with the resulting referer, null if we are empty
+		if (trim($referer) == '') {
+			return null;
+		}
+		return $referer;
+	}
+
+	/**
+	 * @return null|string
+	 */
+	public function getRefererRaw(): ?string
+	{
+		$referer = $this->server['HTTP_REFERER'];
+		if (!$referer || trim($referer) == '') return null;
+		return $referer;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function getResponse()
