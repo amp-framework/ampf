@@ -265,7 +265,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 	 */
 	public function getLink(string $relative)
 	{
-		$path = $this->getDirname($this->server['PHP_SELF']);
+		$path = $this->getDirname($this->server['SCRIPT_NAME']);
 
 		$route = '';
 		if (!empty($path)) $route .= ('/' . $path);
@@ -304,7 +304,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 		$referer = ltrim($referer, '/');
 
 		// Get our app prefix, aka the webserver document root prefix of our app
-		$prefix = ltrim($this->getDirname($this->server['PHP_SELF']), '/');
+		$prefix = ltrim($this->getDirname($this->server['SCRIPT_NAME']), '/');
 		// Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
 		if ($prefix != '' && ($i = mb_strpos($referer, $prefix)) === 0) {
 			// Yes, so remove it from the referer
@@ -509,7 +509,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 		$route = ltrim($route, '/');
 
 		// Get the base path
-		$base = $this->getDirname($this->server['PHP_SELF']);
+		$base = $this->getDirname($this->server['SCRIPT_NAME']);
 		// If it is set, remove it from the route
 		if ($base != '' && strpos($route, $base) === 0)
 		{
