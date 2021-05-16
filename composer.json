@@ -1,14 +1,19 @@
 {
-	"name": "amp-framework/ampf",
-	"description": "ampf MVC PHP framework",
-	"license": "MIT",
-	"autoload": {
-		"psr-4": {
-			"ampf\\": "src/ampf/"
-		}
-	},
-	"require": {
-		"php": ">=7.0.0",
-		"doctrine/orm": "^2.5"
-	}
+  "name": "amp-framework/ampf",
+  "description": "ampf MVC PHP framework",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "ampf\\": "src/ampf/"
+    }
+  },
+  "require": {
+    "php": ">=8.0.0",
+    "doctrine/orm": "^2.8",
+    "ext-pdo": "*"
+  },
+  "require-dev": {
+    "slevomat/coding-standard": "^7.0",
+    "friendsofphp/php-cs-fixer": "^3.0"
+  }
 }
