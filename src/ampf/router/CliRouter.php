@@ -1,23 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\router;
 
-use \ampf\requests\CliRequest;
-use \ampf\controller\Controller;
+use ampf\controller\Controller;
+use ampf\requests\CliRequest;
 
 interface CliRouter
 {
-	/**
-	 * @param CliRequest $request
-	 * @return CliRouter
-	 * @throws \Exception
-	 */
-	public function route(CliRequest $request);
+    public function route(CliRequest $request): self;
 
-	/**
-	 * @param Controller $controller
-	 * @param array $params
-	 * @return CliRouter
-	 */
-	public function routeBean(Controller $controller, array $params = null);
+    public function routeBean(Controller $controller, ?array $params = null): self;
 }

@@ -1,41 +1,46 @@
 <?php
 
-return array(
+declare(strict_types=1);
 
-	'routes' => array(
-	),
+use ampf\requests\impl\DefaultCli;
+use ampf\router\impl\DefaultCliRouter;
+use ampf\router\impl\DefaultRouteResolver;
+use ampf\views\impl\DefaultCliView;
 
-	'beans' => array(
-		/**
-		 * Routing stuff
-		 */
-		'RouteResolver' => array(
-			'class' => '\ampf\router\impl\DefaultRouteResolver',
-		),
-		'Router' => array(
-			'class' => '\ampf\router\impl\DefaultCliRouter',
-		),
+return [
+    'routes' => [],
 
-		/**
-		 * Request stuff
-		 */
-		'Request' => array(
-			'class' => '\ampf\requests\impl\DefaultCli',
-		),
-		'RequestStub' => array(
-			'class' => '\ampf\requests\impl\DefaultCli',
-			'parent' => 'Request',
-			'scope' => 'prototype',
-		),
+    'beans' => [
+        /**
+         * Routing stuff
+         */
+        'RouteResolver' => [
+            'class' => DefaultRouteResolver::class,
+        ],
+        'Router' => [
+            'class' => DefaultCliRouter::class,
+        ],
 
-		/**
-		 * View stuff
-		 */
-		'View' => array(
-			'class' => '\ampf\views\impl\DefaultCliView',
-			'scope' => 'prototype',
-		),
-	),
+        /**
+         * Request stuff
+         */
+        'Request' => [
+            'class' => DefaultCli::class,
+        ],
+        'RequestStub' => [
+            'class' => DefaultCli::class,
+            'parent' => 'Request',
+            'scope' => 'prototype',
+        ],
 
-	'viewDirectory' => null,
-);
+        /**
+         * View stuff
+         */
+        'View' => [
+            'class' => DefaultCliView::class,
+            'scope' => 'prototype',
+        ],
+    ],
+
+    'viewDirectory' => null,
+];

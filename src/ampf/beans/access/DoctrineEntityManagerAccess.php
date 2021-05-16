@@ -1,37 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
-use \Doctrine\ORM\EntityManagerInterface;
+use ampf\beans\BeanFactory;
+use Doctrine\ORM\EntityManagerInterface;
 
 trait DoctrineEntityManagerAccess
 {
-	protected $__doctrineEntityManager = null;
+    protected ?EntityManagerInterface $__doctrineEntityManager = null;
 
-	/**
-	 * @return EntityManagerInterface
-	 */
-	public function getDoctrineEntityManager()
-	{
-		if ($this->__doctrineEntityManager === null)
-		{
-			$this->setDoctrineEntityManager(
-				$this->getBeanFactory()->get('EntityManagerFactory')->get()
-			);
-		}
-		return $this->__doctrineEntityManager;
-	}
+    public function getDoctrineEntityManager(): EntityManagerInterface
+    {
+        if ($this->__doctrineEntityManager === null) {
+            $this->setDoctrineEntityManager(
+                $this->getBeanFactory()->get('EntityManagerFactory')->get(),
+            );
+        }
 
-	/**
-	 * @param EntityManagerInterface $entityManager
-	 */
-	public function setDoctrineEntityManager(EntityManagerInterface $entityManager)
-	{
-		$this->__doctrineEntityManager = $entityManager;
-	}
+        return $this->__doctrineEntityManager;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setDoctrineEntityManager(EntityManagerInterface $entityManager): void
+    {
+        $this->__doctrineEntityManager = $entityManager;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

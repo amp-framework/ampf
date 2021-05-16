@@ -1,68 +1,68 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\hasher\impl;
 
+// phpcs:disable SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses.IncorrectlyOrderedUses
 use ampf\services\hasher\HasherService;
+use const PASSWORD_BCRYPT;
+use RuntimeException;
 
 class DefaultHasherService implements HasherService
 {
-	static protected $TOKEN_TIMING_ATT = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
+    protected const TOKEN_TIMING_ATT = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
 
-	/**
-	 * @param string $input
-	 * @return void
-	 * @throws \Exception
-	 */
-	public function avoidTimingAttack(string $input)
-	{
-		// Burn some CPU time by doing an useless check
-		$this->check($input, static::$TOKEN_TIMING_ATT);
-	}
+    public function avoidTimingAttack(string $input): void
+    {
+        // Burn some CPU time by doing an useless check
+        $this->check($input, static::TOKEN_TIMING_ATT);
+    }
 
-	/**
-	 * @param string $string
-	 * @param string $storedHash
-	 * @return boolean
-	 * @throws \Exception
-	 */
-	public function check(string $string, string $storedHash)
-	{
-		if (trim($string) == '') throw new \Exception('String to check needs to be not-blank.');
-		if (strlen($storedHash) != 60) throw new \Exception('No valid bcrypt hash given.');
+    public function check(string $string, string $storedHash): bool
+    {
+        if (trim($string) === '') {
+            throw new RuntimeException('String to check needs to be not-blank.');
+        }
 
-		// Randomly sleep some milliseconds
-		$this->sleep();
+        if (strlen($storedHash) !== 60) {
+            throw new RuntimeException('No valid bcrypt hash given.');
+        }
 
-		return password_verify($string, $storedHash);
-	}
+        // Randomly sleep some milliseconds
+        $this->sleep();
 
-	/**
-	 * @param string $string
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function hash(string $string)
-	{
-		if (trim($string) == '') throw new \Exception();
+        return password_verify($string, $storedHash);
+    }
 
-		// Randomly sleep some milliseconds
-		$this->sleep();
+    public function hash(string $string): string
+    {
+        if (trim($string) === '') {
+            throw new RuntimeException();
+        }
 
-		$hash = password_hash($string, \PASSWORD_BCRYPT, array('cost' => '12'));
-		if (strlen($hash) != 60) throw new \Exception();
+        // Randomly sleep some milliseconds
+        $this->sleep();
 
-		return $hash;
-	}
+        $hash = password_hash($string, PASSWORD_BCRYPT, ['cost' => '12']);
+        if (mb_strlen($hash) !== 60) {
+            throw new RuntimeException();
+        }
 
-	/**
-	 * Sleeps randomly between 1 and 5 milliseconds to avoid timing attacks
-	 * and to mask the real runtime of the HasherService.
-	 */
-	protected function sleep()
-	{
-		usleep(mt_rand(
-			(1 * 1000),
-			(5 * 1000)
-		));
-	}
+        return $hash;
+    }
+
+    /**
+     * Sleeps randomly between 1 and 5 milliseconds to avoid timing attacks
+     * and to mask the real runtime of the HasherService.
+     */
+    protected function sleep(): void
+    {
+        usleep(
+            mt_rand(
+                (1 * 1000),
+                (5 * 1000),
+            ),
+        );
+    }
 }

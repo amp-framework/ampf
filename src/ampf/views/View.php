@@ -1,68 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\views;
 
 interface View
 {
-	/**
-	 * @param string $key
-	 * @param mixed $default
-	 * @return mixed
-	 */
-	public function get(string $key, $default = null);
+    public function get(string $key, mixed $default = null): mixed;
 
-	/**
-	 * @param string $key
-	 * @param mixed $value
-	 */
-	public function set(string $key, $value);
+    public function set(string $key, mixed $value): void;
 
-	/**
-	 * @param string $key
-	 * @return bool
-	 */
-	public function has(string $key);
+    public function has(string $key): bool;
 
-	/**
-	 * @param string $view
-	 * @return string
-	 */
-	public function render(string $view);
+    public function render(string $view): string;
 
-	public function reset();
+    public function reset(): void;
 
-	/**
-	 * @param string $viewID
-	 * @param array $params
-	 * @return string
-	 */
-	public function subRender(string $viewID, array $params = null);
+    public function subRender(string $viewID, ?array $params = null): string;
 
-	/**
-	 * @param numeric $number
-	 * @param int $decimals
-	 * @param string $decPoint
-	 * @param string $thousandsSep
-	 * @return string
-	 */
-	public function formatNumber($number, int $decimals = null, string $decPoint = null, string $thousandsSep = null);
+    public function formatNumber(
+        string $number,
+        ?int $decimals = null,
+        ?string $decPoint = null,
+        ?string $thousandsSep = null,
+    ): string;
 
-	/**
-	 * @param \DateTime|numeric|null $time Either a \DateTime instance or a numeric representing an UNIX timestamp
-	 * @param string $format A \DateTime::format compatible string
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function formatTime($time = null, string $format = null);
+    /**
+     * @param \DateTime|numeric|null $time   Either a \DateTime instance or a numeric representing an UNIX timestamp
+     * @param string|null            $format A \DateTime::format compatible string
+     */
+    public function formatTime(mixed $time = null, ?string $format = null): string;
 
-	/**
-	 * @param string $key
-	 * @param array $args
-	 * @return string
-	 */
-	public function t(string $key, array $args = null);
+    public function t(string $key, ?array $args = null): string;
 
-	public function subRoute($controllerBean, $params = null);
+    public function subRoute(string $controllerBean, ?array $params = null): string;
 
-	public function escape($string);
+    public function escape(mixed $string): string;
 }

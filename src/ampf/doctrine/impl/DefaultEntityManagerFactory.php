@@ -1,51 +1,46 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\doctrine\impl;
 
-use \Doctrine\DBAL\Types\Type;
-use \Doctrine\ORM\EntityManager;
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\doctrine\EntityManagerFactory;
+use ampf\beans\access\DoctrineConfigAccess;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\doctrine\EntityManagerFactory;
+use Doctrine\DBAL\Types\Type;
+use Doctrine\ORM\EntityManager;
 
 class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFactory
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
-	use \ampf\beans\access\DoctrineConfigAccess;
+    use DefaultBeanFactoryAccess;
+    use DoctrineConfigAccess;
 
-	/**
-	 * @var EntityManager
-	 */
-	protected $_em = null;
+    protected ?EntityManager $_em = null;
 
-	public function init()
-	{
-		$doctrine = $this->getDoctrineConfig();
+    public function init(): void
+    {
+        $doctrine = $this->getDoctrineConfig();
 
-		foreach ($doctrine->getTypeOverrides() as $type => $override)
-		{
-			Type::overrideType($type, $override);
-		}
+        foreach ($doctrine->getTypeOverrides() as $type => $override) {
+            Type::overrideType($type, $override);
+        }
 
-		$this->_em = EntityManager::create(
-			$doctrine->getConnectionParams(),
-			$doctrine->getConfiguration()
-		);
+        $this->_em = EntityManager::create(
+            $doctrine->getConnectionParams(),
+            $doctrine->getConfiguration(),
+        );
 
-		if (count($doctrine->getMappingOverrides()) > 0)
-		{
-			$platform = $this->_em->getConnection()->getDatabasePlatform();
-			foreach ($doctrine->getMappingOverrides() as $mapping => $override)
-			{
-				$platform->registerDoctrineTypeMapping($mapping, $override);
-			}
-		}
-	}
+        if (count($doctrine->getMappingOverrides()) > 0) {
+            $platform = $this->_em->getConnection()->getDatabasePlatform();
+            foreach ($doctrine->getMappingOverrides() as $mapping => $override) {
+                $platform->registerDoctrineTypeMapping($mapping, $override);
+            }
+        }
+    }
 
-	/**
-	 * @return EntityManager
-	 */
-	public function get()
-	{
-		return $this->_em;
-	}
+    public function get(): ?EntityManager
+    {
+        return $this->_em;
+    }
 }

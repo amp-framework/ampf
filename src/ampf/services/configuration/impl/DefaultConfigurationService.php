@@ -1,73 +1,56 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\configuration\impl;
 
-use \ampf\services\configuration\ConfigurationService;
+use ampf\services\configuration\ConfigurationService;
+use RuntimeException;
 
 class DefaultConfigurationService implements ConfigurationService
 {
-	/**
-	 * @var array
-	 */
-	protected $config = array();
+    /** @var array<string, array<string, string>> */
+    protected array $config = [];
 
-	/**
-	 * @var string
-	 */
-	protected $domain = null;
+    protected ?string $domain = null;
 
-	/**
-	 * @param string $key
-	 * @param string|null $domain
-	 * @return string|null
-	 */
-	public function get(string $key, string $domain = null)
-	{
-		if ($domain === null)
-		{
-			$domain = $this->domain;
-		}
+    public function get(string $key, ?string $domain = null): ?string
+    {
+        if ($domain === null) {
+            $domain = $this->domain;
+        }
 
-		while (
-			strpos($domain, '.') !== false
-			&& trim($domain) != ''
-		)
-		{
-			if (
-				isset($this->config[$domain])
-				&& isset($this->config[$domain][$key])
-			)
-			{
-				return $this->config[$domain][$key];
-			}
+        while (
+            strpos($domain, '.') !== false
+            && trim($domain) !== ''
+        ) {
+            if (
+                isset($this->config[$domain], $this->config[$domain][$key])
+            ) {
+                return $this->config[$domain][$key];
+            }
 
-			$domain = substr($domain, 0, strrpos($domain, '.'));
-		}
-	}
+            $domain = substr($domain, 0, strrpos($domain, '.'));
+        }
+    }
 
-	/**
-	 * @param string $domain
-	 * @return ConfigurationService
-	 */
-	public function setDomain(string $domain)
-	{
-		$this->domain = $domain;
-	}
+    public function setDomain(string $domain): self
+    {
+        $this->domain = $domain;
 
-	/**
-	 * Bean setters
-	 */
+        return $this;
+    }
 
-	public function setConfig(array $config)
-	{
-		if (
-			!isset($config['configuration.service'])
-			|| !is_array($config['configuration.service'])
-		)
-		{
-			throw new \Exception();
-		}
+    /** @param array<string, mixed> $config */
+    public function setConfig(array $config): void
+    {
+        if (
+            !isset($config['configuration.service'])
+            || !is_array($config['configuration.service'])
+        ) {
+            throw new RuntimeException();
+        }
 
-		$this->config = $config['configuration.service'];
-	}
+        $this->config = $config['configuration.service'];
+    }
 }

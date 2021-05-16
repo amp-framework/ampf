@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
-use \ampf\services\configuration\ConfigurationService;
+use ampf\beans\BeanFactory;
+use ampf\services\configuration\ConfigurationService;
 
 trait ConfigurationServiceAccess
 {
-	protected $__configurationService = null;
+    protected ?ConfigurationService $__configurationService = null;
 
-	/**
-	 * @return ConfigurationService
-	 */
-	public function getConfigurationService()
-	{
-		if ($this->__configurationService === null)
-		{
-			$this->setConfigurationService($this->getBeanFactory()->get('ConfigurationService'));
-		}
-		return $this->__configurationService;
-	}
+    public function getConfigurationService(): ConfigurationService
+    {
+        if ($this->__configurationService === null) {
+            $this->setConfigurationService($this->getBeanFactory()->get('ConfigurationService'));
+        }
 
-	/**
-	 * @param ConfigurationService $configurationService
-	 */
-	public function setConfigurationService(ConfigurationService $configurationService)
-	{
-		$this->__configurationService = $configurationService;
-	}
+        return $this->__configurationService;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setConfigurationService(ConfigurationService $configurationService): void
+    {
+        $this->__configurationService = $configurationService;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

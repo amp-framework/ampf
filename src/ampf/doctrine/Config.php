@@ -1,26 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\doctrine;
+
+use Doctrine\ORM\Configuration;
 
 interface Config
 {
-	/**
-	 * @return \Doctrine\ORM\Configuration
-	 */
-	public function getConfiguration();
+    public function getConfiguration(): Configuration;
 
-	/**
-	 * @return array
-	 */
-	public function getConnectionParams();
+    /** @return array<string, mixed> */
+    public function getConnectionParams(): array;
 
-	/**
-	 * @return array
-	 */
-	public function getMappingOverrides();
+    /** @return array<string, mixed> */
+    public function getMappingOverrides(): array;
 
-	/**
-	 * @return array
-	 */
-	public function getTypeOverrides();
+    /** @return array<string, mixed> */
+    public function getTypeOverrides(): array;
 }

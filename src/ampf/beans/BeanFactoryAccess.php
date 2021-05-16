@@ -1,18 +1,12 @@
 <?php
 
-namespace ampf\beans;
+declare(strict_types=1);
 
-use \ampf\beans\BeanFactory;
+namespace ampf\beans;
 
 interface BeanFactoryAccess
 {
-	/**
-	 * @return BeanFactory
-	 */
-	public function getBeanFactory();
+    public function getBeanFactory(): BeanFactory;
 
-	/**
-	 * @param BeanFactory $beanFactory
-	 */
-	public function setBeanFactory(BeanFactory $beanFactory);
+    public function setBeanFactory(BeanFactory $beanFactory): void;
 }

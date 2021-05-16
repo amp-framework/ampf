@@ -1,231 +1,203 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\router\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\router\RouteResolver;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\router\RouteResolver;
+use JetBrains\PhpStorm\ArrayShape;
+use RuntimeException;
 
 class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+    use DefaultBeanFactoryAccess;
 
-	/**
-	 * @var array
-	 */
-	protected $_config = null;
+    /** @var ?array<string, array<string, mixed>> */
+    protected ?array $_config = null;
 
-	/**
-	 * @param string $routePattern
-	 * @return string
-	 */
-	public function getControllerByRoutePattern(string $routePattern)
-	{
-		$array = $this->getControllerParamsByRoutePattern($routePattern);
-		if (is_null($array)) return null;
-		return $array[1];
-	}
+    public function getControllerByRoutePattern(string $routePattern): ?string
+    {
+        $array = $this->getControllerParamsByRoutePattern($routePattern);
+        if ($array === null) {
+            return null;
+        }
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @return array
-	 */
-	public function getNotDefinedParams(string $routeID, array $params)
-	{
-		$routePattern = $this->getRoutePattern($routeID);
-		if ($routePattern === null)
-		{
-			return null;
-		}
+        return $array[1];
+    }
 
-		if ($params === null || !is_array($params))
-		{
-			$params = array();
-		}
-		return $this->getAdjustedRouteParams($routePattern, $params)['notUsedParams'];
-	}
+    /** @return ?string[] */
+    public function getNotDefinedParams(string $routeID, ?array $params = null): ?array
+    {
+        $routePattern = $this->getRoutePattern($routeID);
+        if ($routePattern === null) {
+            return null;
+        }
 
-	/**
-	 * @param string $routePattern
-	 * @return array
-	 */
-	public function getParamsByRoutePattern(string $routePattern)
-	{
-		$array = $this->getControllerParamsByRoutePattern($routePattern);
-		if (is_null($array)) return null;
-		return $array[2];
-	}
+        if ($params === null) {
+            $params = [];
+        }
 
-	/**
-	 * @param string $routePattern
-	 * @return string
-	 */
-	public function getRouteIDByRoutePattern(string $routePattern)
-	{
-		$array = $this->getControllerParamsByRoutePattern($routePattern);
-		if (is_null($array)) return null;
-		return $array[0];
-	}
+        return $this->getAdjustedRouteParams($routePattern, $params)['notUsedParams'];
+    }
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @return string
-	 */
-	public function getRoutePatternByRouteID(string $routeID, array $params = null)
-	{
-		$routePattern = $this->getRoutePattern($routeID);
-		if ($routePattern === null)
-		{
-			return null;
-		}
+    /** @return ?string[] */
+    public function getParamsByRoutePattern(string $routePattern): ?array
+    {
+        $array = $this->getControllerParamsByRoutePattern($routePattern);
+        if ($array === null) {
+            return null;
+        }
 
-		if ($params == null || !is_array($params))
-		{
-			$params = array();
-		}
-		return $this->getAdjustedRouteParams($routePattern, $params)['route'];
-	}
+        return $array[2];
+    }
 
-	/**
-	 * Protected methods
-	 */
+    public function getRouteIDByRoutePattern(string $routePattern): ?string
+    {
+        $array = $this->getControllerParamsByRoutePattern($routePattern);
+        if ($array === null) {
+            return null;
+        }
 
-	/**
-	 * @param string $routePattern
-	 * @return array
-	 */
-	protected function getControllerParamsByRoutePattern(string $routePattern)
-	{
-		foreach ($this->getConfig() as $routeID => $value)
-		{
-			$preg = ('/^' . str_replace('/', '\/', $value['pattern']) . '$/');
-			$matches = array();
-			if (preg_match($preg, $routePattern, $matches))
-			{
-				$matches = $this->cleanMatches($matches, $this->getRouteParams($value['pattern']));
+        return $array[0];
+    }
 
-				return array($routeID, $value['controller'], $matches);
-			}
-		}
+    /** @param array<string, string> $params */
+    public function getRoutePatternByRouteID(string $routeID, ?array $params = null): ?string
+    {
+        $routePattern = $this->getRoutePattern($routeID);
+        if ($routePattern === null) {
+            return null;
+        }
 
-		return null;
-	}
+        if ($params === null) {
+            $params = [];
+        }
 
-	/**
-	 * @param array $matches
-	 * @param array $allowedParams
-	 * @return array
-	 */
-	protected function cleanMatches(array $matches, array $allowedParams)
-	{
-		$result = array();
-		foreach ($matches as $key => $value)
-		{
-			if (in_array($key, $allowedParams, true))
-			{
-				$result[$key] = $value;
-			}
-		}
-		return $result;
-	}
+        return $this->getAdjustedRouteParams($routePattern, $params)['route'];
+    }
 
-	/**
-	 * @param string $regex
-	 * @param array $params
-	 * @return array
-	 * @throws \Exception
-	 */
-	protected function getAdjustedRouteParams(string $regex, array $params = null)
-	{
-		if ($params === null || !is_array($params))
-		{
-			$params = array();
-		}
-		$matches = array();
-		$catch = '/\(\?P\<(.+)\>[^\)]+\)/';
-		preg_match_all($catch, $regex, $matches, PREG_SET_ORDER);
-		foreach ($matches as $match)
-		{
-			$search = $match[0];
-			if (!isset($params[$match[1]])) throw new \Exception("Missing parameter " . $match[1]);
-			$replace = $params[$match[1]];
-			unset ($params[$match[1]]);
-			$regex = str_replace($search, $replace, $regex);
-		}
+    /** @param array<string, mixed> $config */
+    public function setConfig(array $config): void
+    {
+        if (!isset($config['routes'])) {
+            throw new RuntimeException();
+        }
 
-		return array('route' => $regex, 'notUsedParams' => $params);
-	}
+        $config = $config['routes'];
+        if (!is_array($config) || count($config) < 1) {
+            throw new RuntimeException();
+        }
 
-	/**
-	 * @param string $regex
-	 * @return array
-	 */
-	protected function getRouteParams(string $regex)
-	{
-		$matches = array();
-		$catch = '/\(\?P\<(.+)\>[^\)]+\)/';
-		preg_match_all($catch, $regex, $matches, PREG_PATTERN_ORDER);
-		return $matches[1];
-	}
+        $correctKeys = ['pattern', 'controller'];
 
-	/**
-	 * @param string $routeID
-	 * @return string
-	 * @throws \Exception
-	 */
-	protected function getRoutePattern(string $routeID)
-	{
-		if (trim($routeID) == '') throw new \Exception();
+        foreach ($config as $key => $value) {
+            if (!is_string($key) || trim($key) === '') {
+                throw new RuntimeException();
+            }
 
-		foreach ($this->getConfig() as $_routeID => $value)
-		{
-			if ($_routeID === $routeID)
-			{
-				return $value['pattern'];
-			}
-		}
+            $diff = array_diff(array_keys($value), $correctKeys);
+            if (count($diff) !== 0) {
+                throw new RuntimeException();
+            }
+        }
 
-		return null;
-	}
+        $this->_config = $config;
+    }
 
-	// Bean getters
+    /**
+     * @param array<string, string> $matches
+     * @param string[]              $allowedParams
+     *
+     * @return array<string, string>
+     */
+    protected function cleanMatches(array $matches, array $allowedParams): array
+    {
+        $result = [];
+        foreach ($matches as $key => $value) {
+            if (in_array($key, $allowedParams, true)) {
+                $result[$key] = $value;
+            }
+        }
 
-	/**
-	 * @return array
-	 */
-	public function getConfig()
-	{
-		if (is_null($this->_config))
-		{
-			$this->setConfig($this->getBeanFactory()->get('Config'));
-		}
-		return $this->_config;
-	}
+        return $result;
+    }
 
-	// Bean setters
+    /** @return array<string, mixed> */
+    #[ArrayShape(['route' => 'string', 'notUsedParams' => 'array'])]
+    protected function getAdjustedRouteParams(string $regex, ?array $params = null): array
+    {
+        if ($params === null) {
+            $params = [];
+        }
 
-	/**
-	 * @param array $config
-	 * @return RouteResolver
-	 * @throws \Exception
-	 */
-	public function setConfig(array $config)
-	{
-		if (!is_array($config) || !isset($config['routes'])) throw new \Exception();
-		$config = $config['routes'];
-		if (!is_array($config) || count($config) < 1) throw new \Exception();
+        $matches = [];
+        $catch = '/\(\?P\<(.+)\>[^\)]+\)/';
+        preg_match_all($catch, $regex, $matches, PREG_SET_ORDER);
 
-		$correctKeys = array('pattern', 'controller');
+        foreach ($matches as $match) {
+            $search = $match[0];
+            if (!isset($params[$match[1]])) {
+                throw new RuntimeException('Missing parameter ' . $match[1]);
+            }
 
-		foreach ($config as $key => $value)
-		{
-			if (!is_string($key) || trim($key) == '') throw new \Exception();
-			$diff = array_diff(array_keys($value), $correctKeys);
-			if (count($diff) != 0) throw new \Exception();
-		}
+            $replace = $params[$match[1]];
+            unset($params[$match[1]]);
+            $regex = str_replace($search, $replace, $regex);
+        }
 
-		$this->_config = $config;
-		return $this;
-	}
+        return ['route' => $regex, 'notUsedParams' => $params];
+    }
+
+    /** @return array<string, array<string, mixed>> */
+    protected function getConfig(): array
+    {
+        if ($this->_config === null) {
+            $this->setConfig($this->getBeanFactory()->get('Config'));
+        }
+
+        return $this->_config;
+    }
+
+    /** @return ?mixed[] */
+    protected function getControllerParamsByRoutePattern(string $routePattern): ?array
+    {
+        foreach ($this->getConfig() as $routeID => $value) {
+            $preg = ('/^' . str_replace('/', '\/', $value['pattern']) . '$/');
+            $matches = [];
+            if (preg_match($preg, $routePattern, $matches)) {
+                $matches = $this->cleanMatches($matches, $this->getRouteParams($value['pattern']));
+
+                return [$routeID, $value['controller'], $matches];
+            }
+        }
+
+        return null;
+    }
+
+    /** @return string[] */
+    protected function getRouteParams(string $regex): array
+    {
+        $matches = [];
+        $catch = '/\(\?P\<(.+)\>[^\)]+\)/';
+        preg_match_all($catch, $regex, $matches, PREG_PATTERN_ORDER);
+
+        return $matches[1];
+    }
+
+    protected function getRoutePattern(string $routeID): ?string
+    {
+        if (trim($routeID) === '') {
+            throw new RuntimeException();
+        }
+
+        foreach ($this->getConfig() as $_routeID => $value) {
+            if ($_routeID === $routeID) {
+                return $value['pattern'];
+            }
+        }
+
+        return null;
+    }
 }

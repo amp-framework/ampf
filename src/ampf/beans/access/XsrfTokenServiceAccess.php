@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\services\xsrfToken\XsrfTokenService;
 
 trait XsrfTokenServiceAccess
 {
-	protected $__xsrfTokenService = null;
+    protected ?XsrfTokenService $__xsrfTokenService = null;
 
-	/**
-	 * @return XsrfTokenService
-	 */
-	public function getXsrfTokenService()
-	{
-		if ($this->__xsrfTokenService === null)
-		{
-			$this->setXsrfTokenService($this->getBeanFactory()->get('XsrfTokenService'));
-		}
-		return $this->__xsrfTokenService;
-	}
+    public function getXsrfTokenService(): XsrfTokenService
+    {
+        if ($this->__xsrfTokenService === null) {
+            $this->setXsrfTokenService($this->getBeanFactory()->get('XsrfTokenService'));
+        }
 
-	/**
-	 * @param XsrfTokenService $xsrfTokenService
-	 */
-	public function setXsrfTokenService(XsrfTokenService $xsrfTokenService)
-	{
-		$this->__xsrfTokenService = $xsrfTokenService;
-	}
+        return $this->__xsrfTokenService;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setXsrfTokenService(XsrfTokenService $xsrfTokenService): void
+    {
+        $this->__xsrfTokenService = $xsrfTokenService;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

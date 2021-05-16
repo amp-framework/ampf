@@ -1,84 +1,75 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\doctrine\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\doctrine\Config;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\doctrine\Config;
+use Doctrine\ORM\Configuration;
+use RuntimeException;
 
 class DefaultConfig implements BeanFactoryAccess, Config
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+    use DefaultBeanFactoryAccess;
 
-	protected $_config = null;
+    /** @var ?array<string, mixed> */
+    protected ?array $_config = null;
 
-	/**
-	 * @return \Doctrine\ORM\Configuration
-	 */
-	public function getConfiguration()
-	{
-		return $this->getConfigValue('configuration');
-	}
+    /** @return array<string, mixed> */
+    public function getConfig(): array
+    {
+        if ($this->_config === null) {
+            $this->setConfig($this->getBeanFactory()->get('Config'));
+        }
 
-	/**
-	 * @return array
-	 */
-	public function getConnectionParams()
-	{
-		return $this->getConfigValue('connectionParams');
-	}
+        return $this->_config;
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getMappingOverrides()
-	{
-		return $this->getConfigValue('mappingOverrides');
-	}
+    public function getConfiguration(): Configuration
+    {
+        return $this->getConfigValue('configuration');
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getTypeOverrides()
-	{
-		return $this->getConfigValue('typeOverrides');
-	}
+    /** @return array<string, mixed> */
+    public function getConnectionParams(): array
+    {
+        return $this->getConfigValue('connectionParams');
+    }
 
-	// Protected
+    /** @return array<string, mixed> */
+    public function getMappingOverrides(): array
+    {
+        return $this->getConfigValue('mappingOverrides');
+    }
 
-	/**
-	 * @param string $value
-	 * @return mixed
-	 */
-	protected function getConfigValue(string $value)
-	{
-		$config = $this->getConfig();
-		if (!isset($config[$value]))
-		{
-			return null;
-		}
-		return $config[$value];
-	}
+    /** @return array<string, mixed> */
+    public function getTypeOverrides(): array
+    {
+        return $this->getConfigValue('typeOverrides');
+    }
 
-	// Bean getters
+    public function setConfig(?array $config = null): void
+    {
+        if ($config === null || count($config) < 1) {
+            throw new RuntimeException();
+        }
 
-	public function getConfig()
-	{
-		if ($this->_config === null)
-		{
-			$this->setConfig($this->getBeanFactory()->get('Config'));
-		}
-		return $this->_config;
-	}
+        if (!isset($config['doctrine']) || !is_array($config['doctrine']) || count($config['doctrine']) < 1) {
+            throw new RuntimeException();
+        }
 
-	// Bean setters
+        $this->_config = $config['doctrine'];
+    }
 
-	public function setConfig($config)
-	{
-		if (!is_array($config) || count($config) < 1) throw new \Exception();
-		if (!isset($config['doctrine']) || !is_array($config['doctrine']) || count($config['doctrine']) < 1)
-		{
-			throw new \Exception();
-		}
-		$this->_config = $config['doctrine'];
-	}
+    protected function getConfigValue(string $value): mixed
+    {
+        $config = $this->getConfig();
+        if (!isset($config[$value])) {
+            return null;
+        }
+
+        return $config[$value];
+    }
 }

@@ -1,22 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\xsrfToken;
 
 interface XsrfTokenService
 {
-	/**
-	 * @return string
-	 */
-	public function getNewToken();
+    public function getNewToken(): string;
 
-	/**
-	 * @return string
-	 */
-	public function getTokenIDForRequest();
+    public function getTokenIDForRequest(): string;
 
-	/**
-	 * @param string $token
-	 * @return boolean
-	 */
-	public function isCorrectToken(string $token);
+    public function isCorrectToken(string $token): bool;
 }

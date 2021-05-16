@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\services\hasher\HasherService;
 
 trait HasherServiceAccess
 {
-	protected $__hasherService = null;
+    protected ?HasherService $__hasherService = null;
 
-	/**
-	 * @return HasherService
-	 */
-	public function getHasherService()
-	{
-		if ($this->__hasherService === null)
-		{
-			$this->setHasherService($this->getBeanFactory()->get('HasherService'));
-		}
-		return $this->__hasherService;
-	}
+    public function getHasherService(): HasherService
+    {
+        if ($this->__hasherService === null) {
+            $this->setHasherService($this->getBeanFactory()->get('HasherService'));
+        }
 
-	/**
-	 * @param HasherService $hasherService
-	 */
-	public function setHasherService(HasherService $hasherService)
-	{
-		$this->__hasherService = $hasherService;
-	}
+        return $this->__hasherService;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setHasherService(HasherService $hasherService): void
+    {
+        $this->__hasherService = $hasherService;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

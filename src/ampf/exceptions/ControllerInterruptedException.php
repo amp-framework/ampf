@@ -1,5 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\exceptions;
 
-class ControllerInterruptedException extends \Exception { }
+use Exception;
+
+class ControllerInterruptedException extends Exception
+{
+}

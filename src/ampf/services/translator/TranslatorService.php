@@ -1,33 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\translator;
 
 interface TranslatorService
 {
-	/**
-	 * @param string $translation
-	 * @param bool $ignoreCase
-	 * @return string
-	 */
-	public function getKey(string $translation, bool $ignoreCase = true);
+    public function getKey(string $translation, bool $ignoreCase = true): ?string;
 
-	/**
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function getLanguage();
+    public function getLanguage(): ?string;
 
-	/**
-	 * @param string $language
-	 * @throws \Exception
-	 */
-	public function setLanguage(string $language);
+    public function setLanguage(string $language): void;
 
-	/**
-	 * @param string $key
-	 * @param array $args
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function translate(string $key, array $args = null);
+    public function translate(string $key, ?array $args = null): ?string;
 }

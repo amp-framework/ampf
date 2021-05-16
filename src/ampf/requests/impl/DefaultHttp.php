@@ -1,563 +1,487 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\requests\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\requests\HttpRequest;
+use ampf\beans\access\RouteResolverAccess;
+use ampf\beans\access\XsrfTokenServiceAccess;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\requests\HttpRequest;
+use RuntimeException;
 
+/**
+ * phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+ */
 class DefaultHttp implements BeanFactoryAccess, HttpRequest
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
-	use \ampf\beans\access\RouteResolverAccess;
-	use \ampf\beans\access\XsrfTokenServiceAccess;
+    use DefaultBeanFactoryAccess;
+    use RouteResolverAccess;
+    use XsrfTokenServiceAccess;
 
-	/**
-	 * @var array
-	 */
-	protected $get = null;
+    /** @var ?array<string, string|array> */
+    protected ?array $get = null;
 
-	/**
-	 * @var array
-	 */
-	protected $post = null;
+    /** @var ?array<string, string|array> */
+    protected ?array $post = null;
 
-	/**
-	 * @var array
-	 */
-	protected $cookie = null;
+    /** @var ?array<string, string|array> */
+    protected ?array $cookie = null;
 
-	/**
-	 * @var array
-	 */
-	protected $server = null;
+    /** @var ?array<string, string|array> */
+    protected ?array $server = null;
 
-	/**
-	 * @var string
-	 */
-	protected $responseBody = null;
+    protected ?string $responseBody = null;
 
-	/**
-	 * @var array
-	 */
-	protected $responseRedirect = null;
+    /** @var ?array<string, string> */
+    protected ?array $responseRedirect = null;
 
-	/**
-	 * @var string
-	 */
-	protected $responseStatusCode = '200';
+    protected int $responseStatusCode = 200;
 
-	/**
-	 * @var array
-	 */
-	protected $headers = array();
+    /** @var array<string, string> */
+    protected array $headers = [];
 
-	public function __construct()
-	{
-		$this->get = $_GET;
-		$this->post = $_POST;
-		$this->cookie = $_COOKIE;
-		$this->server = $_SERVER;
+    public function __construct()
+    {
+        $this->get = $_GET;
+        $this->post = $_POST;
+        $this->cookie = $_COOKIE;
+        $this->server = $_SERVER;
 
-		// Set some default headers regarding browser caching
-		$this->addHeader('Content-Type', 'text/html; charset=UTF-8');
-		$this->addHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
-		$this->addHeader('Pragma', 'no-cache');
-		$this->addHeader('Expires', gmdate('D, d M Y H:i:s \G\M\T', 0));
-	}
+        // Set some default headers regarding browser caching
+        $this->addHeader('Content-Type', 'text/html; charset=UTF-8');
+        $this->addHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+        $this->addHeader('Pragma', 'no-cache');
+        $this->addHeader('Expires', gmdate('D, d M Y H:i:s \G\M\T', 0));
+    }
 
-	/**
-	 * @param string $key
-	 * @param string $value
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function addHeader(string $key, string $value)
-	{
-		if (trim($key) == '') throw new \Exception();
-		if (trim($value) == '') throw new \Exception();
-		$this->headers[] = "{$key}: {$value}";
-		return $this;
-	}
+    public function addHeader(string $key, string $value): self
+    {
+        if (trim($key) === '' || trim($value) === '') {
+            throw new RuntimeException();
+        }
 
-	/**
-	 * @param string $key
-	 * @return HttpRequest
-	 */
-	public function destroyCookieParam(string $key)
-	{
-		if (!$this->hasCookieParam($key))
-		{
-			return;
-		}
-		// Delete the cookie in the browser
-		setcookie(
-			$key,
-			'',
-			0,
-			'/'
-		);
-		// And in our object
-		unset($this->cookie[$key]);
-		return $this;
-	}
+        $this->headers[] = "{$key}: {$value}";
 
-	/**
-	 * @return HttpRequest
-	 */
-	public function flush()
-	{
-		http_response_code($this->responseStatusCode);
+        return $this;
+    }
 
-		foreach ($this->headers as $header)
-		{
-			header($header, true);
-		}
-		$this->headers = array();
+    public function destroyCookieParam(string $key): self
+    {
+        if (!$this->hasCookieParam($key)) {
+            return $this;
+        }
 
-		if (!is_null($this->responseRedirect))
-		{
-			header('Location: ' . $this->responseRedirect['target'], true, $this->responseRedirect['code']);
-			$this->responseRedirect = null;
-		}
+        // Delete the cookie in the browser
+        setcookie(
+            $key,
+            '',
+            0,
+            '/',
+        );
 
-		if (!is_null($this->responseBody))
-		{
-			echo $this->responseBody;
-			$this->responseBody = null;
-		}
+        // And in our object
+        unset($this->cookie[$key]);
 
-		return $this;
-	}
+        return $this;
+    }
 
-	/**
-	 * @return \stdClass[]
-	 */
-	public function getAcceptedLanguages()
-	{
-		if (!$this->hasServerParam('HTTP_ACCEPT_LANGUAGE'))
-		{
-			return array();
-		}
-		$serverParam = explode(
-			',',
-			$this->getServerParam('HTTP_ACCEPT_LANGUAGE')
-		);
+    public function hasCookieParam(string $key): bool
+    {
+        return isset($this->cookie[$key]);
+    }
 
-		$results = array();
-		foreach ($serverParam as $language)
-		{
-			$language = trim($language);
-			$quality = ((float)1);
-			if ($language == '')
-			{
-				continue;
-			}
-			if (strpos($language, ';') !== false)
-			{
-				list($language, $quality) = explode(';', $language);
-				$language = trim($language);
-				$quality = trim($quality);
-				if ($language == '' || $quality == '' || strpos($quality, 'q=') !== 0)
-				{
-					continue;
-				}
-				$quality = trim(substr($quality, strlen('q=')));
-				if (((float)$quality) != $quality || $quality > 1 || $quality <= 0)
-				{
-					continue;
-				}
-				$quality = ((float)$quality);
-			}
+    public function flush(): self
+    {
+        http_response_code($this->responseStatusCode);
 
-			$cresult = new \stdClass();
-			$cresult->language = $language;
-			$cresult->quality = $quality;
+        foreach ($this->headers as $header) {
+            header($header, true);
+        }
+        $this->headers = [];
 
-			$results[] = $cresult;
-		}
+        if ($this->responseRedirect !== null) {
+            header('Location: ' . $this->responseRedirect['target'], true, $this->responseRedirect['code']);
+            $this->responseRedirect = null;
+        }
 
-		return $results;
-	}
+        if ($this->responseBody !== null) {
+            echo $this->responseBody;
+            $this->responseBody = null;
+        }
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @param bool $addToken
-	 * @param string $hashParam
-	 * @return string
-	 */
-	public function getActionLink(
-		string $routeID,
-		array $params = null,
-		bool $addToken = false,
-		string $hashParam = null
-	)
-	{
-		if ($params === null) $params = array();
-		if ($hashParam === null) $hashParam = '';
+        return $this;
+    }
 
-		if ($addToken === true)
-		{
-			$tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
-			$tokenValue = $this->getXsrfTokenService()->getNewToken();
-			$params[$tokenKey] = $tokenValue;
-		}
+    /**
+     * @return \stdClass[]
+     */
+    public function getAcceptedLanguages(): array
+    {
+        if (!$this->hasServerParam('HTTP_ACCEPT_LANGUAGE')) {
+            return [];
+        }
 
-		$routePattern = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
-		if ($routePattern === null)
-		{
-			throw new \Exception("Route pattern not found for routeID {$routeID}");
-		}
+        $serverParam = explode(
+            ',',
+            $this->getServerParam('HTTP_ACCEPT_LANGUAGE'),
+        );
 
-		$notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
-		if (count($notDefinedParams) > 0)
-		{
-			$additionalParams = array();
-			foreach ($notDefinedParams as $paramKey => $paramValue)
-			{
-				$additionalParams[] = (rawurlencode($paramKey) . '=' . rawurlencode($paramValue));
-			}
-			$routePattern .= ('?' . implode('&', $additionalParams));
-		}
+        $results = [];
+        foreach ($serverParam as $language) {
+            $language = trim($language);
+            $quality = ((float)1);
+            if ($language === '') {
+                continue;
+            }
 
-		if (trim($hashParam) != '')
-		{
-			$routePattern .= ('#' . rawurlencode($hashParam));
-		}
+            if (str_contains($language, ';')) {
+                [$language, $quality] = explode(';', $language);
+                $language = trim($language);
+                $quality = trim($quality);
+                if ($language === '' || $quality === '' || !str_starts_with($quality, 'q=')) {
+                    continue;
+                }
 
-		$routePattern = $this->getLink($routePattern);
-		return $routePattern;
-	}
+                $quality = trim(substr($quality, strlen('q=')));
+                if (((string)(float)$quality) !== $quality || $quality > 1 || $quality <= 0) {
+                    continue;
+                }
 
-	/**
-	 * @return string
-	 */
-	public function getController()
-	{
-		return $this->getRouteResolver()->getControllerByRoutePattern(
-			$this->getRoute()
-		);
-	}
+                $quality = ((float)$quality);
+            }
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getCookieParam(string $key)
-	{
-		if (!$this->hasCookieParam($key)) return null;
-		return $this->cookie[$key];
-	}
+            $cresult = new \stdClass();
+            $cresult->language = $language;
+            $cresult->quality = $quality;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getGetParam(string $key)
-	{
-		if (!$this->hasGetParam($key)) return null;
-		return $this->get[$key];
-	}
+            $results[] = $cresult;
+        }
 
-	/**
-	 * @param string $relative
-	 * @return string
-	 */
-	public function getLink(string $relative)
-	{
-		$path = $this->getDirname($this->server['SCRIPT_NAME']);
+        return $results;
+    }
 
-		$route = '';
-		if (!empty($path)) $route .= ('/' . $path);
-		$route .= ('/' . $relative);
+    public function hasServerParam(string $key): bool
+    {
+        return isset($this->server[$key]);
+    }
 
-		return $route;
-	}
+    public function getServerParam(string $key): mixed
+    {
+        if (!$this->hasServerParam($key)) {
+            return null;
+        }
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getPostParam(string $key)
-	{
-		if (!$this->hasPostParam($key)) return null;
-		return $this->post[$key];
-	}
+        return $this->server[$key];
+    }
 
-	/**
-	 * @return null|string
-	 */
-	public function getRefererLocalized(): ?string
-	{
-		// Get the raw referer
-		$referer = $this->getRefererRaw();
-		if (!$referer) return null;
+    public function getController(): string
+    {
+        return $this->getRouteResolver()->getControllerByRoutePattern(
+            $this->getRoute(),
+        );
+    }
 
-		// Get the HTTP host, aka domain name of this project
-		$domain = ('://' . $this->server['HTTP_HOST'] . '/');
-		// Do we have $domain as a domain name in the referer?
-		if (($i = mb_strpos($referer, $domain)) !== false) {
-			// Yes, so remove it from the referer
-			$referer = mb_substr($referer, ($i + mb_strlen($domain)));
-		}
-		// Trim beginning slashes of the resulting referer...
-		$referer = ltrim($referer, '/');
+    public function getCookieParam(string $key): mixed
+    {
+        if (!$this->hasCookieParam($key)) {
+            return null;
+        }
 
-		// Get our app prefix, aka the webserver document root prefix of our app
-		$prefix = ltrim($this->getDirname($this->server['SCRIPT_NAME']), '/');
-		// Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
-		if ($prefix != '' && ($i = mb_strpos($referer, $prefix)) === 0) {
-			// Yes, so remove it from the referer
-			$referer = mb_substr($referer, ($i + mb_strlen($prefix)));
-		}
-		// Trim beginning slashes of the resulting referer...
-		$referer = ltrim($referer, '/');
+        return $this->cookie[$key];
+    }
 
-		// And return with the resulting referer, null if we are empty
-		if (trim($referer) == '') {
-			return null;
-		}
-		return $referer;
-	}
+    public function getPostParam(string $key): mixed
+    {
+        if (!$this->hasPostParam($key)) {
+            return null;
+        }
 
-	/**
-	 * @return null|string
-	 */
-	public function getRefererRaw(): ?string
-	{
-		$referer = $this->server['HTTP_REFERER'];
-		if (!$referer || trim($referer) == '') return null;
-		return $referer;
-	}
+        return $this->post[$key];
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getResponse()
-	{
-		return $this->responseBody;
-	}
+    public function hasPostParam(string $key): bool
+    {
+        return isset($this->post[$key]);
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getRouteID()
-	{
-		return $this->getRouteResolver()->getRouteIDByRoutePattern(
-			$this->getRoute()
-		);
-	}
+    public function getRefererLocalized(): ?string
+    {
+        // Get the raw referer
+        $referer = $this->getRefererRaw();
+        if (!$referer) {
+            return null;
+        }
 
-	/**
-	 * @return array
-	 */
-	public function getRouteParams()
-	{
-		return $this->getRouteResolver()->getParamsByRoutePattern(
-			$this->getRoute()
-		);
-	}
+        // Get the HTTP host, aka domain name of this project
+        $domain = ('://' . $this->server['HTTP_HOST'] . '/');
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getServerParam(string $key)
-	{
-		if (!$this->hasServerParam($key)) return null;
-		return $this->server[$key];
-	}
+        // Do we have $domain as a domain name in the referer?
+        $i = mb_strpos($referer, $domain);
+        if ($i !== false) {
+            // Yes, so remove it from the referer
+            $referer = mb_substr($referer, ($i + mb_strlen($domain)));
+        }
+        // Trim beginning slashes of the resulting referer...
+        $referer = ltrim($referer, '/');
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasCookieParam(string $key)
-	{
-		return isset($this->cookie[$key]);
-	}
+        // Get our app prefix, aka the webserver document root prefix of our app
+        $prefix = ltrim($this->getDirname($this->server['SCRIPT_NAME']), '/');
 
-	/**
-	 * @return boolean
-	 */
-	public function hasCorrectToken()
-	{
-		$tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
-		// no token in request - cannot have correct token
-		if (!$this->hasGetParam($tokenKey))
-		{
-			return false;
-		}
-		// take the token
-		$tokenValue = $this->getGetParam($tokenKey);
-		// and return whether it is correct
-		return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
-	}
+        // Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
+        $i = mb_strpos($referer, $prefix);
+        if ($prefix !== '' && $i === 0) {
+            // Yes, so remove it from the referer
+            $referer = mb_substr($referer, ($i + mb_strlen($prefix)));
+        }
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasGetParam(string $key)
-	{
-		return isset($this->get[$key]);
-	}
+        // Trim beginning slashes of the resulting referer...
+        $referer = ltrim($referer, '/');
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasPostParam(string $key)
-	{
-		return isset($this->post[$key]);
-	}
+        // And return with the resulting referer, null if we are empty
+        if (trim($referer) === '') {
+            return null;
+        }
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasServerParam(string $key)
-	{
-		return isset($this->server[$key]);
-	}
+        return $referer;
+    }
 
-	/**
-	 * @return boolean
-	 */
-	public function isPostRequest()
-	{
-		return (
-			$this->hasServerParam('REQUEST_METHOD')
-			&& $this->getServerParam('REQUEST_METHOD') == 'POST'
-		);
-	}
+    public function getRefererRaw(): ?string
+    {
+        $referer = $this->server['HTTP_REFERER'];
+        if (!$referer || trim($referer) === '') {
+            return null;
+        }
 
-	/**
-	 * @return boolean
-	 */
-	public function isRedirect()
-	{
-		return (!is_null($this->responseRedirect));
-	}
+        return $referer;
+    }
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @param string $code
-	 * @param bool $addToken
-	 * @param string $hashParam
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setRedirect(
-		string $routeID,
-		array $params = null,
-		string $code = null,
-		bool $addToken = null,
-		string $hashParam = null
-	)
-	{
-		if ($this->responseBody !== null) throw new \Exception();
-		if ($params === null || !is_array($params)) $params = array();
-		if ($code === null || trim($code) === '') $code = '301';
-		if ($addToken === null) $addToken = false;
-		if ($hashParam === null) $hashParam = '';
+    public function getResponse(): string
+    {
+        return $this->responseBody;
+    }
 
-		$this->responseRedirect = array(
-			'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
-			'code' => $code,
-		);
-		return $this;
-	}
+    public function getRouteID(): string
+    {
+        return $this->getRouteResolver()->getRouteIDByRoutePattern(
+            $this->getRoute(),
+        );
+    }
 
-	/**
-	 * @param string $response
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setResponse(string $response)
-	{
-		if (!is_null($this->responseRedirect)) throw new \Exception();
-		$this->responseBody = $response;
-		return $this;
-	}
+    /** @return string[] */
+    public function getRouteParams(): array
+    {
+        return $this->getRouteResolver()->getParamsByRoutePattern(
+            $this->getRoute(),
+        );
+    }
 
-	/**
-	 * @param string $statusCode
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setStatusCode(string $statusCode)
-	{
-		$statusCode = ((int)$statusCode);
-		if ($statusCode < 100 || $statusCode > 599) throw new \Exception();
-		$this->responseStatusCode = ((string)$statusCode);
-		return $this;
-	}
+    public function hasCorrectToken(): bool
+    {
+        $tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
+        // no token in request - cannot have correct token
+        if (!$this->hasGetParam($tokenKey)) {
+            return false;
+        }
 
-	/**
-	 * Protected methods
-	 */
+        // take the token
+        $tokenValue = $this->getGetParam($tokenKey);
 
-	/**
-	 * @return string
-	 */
-	protected function getRoute()
-	{
-		$route = $this->server['REQUEST_URI'];
-		// Remove beginning slashes, just to be sure
-		$route = ltrim($route, '/');
+        // and return whether it is correct
+        return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
+    }
 
-		// Get the base path
-		$base = $this->getDirname($this->server['SCRIPT_NAME']);
-		// If it is set, remove it from the route
-		if ($base != '' && strpos($route, $base) === 0)
-		{
-			$route = substr($route, mb_strlen($base));
-		}
+    public function hasGetParam(string $key): bool
+    {
+        return isset($this->get[$key]);
+    }
 
-		// search for a questionmark and only take the string before it
-		// this is done because we don't want to have GET-params into the route
-		$questionMarkPosition = strpos($route, '?');
-		if ($questionMarkPosition !== false)
-		{
-			$route = substr($route, 0, $questionMarkPosition);
-		}
+    public function getGetParam(string $key): mixed
+    {
+        if (!$this->hasGetParam($key)) {
+            return null;
+        }
 
-		// Remove beginning slashes again, just to be sure...
-		// There still might be some when running directly on a domain and not in a subdirectory
-		$route = ltrim($route, '/');
+        return $this->get[$key];
+    }
 
-		return $route;
-	}
+    public function isPostRequest(): bool
+    {
+        return
+            $this->hasServerParam('REQUEST_METHOD')
+            && $this->getServerParam('REQUEST_METHOD') === 'POST'
+        ;
+    }
 
-	/**
-	 * @param string $path
-	 * @return string
-	 * @throws \Exception
-	 */
-	protected function getDirname(string $path)
-	{
-		// replace backslashes with slashes (windows)
-		$path = str_replace('\\', '/', $path);
-		// remove trailing slashes
-		$path = trim($path, '/');
-		// explode for slashes
-		$path = explode('/', $path);
-		if (!is_array($path) || count($path) < 1) throw new \Exception();
-		foreach ($path as $pathKey => $value)
-		{
-			// Remove empty paths information (this changes 'blub//didub' to 'blub/didub')
-			if ($value === '')
-			{
-				unset($path[$pathKey]);
-				continue;
-			}
-			// A-Z a-z _ . % -
-			if (!preg_match('/^[A-Za-z0-9_\.%\-]+$/', $value)) throw new \Exception();
-		}
-		array_pop($path);
-		if (count($path) == 0) return '';
-		return implode('/', $path);
-	}
+    public function isRedirect(): bool
+    {
+        return $this->responseRedirect !== null;
+    }
+
+    public function setRedirect(
+        string $routeID,
+        ?array $params = null,
+        ?string $code = null,
+        ?bool $addToken = null,
+        ?string $hashParam = null,
+    ): self {
+        if ($this->responseBody !== null) {
+            throw new RuntimeException();
+        }
+        if ($params === null) {
+            $params = [];
+        }
+        if (trim($code) === '') {
+            $code = '301';
+        }
+        if ($addToken === null) {
+            $addToken = false;
+        }
+        if ($hashParam === null) {
+            $hashParam = '';
+        }
+
+        $this->responseRedirect = [
+            'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
+            'code' => $code,
+        ];
+
+        return $this;
+    }
+
+    public function getActionLink(
+        string $routeID,
+        ?array $params = null,
+        ?bool $addToken = false,
+        ?string $hashParam = null,
+    ): string {
+        if ($params === null) {
+            $params = [];
+        }
+        if ($hashParam === null) {
+            $hashParam = '';
+        }
+
+        if ($addToken === true) {
+            $tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
+            $tokenValue = $this->getXsrfTokenService()->getNewToken();
+            $params[$tokenKey] = $tokenValue;
+        }
+
+        $routePattern = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
+        if ($routePattern === null) {
+            throw new RuntimeException("Route pattern not found for routeID {$routeID}");
+        }
+
+        $notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
+        if (count($notDefinedParams) > 0) {
+            $additionalParams = [];
+            foreach ($notDefinedParams as $paramKey => $paramValue) {
+                $additionalParams[] = (rawurlencode($paramKey) . '=' . rawurlencode($paramValue));
+            }
+            $routePattern .= ('?' . implode('&', $additionalParams));
+        }
+
+        if (trim($hashParam) !== '') {
+            $routePattern .= ('#' . rawurlencode($hashParam));
+        }
+
+        return $this->getLink($routePattern);
+    }
+
+    public function getLink(string $relative): string
+    {
+        $path = $this->getDirname($this->server['SCRIPT_NAME']);
+
+        $route = '';
+        if (trim($path) !== '') {
+            $route .= ('/' . $path);
+        }
+        $route .= ('/' . $relative);
+
+        return $route;
+    }
+
+    public function setResponse(string $response): self
+    {
+        if ($this->responseRedirect !== null) {
+            throw new RuntimeException();
+        }
+
+        $this->responseBody = $response;
+
+        return $this;
+    }
+
+    public function setStatusCode(int $statusCode): self
+    {
+        if ($statusCode < 100 || $statusCode > 599) {
+            throw new RuntimeException();
+        }
+
+        $this->responseStatusCode = $statusCode;
+
+        return $this;
+    }
+
+    protected function getRoute(): string
+    {
+        $route = $this->server['REQUEST_URI'];
+        // Remove beginning slashes, just to be sure
+        $route = ltrim($route, '/');
+
+        // Get the base path
+        $base = $this->getDirname($this->server['SCRIPT_NAME']);
+        // If it is set, remove it from the route
+        if ($base !== '' && str_starts_with($route, $base)) {
+            $route = substr($route, mb_strlen($base));
+        }
+
+        // search for a questionmark and only take the string before it
+        // this is done because we don't want to have GET-params into the route
+        $questionMarkPosition = strpos($route, '?');
+        if ($questionMarkPosition !== false) {
+            $route = substr($route, 0, $questionMarkPosition);
+        }
+
+        // Remove beginning slashes again, just to be sure...
+        // There still might be some when running directly on a domain and not in a subdirectory
+        return ltrim($route, '/');
+    }
+
+    protected function getDirname(string $path): string
+    {
+        // replace backslashes with slashes (windows)
+        $path = str_replace('\\', '/', $path);
+        // remove trailing slashes
+        $path = trim($path, '/');
+        // explode for slashes
+        $path = explode('/', $path);
+        if (count($path) < 1) {
+            throw new RuntimeException();
+        }
+
+        foreach ($path as $pathKey => $value) {
+            // Remove empty paths information (this changes 'blub//didub' to 'blub/didub')
+            if ($value === '') {
+                unset($path[$pathKey]);
+
+                continue;
+            }
+
+            // A-Z a-z _ . % -
+            if (!preg_match('/^[A-Za-z0-9_\.%\-]+$/', $value)) {
+                throw new RuntimeException();
+            }
+        }
+
+        array_pop($path);
+
+        if (count($path) === 0) {
+            return '';
+        }
+
+        return implode('/', $path);
+    }
 }

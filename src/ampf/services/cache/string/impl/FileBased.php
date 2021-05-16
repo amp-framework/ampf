@@ -1,139 +1,120 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\cache\string\impl;
 
-use \ampf\services\cache\string\StringCacheService;
+use ampf\services\cache\string\StringCacheService;
+use RuntimeException;
+use stdClass;
 
 class FileBased implements StringCacheService
 {
-	/**
-	 * @var string
-	 */
-	protected $cacheDir = null;
+    protected ?string $cacheDir = null;
 
-	/**
-	 *
-	 * @var int
-	 */
-	protected $defaultTTL = null;
+    protected ?int $defaultTTL = null;
 
-	/**
-	 * @param string $key
-	 * @return mixed False or the cache contents
-	 */
-	public function get(string $key)
-	{
-		$path = $this->getPath($key);
-		if (!file_exists($path))
-		{
-			return false;
-		}
+    public function get(string $key): mixed
+    {
+        $path = $this->getPath($key);
+        if (!file_exists($path)) {
+            return false;
+        }
 
-		$content = file_get_contents($path);
-		if (trim($content) == '')
-		{
-			unlink($path);
-			return false;
-		}
+        $content = file_get_contents($path);
+        if (trim($content) === '') {
+            unlink($path);
 
-		$json = json_decode($content);
-		if ($json === null || !is_object($json))
-		{
-			unlink($path);
-			return false;
-		}
-		if (!isset($json->until) || !isset($json->string))
-		{
-			unlink($path);
-			return false;
-		}
-		if ($json->until < time())
-		{
-			unlink($path);
-			return false;
-		}
+            return false;
+        }
 
-		return $json->string;
-	}
+        $json = json_decode($content);
+        if ($json === null || !is_object($json)) {
+            unlink($path);
 
-	/**
-	 * @param string $key
-	 * @param string $string
-	 * @param integer $ttl
-	 * @return boolean
-	 * @throws \Exception
-	 */
-	public function set(string $key, string $string, int $ttl = null)
-	{
-		if (trim($string) == '')
-		{
-			throw new \Exception();
-		}
-		if ($ttl === null)
-		{
-			$ttl = $this->defaultTTL;
-		}
-		if (((int)$ttl) != $ttl)
-		{
-			throw new \Exception();
-		}
+            return false;
+        }
 
-		$json = new \stdClass();
-		$json->until = (time() + $ttl);
-		$json->string = $string;
+        if (!isset($json->until) || !isset($json->string)) {
+            unlink($path);
 
-		$content = json_encode($json);
+            return false;
+        }
 
-		$path = $this->getPath($key);
-		file_put_contents($path, $content);
+        if ($json->until < time()) {
+            unlink($path);
 
-		return true;
-	}
+            return false;
+        }
 
-	/**
-	 * Protected methods
-	 */
+        return $json->string;
+    }
 
-	protected function getPath(string $key)
-	{
-		if (!$this->isCorrectKey($key))
-		{
-			throw new \Exception();
-		}
-		return ($this->cacheDir . '/' . $key . '.asc');
-	}
+    public function set(string $key, string $string, ?int $ttl = null): bool
+    {
+        if (trim($string) === '') {
+            throw new RuntimeException();
+        }
 
-	protected function isCorrectKey(string $key)
-	{
-		return preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key);
-	}
+        if ($ttl === null) {
+            $ttl = $this->defaultTTL;
+        }
 
-	/**
-	 * Bean setters
-	 */
+        $json = new stdClass();
+        $json->until = (time() + $ttl);
+        $json->string = $string;
 
-	public function setConfig(array $config)
-	{
-		if (!is_array($config) || count($config) < 1) throw new \Exception();
+        $content = json_encode($json);
 
-		if (!isset($config['stringfilecache'])) throw new \Exception();
-		if (!is_array($config['stringfilecache'])) throw new \Exception();
+        $path = $this->getPath($key);
+        file_put_contents($path, $content);
 
-		if (!isset($config['stringfilecache']['cachedir'])) throw new \Exception();
+        return true;
+    }
 
-		$cachedir = realpath($config['stringfilecache']['cachedir']);
-		if (
-			$cachedir === false
-			|| !is_dir($cachedir)
-			|| !is_writable($cachedir)
-		) throw new \Exception();
+    /** @param array<string, mixed> $config */
+    public function setConfig(array $config): void
+    {
+        if (count($config) < 1) {
+            throw new RuntimeException();
+        }
 
-		$this->cacheDir = $cachedir;
+        if (!isset($config['stringfilecache']) || !is_array($config['stringfilecache'])) {
+            throw new RuntimeException();
+        }
 
-		$this->defaultTTL = 3600;
-		if (isset($config['stringfilecache']['defaultttl']))
-		{
-			$this->defaultTTL = ((int)$config['stringfilecache']['defaultttl']);
-		}
-	}
+        if (!isset($config['stringfilecache']['cachedir'])) {
+            throw new RuntimeException();
+        }
+
+        $cachedir = realpath($config['stringfilecache']['cachedir']);
+        if (
+            $cachedir === false
+            || !is_dir($cachedir)
+            || !is_writable($cachedir)
+        ) {
+            throw new RuntimeException();
+        }
+
+        $this->cacheDir = $cachedir;
+
+        $this->defaultTTL = 3600;
+        if (isset($config['stringfilecache']['defaultttl'])) {
+            $this->defaultTTL = ((int)$config['stringfilecache']['defaultttl']);
+        }
+    }
+
+    protected function getPath(string $key): string
+    {
+        if (!$this->isCorrectKey($key)) {
+            throw new RuntimeException();
+        }
+
+        return $this->cacheDir . '/' . $key . '.asc';
+    }
+
+    protected function isCorrectKey(string $key): bool
+    {
+        return preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key);
+    }
 }

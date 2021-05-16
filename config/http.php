@@ -1,44 +1,49 @@
 <?php
 
-return array(
+declare(strict_types=1);
 
-	'routes' => array(
-	),
+use ampf\requests\impl\DefaultHttp;
+use ampf\router\impl\DefaultHttpRouter;
+use ampf\router\impl\DefaultRouteResolver;
+use ampf\views\impl\DefaultHttpView;
 
-	'beans' => array(
-		/**
-		 * Routing stuff
-		 */
-		'RouteResolver' => array(
-			'class' => '\ampf\router\impl\DefaultRouteResolver',
-			'properties' => array(
-				'Config' => 'config',
-			),
-		),
-		'Router' => array(
-			'class' => '\ampf\router\impl\DefaultHttpRouter',
-		),
+return [
+    'routes' => [],
 
-		/**
-		 * Request stuff
-		 */
-		'Request' => array(
-			'class' => '\ampf\requests\impl\DefaultHttp',
-		),
-		'RequestStub' => array(
-			'class' => '\ampf\requests\impl\DefaultHttp',
-			'parent' => 'Request',
-			'scope' => 'prototype',
-		),
+    'beans' => [
+        /**
+         * Routing stuff
+         */
+        'RouteResolver' => [
+            'class' => DefaultRouteResolver::class,
+            'properties' => [
+                'Config' => 'config',
+            ],
+        ],
+        'Router' => [
+            'class' => DefaultHttpRouter::class,
+        ],
 
-		/**
-		 * View stuff
-		 */
-		'View' => array(
-			'class' => '\ampf\views\impl\DefaultHttpView',
-			'scope' => 'prototype',
-		),
-	),
+        /**
+         * Request stuff
+         */
+        'Request' => [
+            'class' => DefaultHttp::class,
+        ],
+        'RequestStub' => [
+            'class' => DefaultHttp::class,
+            'parent' => 'Request',
+            'scope' => 'prototype',
+        ],
 
-	'viewDirectory' => null,
-);
+        /**
+         * View stuff
+         */
+        'View' => [
+            'class' => DefaultHttpView::class,
+            'scope' => 'prototype',
+        ],
+    ],
+
+    'viewDirectory' => null,
+];

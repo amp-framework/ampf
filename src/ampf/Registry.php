@@ -1,24 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf;
 
 class Registry
 {
-	static protected $_memory = array();
+    /** @var array<string, mixed> */
+    protected static array $_memory = [];
 
-	static public function set($key, $value)
-	{
-		self::$_memory[$key] = $value;
-	}
+    public static function set(string $key, mixed $value): void
+    {
+        self::$_memory[$key] = $value;
+    }
 
-	static public function get($key)
-	{
-		if (!self::has($key)) return null;
-		return self::$_memory[$key];
-	}
+    public static function get(string $key): mixed
+    {
+        if (!self::has($key)) {
+            return null;
+        }
 
-	static public function has($key)
-	{
-		return isset(self::$_memory[$key]);
-	}
+        return self::$_memory[$key];
+    }
+
+    public static function has(string $key): bool
+    {
+        return isset(self::$_memory[$key]);
+    }
 }

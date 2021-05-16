@@ -1,123 +1,113 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\translator\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\services\translator\TranslatorService;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\services\translator\TranslatorService;
+use RuntimeException;
 
+/**
+ * phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
+ */
 class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+    use DefaultBeanFactoryAccess;
 
-	/**
-	 * @var array
-	 */
-	protected $_config = null;
+    /** @var ?array<string, string> */
+    protected ?array $_config = null;
 
-	/**
-	 * @var string
-	 */
-	protected $language = null;
+    protected ?string $language = null;
 
-	/**
-	 * @param string $translation
-	 * @param bool $ignoreCase
-	 * @return string
-	 */
-	public function getKey(string $translation, bool $ignoreCase = true)
-	{
-		$config = $this->getConfig();
-		foreach ($config as $key => $value)
-		{
-			if (mb_strtolower($value) === mb_strtolower($translation))
-			{
-				return $key;
-			}
-		}
-		return null;
-	}
+    public function getKey(string $translation, bool $ignoreCase = true): ?string
+    {
+        $config = $this->getConfig();
+        foreach ($config as $key => $value) {
+            if (mb_strtolower($value) === mb_strtolower($translation)) {
+                return $key;
+            }
+        }
 
-	/**
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function getLanguage()
-	{
-		if ($this->language === null)
-		{
-			throw new \Exception('No language set');
-		}
-		return $this->language;
-	}
+        return null;
+    }
 
-	/**
-	 * @param string $language
-	 * @throws \Exception
-	 */
-	public function setLanguage(string $language)
-	{
-		if (trim($language) == '') throw new \Exception();
-		$this->language = $language;
-	}
+    public function getLanguage(): ?string
+    {
+        if ($this->language === null) {
+            throw new RuntimeException('No language set');
+        }
 
-	/**
-	 * @param string $key
-	 * @param array $args
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function translate(string $key, array $args = null)
-	{
-		if (trim($key) == '') throw new \Exception();
+        return $this->language;
+    }
 
-		$value = $this->getValue($key);
-		if ($value === null) return null;
+    public function setLanguage(string $language): void
+    {
+        if (trim($language) === '') {
+            throw new RuntimeException();
+        }
 
-		if (is_array($args) && count($args) > 0)
-		{
-			$value = vsprintf($value, $args);
-		}
+        $this->language = $language;
+    }
 
-		return $value;
-	}
+    /** @param ?string[] $args */
+    public function translate(string $key, ?array $args = null): ?string
+    {
+        if (trim($key) === '') {
+            throw new RuntimeException();
+        }
 
-	/**
-	 * Protected methods
-	 */
+        $value = $this->getValue($key);
+        if ($value === null) {
+            return null;
+        }
 
-	protected function getValue($key)
-	{
-		$config = $this->getConfig();
-		if (!isset($config[$key]))
-		{
-			return $key;
-		}
-		return $config[$key];
-	}
+        if (is_array($args) && count($args) > 0) {
+            $value = vsprintf($value, $args);
+        }
 
-	// Bean getters
+        return $value;
+    }
 
-	public function getConfig()
-	{
-		if (is_null($this->_config))
-		{
-			$this->setConfig($this->getBeanFactory()->get('Config'));
-		}
-		return $this->_config;
-	}
+    /** @param array<string, mixed> $config */
+    protected function setConfig(array $config): void
+    {
+        if (count($config) < 1) {
+            throw new RuntimeException();
+        }
 
-	// Bean setters
+        if (!isset($config['translation.dir'])) {
+            throw new RuntimeException();
+        }
 
-	public function setConfig($config)
-	{
-		if (!is_array($config) || count($config) < 1) throw new \Exception();
+        $transFile = ($config['translation.dir'] . '/' . $this->getLanguage() . '.php');
+        if (!file_exists($transFile)) {
+            throw new RuntimeException();
+        }
 
-		if (!isset($config['translation.dir'])) throw new \Exception();
-		$transFile = ($config['translation.dir'] . '/' . $this->getLanguage() . '.php');
-		if (!file_exists($transFile)) throw new \Exception();
+        ob_start();
+        $this->_config = require $transFile;
+        ob_end_clean();
+    }
 
-		ob_start();
-		$this->_config = require($transFile);
-		ob_end_clean();
-	}
+    /** @return array<string, string> */
+    protected function getConfig(): array
+    {
+        if ($this->_config === null) {
+            $this->setConfig($this->getBeanFactory()->get('Config'));
+        }
+
+        return $this->_config;
+    }
+
+    protected function getValue(string $key): mixed
+    {
+        $config = $this->getConfig();
+        if (!isset($config[$key])) {
+            return $key;
+        }
+
+        return $config[$key];
+    }
 }

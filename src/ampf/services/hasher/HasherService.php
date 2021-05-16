@@ -1,28 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\hasher;
 
 interface HasherService
 {
-	/**
-	 * @param string $input
-	 * @return void
-	 * @throws \Exception
-	 */
-	public function avoidTimingAttack(string $input);
+    public function avoidTimingAttack(string $input): void;
 
-	/**
-	 * @param string $string
-	 * @param string $storedHash
-	 * @return boolean
-	 * @throws \Exception
-	 */
-	public function check(string $string, string $storedHash);
+    public function check(string $string, string $storedHash): bool;
 
-	/**
-	 * @param string $string
-	 * @return string
-	 * @throws \Exception
-	 */
-	public function hash(string $string);
+    public function hash(string $string): string;
 }

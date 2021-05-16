@@ -1,59 +1,61 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\router\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\router\HttpRouter;
-use \ampf\requests\HttpRequest;
-use \ampf\controller\Controller;
-use \ampf\exceptions\ControllerInterruptedException;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\controller\Controller;
+use ampf\exceptions\ControllerInterruptedException;
+use ampf\requests\HttpRequest;
+use ampf\router\HttpRouter;
+use RuntimeException;
 
 class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+    use DefaultBeanFactoryAccess;
 
-	/**
-	 * @param HttpRequest $request
-	 * @return HttpRouter
-	 * @throws \Exception
-	 */
-	public function route(HttpRequest $request)
-	{
-		$controller = $request->getController();
-		if (is_null($controller)) throw new \Exception();
-		if (!$this->getBeanFactory()->has($controller))
-		{
-			throw new \Exception("Controllerbean {$controller} is not known.");
-		}
+    public function route(HttpRequest $request): self
+    {
+        $controller = $request->getController();
+        if ($controller === null) {
+            throw new RuntimeException();
+        }
 
-		$params = $request->getRouteParams();
-		if (!is_array($params) || count($params) < 1) $params = array();
+        if (!$this->getBeanFactory()->has($controller)) {
+            throw new RuntimeException("Controllerbean {$controller} is not known.");
+        }
 
-		$bean = $this->getBeanFactory()->get($controller);
-		$this->routeBean($bean, $params);
+        $params = $request->getRouteParams();
+        if (!is_array($params) || count($params) < 1) {
+            $params = [];
+        }
 
-		return $this;
-	}
+        $bean = $this->getBeanFactory()->get($controller);
+        if (!($bean instanceof Controller)) {
+            throw new RuntimeException();
+        }
 
-	/**
-	 * @param Controller $controller
-	 * @param array $params
-	 * @return HttpRouter
-	 */
-	public function routeBean(Controller $controller, array $params = null)
-	{
-		if (is_null($params)) $params = array();
+        $this->routeBean($bean, $params);
 
-		try
-		{
-			$controller->beforeAction();
-			call_user_func_array(array($controller, 'execute'), $params);
-			$controller->afterAction();
-		}
-		catch (ControllerInterruptedException $e)
-		{
-			// do nothing.
-		}
-		return $this;
-	}
+        return $this;
+    }
+
+    public function routeBean(Controller $controller, ?array $params = null): self
+    {
+        if ($params === null) {
+            $params = [];
+        }
+
+        try {
+            $controller->beforeAction();
+            call_user_func_array([$controller, 'execute'], $params);
+            $controller->afterAction();
+        } catch (ControllerInterruptedException) {
+            // do nothing.
+        }
+
+        return $this;
+    }
 }

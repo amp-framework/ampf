@@ -1,95 +1,85 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\requests\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\requests\CliRequest;
+use ampf\beans\access\RouteResolverAccess;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\requests\CliRequest;
 
+/**
+ * phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+ */
 class DefaultCli implements BeanFactoryAccess, CliRequest
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
-	use \ampf\beans\access\RouteResolverAccess;
+    use DefaultBeanFactoryAccess;
+    use RouteResolverAccess;
 
-	/**
-	 * @var array
-	 */
-	protected $argv = null;
+    /** @var string[] */
+    protected ?array $argv = null;
 
-	/**
-	 * @var string
-	 */
-	protected $responseBody = null;
+    protected ?string $responseBody = null;
 
-	public function __construct()
-	{
-		$this->argv = $GLOBALS['argv'];
-	}
+    public function __construct()
+    {
+        $this->argv = $GLOBALS['argv'];
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getController()
-	{
-		if (!isset($this->argv[1]) || empty($this->argv[1])) $arg = '*';
-		else $arg = $this->argv[1];
+    public function getController(): string
+    {
+        if (!isset($this->argv[1]) || trim($this->argv[1]) === '') {
+            $arg = '*';
+        } else {
+            $arg = $this->argv[1];
+        }
 
-		return $this->getRouteResolver()->getControllerByRoutePattern($arg);
-	}
+        return $this->getRouteResolver()->getControllerByRoutePattern($arg);
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getRouteParams()
-	{
-		$arg = $this->argv;
-		if (!is_array($arg) || count($arg) < 2) $arg = array();
-		else
-		{
-			array_shift($arg);
-			array_shift($arg);
-		}
-		return $arg;
-	}
+    /** @return string[] */
+    public function getRouteParams(): array
+    {
+        $arg = $this->argv;
+        if ($arg === null || count($arg) < 2) {
+            $arg = [];
+        } else {
+            array_shift($arg);
+            array_shift($arg);
+        }
 
-	/**
-	 * @param string $routeID
-	 * @return string
-	 */
-	public function getCmd(string $routeID)
-	{
-		return ($this->argv[0] . ' ' . $routeID);
-	}
+        return $arg;
+    }
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @return string
-	 */
-	public function getActionCmd(string $routeID, array $params = null)
-	{
-		if (is_null($params)) $params = array();
+    public function getActionCmd(string $routeID, ?array $params = null): string
+    {
+        if ($params === null) {
+            $params = [];
+        }
 
-		$routeID = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
-		return $this->getCmd($routeID);
-	}
+        $routeID = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
 
-	/**
-	 * @param string $response
-	 * @return CliRequest
-	 */
-	public function setResponse(string $response)
-	{
-		$this->responseBody = $response;
-		return $this;
-	}
+        return $this->getCmd($routeID);
+    }
 
-	/**
-	 * @return CliRequest
-	 */
-	public function flush()
-	{
-		echo $this->responseBody;
-		$this->responseBody = null;
-		return $this;
-	}
+    public function getCmd(string $routeID): string
+    {
+        return $this->argv[0] . ' ' . $routeID;
+    }
+
+    public function setResponse(string $response): self
+    {
+        $this->responseBody = $response;
+
+        return $this;
+    }
+
+    public function flush(): self
+    {
+        echo $this->responseBody;
+        $this->responseBody = null;
+
+        return $this;
+    }
 }

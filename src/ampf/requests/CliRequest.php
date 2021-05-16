@@ -1,40 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\requests;
 
 interface CliRequest
 {
-	/**
-	 * @return string
-	 */
-	public function getController();
+    public function getController(): string;
 
-	/**
-	 * @return array
-	 */
-	public function getRouteParams();
+    /** @return string[] */
+    public function getRouteParams(): array;
 
-	/**
-	 * @param string $routeID
-	 * @return string
-	 */
-	public function getCmd(string $routeID);
+    public function getCmd(string $routeID): string;
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @return string
-	 */
-	public function getActionCmd(string $routeID, array $params = null);
+    public function getActionCmd(string $routeID, ?array $params = null): string;
 
-	/**
-	 * @param string $response
-	 * @return CliRequest
-	 */
-	public function setResponse(string $response);
+    public function setResponse(string $response): self;
 
-	/**
-	 * @return CliRequest
-	 */
-	public function flush();
+    public function flush(): self;
 }

@@ -1,124 +1,116 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\xsrfToken\impl;
 
-use \ampf\beans\BeanFactoryAccess;
+use ampf\beans\access\SessionServiceAccess;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\services\xsrfToken\XsrfTokenService;
+use SplQueue;
 
 class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
-	use \ampf\beans\access\SessionServiceAccess;
+    use DefaultBeanFactoryAccess;
+    use SessionServiceAccess;
 
-	static protected $TOKEN_ID_REQUEST = 'stkn';
-	static protected $TOKEN_ID_SESSION = '_xsrfToken';
-	static protected $TOKEN_LEN = 6;
-	static protected $TOKEN_QUEUE_COUNT = 15;
+    protected const TOKEN_ID_REQUEST = 'stkn';
+    protected const TOKEN_ID_SESSION = '_xsrfToken';
+    protected const TOKEN_LEN = 6;
+    protected const TOKEN_QUEUE_COUNT = 15;
 
-	/**
-	 * @var \SplQueue|null
-	 */
-	protected $tokenQueue = null;
+    protected ?SplQueue $tokenQueue = null;
 
-	/**
-	 * @var string|null
-	 */
-	protected $currentToken = null;
+    protected ?string $currentToken = null;
 
-	/**
-	 * @return string
-	 */
-	public function getNewToken(): string
-	{
-		if (is_null($this->currentToken))
-		{
-			// Get the tokenQueue from the session
-			$tokenQueue = $this->getTokenQueue();
+    public function getNewToken(): string
+    {
+        if ($this->currentToken === null) {
+            // Get the tokenQueue from the session
+            $tokenQueue = $this->getTokenQueue();
 
-			// Generate a new token
-			$random             = random_bytes(static::$TOKEN_LEN);
-			$random             = bin2hex($random);
-			$this->currentToken = substr($random, 0, static::$TOKEN_LEN);
+            // Generate a new token
+            $random = random_bytes(static::TOKEN_LEN);
+            $random = bin2hex($random);
+            $this->currentToken = substr($random, 0, static::TOKEN_LEN);
 
-			// Store it into the queue
-			$tokenQueue->enqueue($this->currentToken);
-			// If our queue is full, remove the last one
-			if ($tokenQueue->count() > static::$TOKEN_QUEUE_COUNT) {
-				$tokenQueue->dequeue();
-			}
-			// And save back our tokenQueue into the session
-			$this->setTokenQueue();
-		}
-		return $this->currentToken;
-	}
+            // Store it into the queue
+            $tokenQueue->enqueue($this->currentToken);
 
-	/**
-	 * @return string
-	 */
-	public function getTokenIDForRequest()
-	{
-		return self::$TOKEN_ID_REQUEST;
-	}
+            // If our queue is full, remove the last one
+            if ($tokenQueue->count() > static::TOKEN_QUEUE_COUNT) {
+                $tokenQueue->dequeue();
+            }
 
-	/**
-	 * @param string $token
-	 * @return boolean
-	 */
-	public function isCorrectToken(string $token)
-	{
-		// Make sure the token has the correct format
-		if (trim($token) == '') return false;
-		if (strlen($token) != self::$TOKEN_LEN) return false;
+            // And save back our tokenQueue into the session
+            $this->setTokenQueue();
+        }
 
-		// Get our tokenQueue
-		$tokenQueue = $this->getTokenQueue();
-		// Iterate over the values
-		foreach ($tokenQueue as $i => $realToken) {
-			// If we found the token
-			if (hash_equals($token, $realToken)) {
-				// Remove it from our tokenQueue
-				$tokenQueue->offsetUnset($i);
-				// And save back the queue to the session
-				$this->setTokenQueue();
+        return $this->currentToken;
+    }
 
-				return true;
-			}
-		}
+    public function getTokenIDForRequest(): string
+    {
+        return static::TOKEN_ID_REQUEST;
+    }
 
-		return false;
-	}
+    public function isCorrectToken(string $token): bool
+    {
+        // Make sure the token has the correct format
+        if (trim($token) === '') {
+            return false;
+        }
 
-	/**
-	 * Gets the \SplQueue in which the tokens are being saved
-	 *
-	 * @return \SplQueue
-	 */
-	protected function getTokenQueue(): \SplQueue
-	{
-		if (is_null($this->tokenQueue))
-		{
-			$this->tokenQueue = new \SplQueue();
+        if (mb_strlen($token) !== static::TOKEN_LEN) {
+            return false;
+        }
 
-			if ($this->getSessionService()->hasAttribute(self::$TOKEN_ID_SESSION))
-			{
-				$tokenQueue = $this->getSessionService()->getAttribute(self::$TOKEN_ID_SESSION);
-				if ($tokenQueue instanceof \SplQueue) $this->tokenQueue = $tokenQueue;
-			}
-		}
-		return $this->tokenQueue;
-	}
+        // Get our tokenQueue
+        $tokenQueue = $this->getTokenQueue();
+        // Iterate over the values
+        foreach ($tokenQueue as $i => $realToken) {
+            // If we found the token
+            if (hash_equals($token, $realToken)) {
+                // Remove it from our tokenQueue
+                $tokenQueue->offsetUnset($i);
+                // And save back the queue to the session
+                $this->setTokenQueue();
 
-	/**
-	 * Re-writes the tokenQueue into the session
-	 *
-	 * @return bool
-	 */
-	protected function setTokenQueue(): bool
-	{
-		$this->getSessionService()->setAttribute(
-			self::$TOKEN_ID_SESSION,
-			$this->tokenQueue
-		);
-		return true;
-	}
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets the \SplQueue in which the tokens are being saved
+     */
+    protected function getTokenQueue(): SplQueue
+    {
+        if ($this->tokenQueue === null) {
+            $this->tokenQueue = new SplQueue();
+
+            if ($this->getSessionService()->hasAttribute(static::TOKEN_ID_SESSION)) {
+                $tokenQueue = $this->getSessionService()->getAttribute(static::TOKEN_ID_SESSION);
+                if ($tokenQueue instanceof SplQueue) {
+                    $this->tokenQueue = $tokenQueue;
+                }
+            }
+        }
+
+        return $this->tokenQueue;
+    }
+
+    /**
+     * Re-writes the tokenQueue into the session
+     */
+    protected function setTokenQueue(): void
+    {
+        $this->getSessionService()->setAttribute(
+            static::TOKEN_ID_SESSION,
+            $this->tokenQueue,
+        );
+    }
 }

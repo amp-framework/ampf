@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\router\RouteResolver;
 
 trait RouteResolverAccess
 {
-	protected $__routeResolver = null;
+    protected ?RouteResolver $__routeResolver = null;
 
-	/**
-	 * @return RouteResolver
-	 */
-	public function getRouteResolver()
-	{
-		if ($this->__routeResolver === null)
-		{
-			$this->setRouteResolver($this->getBeanFactory()->get('RouteResolver'));
-		}
-		return $this->__routeResolver;
-	}
+    public function getRouteResolver(): RouteResolver
+    {
+        if ($this->__routeResolver === null) {
+            $this->setRouteResolver($this->getBeanFactory()->get('RouteResolver'));
+        }
 
-	/**
-	 * @param RouteResolver $routeResolver
-	 */
-	public function setRouteResolver(RouteResolver $routeResolver)
-	{
-		$this->__routeResolver = $routeResolver;
-	}
+        return $this->__routeResolver;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setRouteResolver(RouteResolver $routeResolver): void
+    {
+        $this->__routeResolver = $routeResolver;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

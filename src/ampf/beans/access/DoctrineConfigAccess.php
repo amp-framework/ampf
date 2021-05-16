@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\doctrine\Config;
 
 trait DoctrineConfigAccess
 {
-	protected $__doctrineConfig = null;
+    protected ?Config $__doctrineConfig = null;
 
-	/**
-	 * @return \ampf\doctrine\Config
-	 */
-	public function getDoctrineConfig()
-	{
-		if ($this->__doctrineConfig === null)
-		{
-			$this->setDoctrineConfig($this->getBeanFactory()->get('DoctrineConfig'));
-		}
-		return $this->__doctrineConfig;
-	}
+    public function getDoctrineConfig(): Config
+    {
+        if ($this->__doctrineConfig === null) {
+            $this->setDoctrineConfig($this->getBeanFactory()->get('DoctrineConfig'));
+        }
 
-	/**
-	 * @param \ampf\doctrine\Config $config
-	 */
-	public function setDoctrineConfig(Config $config)
-	{
-		$this->__doctrineConfig = $config;
-	}
+        return $this->__doctrineConfig;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setDoctrineConfig(Config $config): void
+    {
+        $this->__doctrineConfig = $config;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

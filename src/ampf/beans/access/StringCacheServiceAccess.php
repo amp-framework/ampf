@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\services\cache\string\StringCacheService;
 
 trait StringCacheServiceAccess
 {
-	protected $__stringCacheService = null;
+    protected ?StringCacheService $__stringCacheService = null;
 
-	/**
-	 * @return StringCacheService
-	 */
-	public function getStringCacheService()
-	{
-		if ($this->__stringCacheService === null)
-		{
-			$this->setStringCacheService($this->getBeanFactory()->get('StringCacheService'));
-		}
-		return $this->__stringCacheService;
-	}
+    public function getStringCacheService(): StringCacheService
+    {
+        if ($this->__stringCacheService === null) {
+            $this->setStringCacheService($this->getBeanFactory()->get('StringCacheService'));
+        }
 
-	/**
-	 * @param StringCacheService $stringCacheService
-	 */
-	public function setStringCacheService(StringCacheService $stringCacheService)
-	{
-		$this->__stringCacheService = $stringCacheService;
-	}
+        return $this->__stringCacheService;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setStringCacheService(StringCacheService $stringCacheService): void
+    {
+        $this->__stringCacheService = $stringCacheService;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

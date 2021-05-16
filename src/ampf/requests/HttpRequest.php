@@ -1,179 +1,82 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\requests;
 
 interface HttpRequest
 {
-	/**
-	 * @param string $key
-	 * @param string $value
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function addHeader(string $key, string $value);
+    public function addHeader(string $key, string $value): self;
 
-	/**
-	 * @param string $key
-	 * @return HttpRequest
-	 */
-	public function destroyCookieParam(string $key);
+    public function destroyCookieParam(string $key): self;
 
-	/**
-	 * @return HttpRequest
-	 */
-	public function flush();
+    public function flush(): self;
 
-	/**
-	 * @return \stdClass[]
-	 */
-	public function getAcceptedLanguages();
+    /**
+     * @return \stdClass[]
+     */
+    public function getAcceptedLanguages(): array;
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @param bool $addToken
-	 * @param string $hashParam
-	 * @return string
-	 */
-	public function getActionLink(
-		string $routeID,
-		array $params = null,
-		bool $addToken = false,
-		string $hashParam = null
-	);
+    public function getActionLink(
+        string $routeID,
+        ?array $params = null,
+        bool $addToken = false,
+        ?string $hashParam = null,
+    ): string;
 
-	/**
-	 * @return string
-	 */
-	public function getController();
+    public function getController(): string;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getCookieParam(string $key);
+    public function getCookieParam(string $key): mixed;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getGetParam(string $key);
+    public function getGetParam(string $key): mixed;
 
-	/**
-	 * @param string $relative
-	 * @return string
-	 */
-	public function getLink(string $relative);
+    public function getLink(string $relative): string;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getPostParam(string $key);
+    public function getPostParam(string $key): mixed;
 
-	/**
-	 * Returns the HTTP referer of this request (if any) localized, which here means
-	 * cleared by the HTTP host and subdirectory.
-	 *
-	 * @return string|null
-	 */
-	public function getRefererLocalized(): ?string;
+    /**
+     * Returns the HTTP referer of this request (if any) localized, which here means
+     * cleared by the HTTP host and subdirectory.
+     */
+    public function getRefererLocalized(): ?string;
 
-	/**
-	 * Returns the HTTP referer of this request (if any).
-	 *
-	 * @return string|null
-	 */
-	public function getRefererRaw(): ?string;
+    /**
+     * Returns the HTTP referer of this request (if any).
+     */
+    public function getRefererRaw(): ?string;
 
-	/**
-	 * @return string
-	 */
-	public function getResponse();
+    public function getResponse(): string;
 
-	/**
-	 * @return string
-	 */
-	public function getRouteID();
+    public function getRouteID(): string;
 
-	/**
-	 * @return array
-	 */
-	public function getRouteParams();
+    /** @return string[] */
+    public function getRouteParams(): array;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getServerParam(string $key);
+    public function getServerParam(string $key): mixed;
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasCookieParam(string $key);
+    public function hasCookieParam(string $key): bool;
 
-	/**
-	 * @return boolean
-	 */
-	public function hasCorrectToken();
+    public function hasCorrectToken(): bool;
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasGetParam(string $key);
+    public function hasGetParam(string $key): bool;
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasPostParam(string $key);
+    public function hasPostParam(string $key): bool;
 
-	/**
-	 * @param string $key
-	 * @return boolean
-	 */
-	public function hasServerParam(string $key);
+    public function hasServerParam(string $key): bool;
 
-	/**
-	 * @return boolean
-	 */
-	public function isPostRequest();
+    public function isPostRequest(): bool;
 
-	/**
-	 * @return boolean
-	 */
-	public function isRedirect();
+    public function isRedirect(): bool;
 
-	/**
-	 * @param string $routeID
-	 * @param array $params
-	 * @param string $code
-	 * @param bool $addToken
-	 * @param string $hashParam
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setRedirect(
-		string $routeID,
-		array $params = null,
-		string $code = null,
-		bool $addToken = null,
-		string $hashParam = null
-	);
+    public function setRedirect(
+        string $routeID,
+        ?array $params = null,
+        ?string $code = null,
+        ?bool $addToken = null,
+        ?string $hashParam = null,
+    ): self;
 
-	/**
-	 * @param string $response
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setResponse(string $response);
+    public function setResponse(string $response): self;
 
-	/**
-	 * @param string $statusCode
-	 * @return HttpRequest
-	 * @throws \Exception
-	 */
-	public function setStatusCode(string $statusCode);
+    public function setStatusCode(int $statusCode): self;
 }

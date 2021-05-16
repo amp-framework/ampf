@@ -1,37 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\session;
 
 interface SessionService
 {
-	/**
-	 * @return void
-	 */
-	public function destroy();
+    public function destroy(): void;
 
-	/**
-	 * @param string $key
-	 * @return mixed
-	 */
-	public function getAttribute(string $key);
+    public function getAttribute(string $key): mixed;
 
-	/**
-	 * @param string $key
-	 * @return bool
-	 */
-	public function hasAttribute(string $key);
+    public function hasAttribute(string $key): bool;
 
-	/**
-	 * @param string $key
-	 * @return void
-	 */
-	public function removeAttribute(string $key);
+    public function removeAttribute(string $key): void;
 
-	/**
-	 * @param string $key
-	 * @param mixed $value
-	 * @return void
-	 * @throws \Exception
-	 */
-	public function setAttribute(string $key, $value);
+    public function setAttribute(string $key, mixed $value): void;
 }

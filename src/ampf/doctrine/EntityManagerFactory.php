@@ -1,13 +1,10 @@
 <?php
 
-namespace ampf\doctrine;
+declare(strict_types=1);
 
-use \Doctrine\ORM\EntityManager;
+namespace ampf\doctrine;
 
 interface EntityManagerFactory
 {
-	/**
-	 * @return EntityManager
-	 */
-	public function get();
+    public function get(): self;
 }

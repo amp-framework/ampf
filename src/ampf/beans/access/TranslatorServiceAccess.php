@@ -1,35 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\beans\access;
 
+use ampf\beans\BeanFactory;
 use ampf\services\translator\TranslatorService;
 
 trait TranslatorServiceAccess
 {
-	protected $__translatorService = null;
+    protected ?TranslatorService $__translatorService = null;
 
-	/**
-	 * @return TranslatorService
-	 */
-	public function getTranslatorService()
-	{
-		if ($this->__translatorService === null)
-		{
-			$this->setTranslatorService($this->getBeanFactory()->get('TranslatorService'));
-		}
-		return $this->__translatorService;
-	}
+    public function getTranslatorService(): TranslatorService
+    {
+        if ($this->__translatorService === null) {
+            $this->setTranslatorService($this->getBeanFactory()->get('TranslatorService'));
+        }
 
-	/**
-	 * @param TranslatorService $translatorService
-	 */
-	public function setTranslatorService(TranslatorService $translatorService)
-	{
-		$this->__translatorService = $translatorService;
-	}
+        return $this->__translatorService;
+    }
 
-	/**
-	 * @return \ampf\beans\BeanFactory
-	 */
-	abstract public function getBeanFactory();
+    public function setTranslatorService(TranslatorService $translatorService): void
+    {
+        $this->__translatorService = $translatorService;
+    }
+
+    abstract public function getBeanFactory(): BeanFactory;
 }

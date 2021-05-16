@@ -1,55 +1,57 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\router\impl;
 
-use \ampf\beans\BeanFactoryAccess;
-use \ampf\router\CliRouter;
-use \ampf\requests\CliRequest;
-use \ampf\controller\Controller;
-use \ampf\exceptions\ControllerInterruptedException;
+use ampf\beans\BeanFactoryAccess;
+use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\controller\Controller;
+use ampf\exceptions\ControllerInterruptedException;
+use ampf\requests\CliRequest;
+use ampf\router\CliRouter;
+use RuntimeException;
 
 class DefaultCliRouter implements BeanFactoryAccess, CliRouter
 {
-	use \ampf\beans\impl\DefaultBeanFactoryAccess;
+    use DefaultBeanFactoryAccess;
 
-	/**
-	 * @param CliRequest $request
-	 * @return CliRouter
-	 * @throws \Exception
-	 */
-	public function route(CliRequest $request)
-	{
-		$controller = $request->getController();
-		if (!$this->getBeanFactory()->has($controller)) throw new \Exception();
+    public function route(CliRequest $request): self
+    {
+        $controller = $request->getController();
+        if (!$this->getBeanFactory()->has($controller)) {
+            throw new RuntimeException();
+        }
 
-		$params = $request->getRouteParams();
-		if (!is_array($params) || count($params) < 1) $params = array();
+        $params = $request->getRouteParams();
+        if ($params === null) {
+            $params = [];
+        }
 
-		$bean = $this->getBeanFactory()->get($controller);
-		$this->routeBean($bean, $params);
+        $bean = $this->getBeanFactory()->get($controller);
+        if (!($bean instanceof Controller)) {
+            throw new RuntimeException();
+        }
 
-		return $this;
-	}
+        $this->routeBean($bean, $params);
 
-	/**
-	 * @param Controller $controller
-	 * @param array $params
-	 * @return CliRouter
-	 */
-	public function routeBean(Controller $controller, array $params = null)
-	{
-		if (is_null($params)) $params = array();
+        return $this;
+    }
 
-		try
-		{
-			$controller->beforeAction();
-			call_user_func_array(array($controller, 'execute'), $params);
-			$controller->afterAction();
-		}
-		catch (ControllerInterruptedException $e)
-		{
-			// do nothing.
-		}
-		return $this;
-	}
+    public function routeBean(Controller $controller, ?array $params = null): self
+    {
+        if ($params === null) {
+            $params = [];
+        }
+
+        try {
+            $controller->beforeAction();
+            call_user_func_array([$controller, 'execute'], $params);
+            $controller->afterAction();
+        } catch (ControllerInterruptedException) {
+            // do nothing.
+        }
+
+        return $this;
+    }
 }

@@ -1,71 +1,54 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\doctrine\types;
 
-use \Doctrine\DBAL\Platforms\AbstractPlatform;
-use \Doctrine\DBAL\Types\ConversionException;
-use \Doctrine\DBAL\Types\DateTimeType;
+use DateTime;
+use DateTimeZone;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Types\ConversionException;
+use Doctrine\DBAL\Types\DateTimeType;
 
 class UTCDateTimeType extends DateTimeType
 {
-	/**
-	 * @var \DateTimeZone
-	 */
-	static protected $utc;
+    protected static DateTimeZone $utc;
 
-	/**
-	 * @param \DateTime $value
-	 * @param AbstractPlatform $platform
-	 * @return mixed
-	 */
-	public function convertToDatabaseValue($value, AbstractPlatform $platform)
-	{
-		if ($value instanceof \DateTime)
-		{
-			$value->setTimezone(static::getUtc());
-		}
+    protected static function getUtc(): DateTimeZone
+    {
+        if (static::$utc === null) {
+            static::$utc = new DateTimeZone('UTC');
+        }
 
-		return parent::convertToDatabaseValue($value, $platform);
-	}
+        return static::$utc;
+    }
 
-	/**
-	 * @param \DateTime $value
-	 * @param AbstractPlatform $platform
-	 * @return \DateTime
-	 * @throws \Doctrine\DBAL\Types\ConversionException
-	 */
-	public function convertToPHPValue($value, AbstractPlatform $platform)
-	{
-		if ($value === null || ($value instanceof \DateTime))
-		{
-			return $value;
-		}
+    public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): mixed
+    {
+        if ($value instanceof DateTime) {
+            $value->setTimezone(static::getUtc());
+        }
 
-		// Create the DateTime object with UTC timezone
-		$converted = \DateTime::createFromFormat(
-				$platform->getDateTimeFormatString(), $value, static::getUtc()
-		);
-		if (!$converted)
-		{
-			throw ConversionException::conversionFailedFormat(
-				$value, $this->getName(), $platform->getDateTimeFormatString()
-			);
-		}
+        return parent::convertToDatabaseValue($value, $platform);
+    }
 
+    public function convertToPHPValue(mixed $value, AbstractPlatform $platform): mixed
+    {
+        if ($value === null || ($value instanceof DateTime)) {
+            return $value;
+        }
 
-		return $converted;
-	}
+        // Create the DateTime object with UTC timezone
+        $converted = DateTime::createFromFormat(
+            $platform->getDateTimeFormatString(),
+            $value,
+            static::getUtc(),
+        );
 
-	/**
-	 * @return \DateTimeZone
-	 */
-	static protected function getUtc()
-	{
-		if (static::$utc === null)
-		{
-			static::$utc = new \DateTimeZone('UTC');
-		}
-		return static::$utc;
-	}
+        if (!$converted) {
+            throw ConversionException::conversionFailedFormat($value, $this->getName(), $platform->getDateTimeFormatString(), );
+        }
 
+        return $converted;
+    }
 }

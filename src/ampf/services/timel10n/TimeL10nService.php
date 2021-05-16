@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ampf\services\timel10n;
 
 interface TimeL10nService
 {
-	public function getUtcDatetime($unixtime = null);
+    public function getUtcDatetime(?int $unixTime = null): string;
 
-	public function getUnixtimeByUtcDatetime($datetime);
+    public function getUnixTimeByUtcDatetime(string $datetime): int;
 }
