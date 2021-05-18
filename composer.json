@@ -14,9 +14,9 @@
     "ext-pdo": "*"
   },
   "require-dev": {
-    "slevomat/coding-standard": "^7.0",
     "friendsofphp/php-cs-fixer": "^3.0",
     "phpstan/phpstan": "^0.12.87",
-    "phpunit/phpunit": "^9.5"
+    "phpunit/phpunit": "^9.5",
+    "slevomat/coding-standard": "^7.0"
   }
 }
