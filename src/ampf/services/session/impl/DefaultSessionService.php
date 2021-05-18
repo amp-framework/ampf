@@ -7,9 +7,7 @@ namespace ampf\services\session\impl;
 use ampf\services\session\SessionService;
 use RuntimeException;
 
-/**
- * phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
- */
+/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
 class DefaultSessionService implements SessionService
 {
     public function __construct()

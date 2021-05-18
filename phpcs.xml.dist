@@ -6,6 +6,11 @@
     <arg value="sp"/>
 
     <rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+    <rule ref="PSR12">
+        <exclude name="Generic.Files.LineLength.TooLong"/>
+        <exclude name="PSR2.Classes.PropertyDeclaration.Underscore"/>
+        <exclude name="PSR12.Files.FileHeader.IncorrectOrder"/>
+    </rule>
 
     <!--
     Based on https://github.com/slevomat/coding-standard/blob/48141737f9e5ed701ef8bcea2027e701b50bd932/README.md

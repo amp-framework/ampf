@@ -41,8 +41,7 @@ class ApplicationContext
                 // If the value is an array, recurse one level deep
                 if (is_array($value) && $depth === 0) {
                     $result[$key] = static::mergeConfig($value, $config2[$key], ($depth + 1));
-                } // Else just take over the value from config2
-                else {
+                } else { // Else just take over the value from config2
                     $result[$key] = $config2[$key];
                 }
                 unset($config2[$key]);

@@ -10,9 +10,7 @@ use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\requests\CliRequest;
 use RuntimeException;
 
-/**
- * phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
- */
+/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
 class DefaultCli implements BeanFactoryAccess, CliRequest
 {
     use DefaultBeanFactoryAccess;

@@ -11,9 +11,7 @@ use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\requests\HttpRequest;
 use RuntimeException;
 
-/**
- * phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
- */
+/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
 class DefaultHttp implements BeanFactoryAccess, HttpRequest
 {
     use DefaultBeanFactoryAccess;

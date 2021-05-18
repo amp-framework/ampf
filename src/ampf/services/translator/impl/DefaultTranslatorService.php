@@ -9,9 +9,7 @@ use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\services\translator\TranslatorService;
 use RuntimeException;
 
-/**
- * phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
- */
+/** @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter */
 class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
 {
     use DefaultBeanFactoryAccess;

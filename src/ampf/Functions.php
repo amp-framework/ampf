@@ -6,6 +6,7 @@ namespace ampf;
 
 use RuntimeException;
 
+/** @phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps */
 abstract class Functions
 {
     /** @return string[] */

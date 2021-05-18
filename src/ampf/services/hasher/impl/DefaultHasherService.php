@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace ampf\services\hasher\impl;
 
-// phpcs:disable SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses.IncorrectlyOrderedUses
+/**
+ * @phpcs:disable PSR12.Files.FileHeader.IncorrectGrouping
+ * @phpcs:disable PSR12.Files.FileHeader.SpacingAfterBlock
+ * @phpcs:disable SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses.IncorrectlyOrderedUses
+ */
+
 use ampf\services\hasher\HasherService;
 use const PASSWORD_BCRYPT;
 use RuntimeException;

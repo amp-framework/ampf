@@ -8,9 +8,7 @@ use ampf\beans\BeanFactory;
 use ampf\beans\BeanFactoryAccess;
 use RuntimeException;
 
-/**
- * phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
- */
+/** @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter */
 class DefaultBeanFactory implements BeanFactory
 {
     /** @var array<string, mixed> */

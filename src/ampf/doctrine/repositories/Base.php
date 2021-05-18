@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace ampf\doctrine\repositories;
 
+use ampf\doctrine\entities\Base as BaseEntity;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use RuntimeException;
 
 /**
- * @template T
+ * @template T of \ampf\doctrine\entities\Base
  * @template-extends \Doctrine\ORM\EntityRepository<T>
  */
 abstract class Base extends EntityRepository
@@ -51,11 +52,19 @@ abstract class Base extends EntityRepository
         return $this->bulkRemoveQuery($qb->getQuery());
     }
 
-    /** @return self<T> */
-    public function create(): self
+    /** @return T */
+    public function create(): BaseEntity
     {
         $class = $this->getClassName();
+
         $obj = new $class();
+        if (!($obj instanceof BaseEntity)) {
+            throw new RuntimeException();
+        }
+        /** @phpcs:disable SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable */
+        /** @var T $obj */
+        /** @phpcs:enable SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable */
+
         $this->getEntityManager()->persist($obj);
 
         return $obj;
@@ -102,7 +111,7 @@ abstract class Base extends EntityRepository
     }
 
     /**
-     * @template R
+     * @template R of \ampf\doctrine\entities\Base
      *
      * @param class-string<R> $entityName
      *
