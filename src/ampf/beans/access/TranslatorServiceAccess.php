@@ -16,6 +16,7 @@ trait TranslatorServiceAccess
         if ($this->__translatorService === null) {
             $this->setTranslatorService($this->getBeanFactory()->get('TranslatorService'));
         }
+        assert($this->__translatorService !== null);
 
         return $this->__translatorService;
     }

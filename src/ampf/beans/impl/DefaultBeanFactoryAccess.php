@@ -12,6 +12,8 @@ trait DefaultBeanFactoryAccess
 
     public function getBeanFactory(): BeanFactory
     {
+        assert($this->__beanFactory instanceof BeanFactory);
+
         return $this->__beanFactory;
     }
 

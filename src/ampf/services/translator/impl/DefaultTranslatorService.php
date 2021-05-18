@@ -98,6 +98,10 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
             $this->setConfig($this->getBeanFactory()->get('Config'));
         }
 
+        if ($this->_config === null) {
+            throw new RuntimeException();
+        }
+
         return $this->_config;
     }
 

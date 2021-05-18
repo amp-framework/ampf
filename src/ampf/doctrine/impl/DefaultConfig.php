@@ -23,6 +23,7 @@ class DefaultConfig implements BeanFactoryAccess, Config
         if ($this->_config === null) {
             $this->setConfig($this->getBeanFactory()->get('Config'));
         }
+        assert($this->_config !== null);
 
         return $this->_config;
     }
@@ -50,13 +51,14 @@ class DefaultConfig implements BeanFactoryAccess, Config
         return $this->getConfigValue('typeOverrides');
     }
 
+    /** @param ?array{doctrine: array<string, mixed>} $config */
     public function setConfig(?array $config = null): void
     {
-        if ($config === null || count($config) < 1) {
+        if ($config === null) {
             throw new RuntimeException();
         }
 
-        if (!isset($config['doctrine']) || !is_array($config['doctrine']) || count($config['doctrine']) < 1) {
+        if (count($config['doctrine'] ?? []) < 1) {
             throw new RuntimeException();
         }
 

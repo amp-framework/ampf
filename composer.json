@@ -4,7 +4,8 @@
   "license": "MIT",
   "autoload": {
     "psr-4": {
-      "ampf\\": "src/ampf/"
+      "ampf\\": "src/ampf/",
+      "ampfTest\\": "tests/"
     }
   },
   "require": {
@@ -14,6 +15,8 @@
   },
   "require-dev": {
     "slevomat/coding-standard": "^7.0",
-    "friendsofphp/php-cs-fixer": "^3.0"
+    "friendsofphp/php-cs-fixer": "^3.0",
+    "phpstan/phpstan": "^0.12.87",
+    "phpunit/phpunit": "^9.5"
   }
 }

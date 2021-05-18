@@ -7,16 +7,18 @@ namespace ampf\views\impl;
 use ampf\router\CliRouter;
 use ampf\views\AbstractView;
 use ampf\views\CliView;
+use RuntimeException;
 
 class DefaultCliView extends AbstractView implements CliView
 {
     protected ?CliRouter $_router = null;
 
-    public function escape(string $string): string
+    public function escape(mixed $string): string
     {
         return $string;
     }
 
+    /** @param array<string, mixed> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {
@@ -35,9 +37,14 @@ class DefaultCliView extends AbstractView implements CliView
         // get the response
         ob_start();
         $request->flush();
+        $result = ob_get_clean();
 
         // and, finally, return it
-        return ob_get_clean();
+        if ($result === false) {
+            throw new RuntimeException();
+        }
+
+        return $result;
     }
 
     // Bean getters
@@ -46,6 +53,10 @@ class DefaultCliView extends AbstractView implements CliView
     {
         if ($this->_router === null) {
             $this->setRouter($this->getBeanFactory()->get('Router'));
+        }
+
+        if ($this->_router === null) {
+            throw new RuntimeException();
         }
 
         return $this->_router;

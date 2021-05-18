@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ampf;
 
+use RuntimeException;
+
 abstract class Functions
 {
     /** @return string[] */
@@ -19,7 +21,12 @@ abstract class Functions
             return $ret;
         }
 
-        return preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY);
+        $result = preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY);
+        if ($result === false) {
+            throw new RuntimeException();
+        }
+
+        return $result;
     }
 
     public static function mb_ucfirst(string $string): string

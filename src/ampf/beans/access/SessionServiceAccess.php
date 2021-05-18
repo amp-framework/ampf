@@ -16,6 +16,7 @@ trait SessionServiceAccess
         if ($this->__sessionService === null) {
             $this->setSessionService($this->getBeanFactory()->get('SessionService'));
         }
+        assert($this->__sessionService !== null);
 
         return $this->__sessionService;
     }

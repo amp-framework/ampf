@@ -12,5 +12,6 @@ interface TranslatorService
 
     public function setLanguage(string $language): void;
 
+    /** @param ?string[] $args */
     public function translate(string $key, ?array $args = null): ?string;
 }

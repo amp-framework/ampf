@@ -8,6 +8,10 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use RuntimeException;
 
+/**
+ * @template T
+ * @template-extends \Doctrine\ORM\EntityRepository<T>
+ */
 abstract class Base extends EntityRepository
 {
     /** @param array<string, mixed> $criteria */
@@ -47,6 +51,7 @@ abstract class Base extends EntityRepository
         return $this->bulkRemoveQuery($qb->getQuery());
     }
 
+    /** @return self<T> */
     public function create(): self
     {
         $class = $this->getClassName();
@@ -70,6 +75,7 @@ abstract class Base extends EntityRepository
         ;
     }
 
+    /** @param ?T $model */
     public function is(mixed $model): bool
     {
         $class = $this->getClassName();
@@ -95,11 +101,24 @@ abstract class Base extends EntityRepository
         return $i;
     }
 
+    /**
+     * @template R
+     *
+     * @param class-string<R> $entityName
+     *
+     * @return self<R>
+     */
     protected function getRepository(string $entityName): self
     {
-        return $this
+        $repo = $this
             ->getEntityManager()
             ->getRepository($entityName)
         ;
+
+        if (!($repo instanceof self)) {
+            throw new RuntimeException();
+        }
+
+        return $repo;
     }
 }

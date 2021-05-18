@@ -16,6 +16,7 @@ interface View
 
     public function reset(): void;
 
+    /** @param ?array<string, mixed> $params */
     public function subRender(string $viewID, ?array $params = null): string;
 
     public function formatNumber(
@@ -31,8 +32,10 @@ interface View
      */
     public function formatTime(mixed $time = null, ?string $format = null): string;
 
+    /** @param ?string[] $args */
     public function t(string $key, ?array $args = null): string;
 
+    /** @param ?array<string, mixed> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string;
 
     public function escape(mixed $string): string;

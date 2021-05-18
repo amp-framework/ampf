@@ -16,6 +16,7 @@ trait RouteResolverAccess
         if ($this->__routeResolver === null) {
             $this->setRouteResolver($this->getBeanFactory()->get('RouteResolver'));
         }
+        assert($this->__routeResolver !== null);
 
         return $this->__routeResolver;
     }

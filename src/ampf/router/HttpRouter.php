@@ -11,5 +11,6 @@ interface HttpRouter
 {
     public function route(HttpRequest $request): self;
 
+    /** @param ?array<string, string> $params */
     public function routeBean(Controller $controller, ?array $params = null): self;
 }

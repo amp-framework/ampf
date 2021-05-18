@@ -41,6 +41,7 @@ class DefaultHttpView extends AbstractView implements HttpView
         return $this->getRequest()->getLink($relativeLink);
     }
 
+    /** @param array<string, mixed> $params */
     public function getActionLink(string $routeID, ?array $params = null, bool $addToken = false): string
     {
         if ($params === null) {
@@ -54,6 +55,10 @@ class DefaultHttpView extends AbstractView implements HttpView
     {
         if ($this->_request === null) {
             $this->setRequest($this->getBeanFactory()->get('Request'));
+        }
+
+        if ($this->_request === null) {
+            throw new RuntimeException();
         }
 
         return $this->_request;
@@ -70,6 +75,10 @@ class DefaultHttpView extends AbstractView implements HttpView
             $this->setRouter($this->getBeanFactory()->get('Router'));
         }
 
+        if ($this->_router === null) {
+            throw new RuntimeException();
+        }
+
         return $this->_router;
     }
 
@@ -78,6 +87,7 @@ class DefaultHttpView extends AbstractView implements HttpView
         $this->_router = $router;
     }
 
+    /** @param array<string, mixed> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {
@@ -96,9 +106,14 @@ class DefaultHttpView extends AbstractView implements HttpView
         // get the response
         ob_start();
         $request->flush();
+        $result = ob_get_clean();
 
         // and, finally, return it
-        return ob_get_clean();
+        if ($result === false) {
+            throw new RuntimeException();
+        }
+
+        return $result;
     }
 
     protected function solveSymbolicPath(string $path): string

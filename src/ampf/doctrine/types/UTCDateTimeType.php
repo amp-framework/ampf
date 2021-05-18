@@ -12,7 +12,7 @@ use Doctrine\DBAL\Types\DateTimeType;
 
 class UTCDateTimeType extends DateTimeType
 {
-    protected static DateTimeZone $utc;
+    protected static ?DateTimeZone $utc;
 
     protected static function getUtc(): DateTimeZone
     {

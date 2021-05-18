@@ -22,7 +22,7 @@ class FileBased implements StringCacheService
         }
 
         $content = file_get_contents($path);
-        if (trim($content) === '') {
+        if ($content === false || trim($content) === '') {
             unlink($path);
 
             return false;
@@ -115,6 +115,6 @@ class FileBased implements StringCacheService
 
     protected function isCorrectKey(string $key): bool
     {
-        return preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key);
+        return preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key) === 1;
     }
 }

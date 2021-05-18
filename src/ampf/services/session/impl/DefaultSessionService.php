@@ -24,8 +24,14 @@ class DefaultSessionService implements SessionService
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
+
+            $sessionName = session_name();
+            if ($sessionName === false) {
+                throw new RuntimeException();
+            }
+
             setcookie(
-                session_name(),
+                $sessionName,
                 '',
                 (time() - 42000),
                 $params['path'],

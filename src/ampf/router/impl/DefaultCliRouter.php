@@ -24,9 +24,6 @@ class DefaultCliRouter implements BeanFactoryAccess, CliRouter
         }
 
         $params = $request->getRouteParams();
-        if ($params === null) {
-            $params = [];
-        }
 
         $bean = $this->getBeanFactory()->get($controller);
         if (!($bean instanceof Controller)) {
@@ -38,6 +35,7 @@ class DefaultCliRouter implements BeanFactoryAccess, CliRouter
         return $this;
     }
 
+    /** @param array<int, string> $params */
     public function routeBean(Controller $controller, ?array $params = null): self
     {
         if ($params === null) {

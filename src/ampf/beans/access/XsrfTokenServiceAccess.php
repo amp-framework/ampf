@@ -16,6 +16,7 @@ trait XsrfTokenServiceAccess
         if ($this->__xsrfTokenService === null) {
             $this->setXsrfTokenService($this->getBeanFactory()->get('XsrfTokenService'));
         }
+        assert($this->__xsrfTokenService !== null);
 
         return $this->__xsrfTokenService;
     }

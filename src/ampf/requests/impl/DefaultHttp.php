@@ -34,12 +34,12 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     protected ?string $responseBody = null;
 
-    /** @var ?array<string, string> */
+    /** @var ?array{code: int, target: string} */
     protected ?array $responseRedirect = null;
 
     protected int $responseStatusCode = 200;
 
-    /** @var array<string, string> */
+    /** @var array<int, string> */
     protected array $headers = [];
 
     public function __construct()
@@ -172,11 +172,12 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if (!$this->hasServerParam($key)) {
             return null;
         }
+        assert(isset($this->server[$key]));
 
         return $this->server[$key];
     }
 
-    public function getController(): string
+    public function getController(): ?string
     {
         return $this->getRouteResolver()->getControllerByRoutePattern(
             $this->getRoute(),
@@ -188,6 +189,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if (!$this->hasCookieParam($key)) {
             return null;
         }
+        assert(isset($this->cookie[$key]));
 
         return $this->cookie[$key];
     }
@@ -197,6 +199,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if (!$this->hasPostParam($key)) {
             return null;
         }
+        assert(isset($this->post[$key]));
 
         return $this->post[$key];
     }
@@ -214,8 +217,13 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
             return null;
         }
 
+        $httpHost = $this->getServerParam('HTTP_HOST');
+        if (!is_string($httpHost) || trim($httpHost) === '') {
+            throw new RuntimeException();
+        }
+
         // Get the HTTP host, aka domain name of this project
-        $domain = ('://' . $this->server['HTTP_HOST'] . '/');
+        $domain = ('://' . $httpHost . '/');
 
         // Do we have $domain as a domain name in the referer?
         $i = mb_strpos($referer, $domain);
@@ -227,7 +235,11 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         $referer = ltrim($referer, '/');
 
         // Get our app prefix, aka the webserver document root prefix of our app
-        $prefix = ltrim($this->getDirname($this->server['SCRIPT_NAME']), '/');
+        $scriptName = $this->getServerParam('SCRIPT_NAME');
+        if (!is_string($scriptName)) {
+            throw new RuntimeException();
+        }
+        $prefix = ltrim($this->getDirname($scriptName), '/');
 
         // Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
         $i = mb_strpos($referer, $prefix);
@@ -249,8 +261,8 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     public function getRefererRaw(): ?string
     {
-        $referer = $this->server['HTTP_REFERER'];
-        if (!$referer || trim($referer) === '') {
+        $referer = $this->getServerParam('HTTP_REFERER');
+        if (!is_string($referer) || trim($referer) === '') {
             return null;
         }
 
@@ -259,18 +271,22 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     public function getResponse(): string
     {
+        if ($this->responseBody === null) {
+            return '';
+        }
+
         return $this->responseBody;
     }
 
-    public function getRouteID(): string
+    public function getRouteID(): ?string
     {
         return $this->getRouteResolver()->getRouteIDByRoutePattern(
             $this->getRoute(),
         );
     }
 
-    /** @return string[] */
-    public function getRouteParams(): array
+    /** @return ?array<string, string> */
+    public function getRouteParams(): ?array
     {
         return $this->getRouteResolver()->getParamsByRoutePattern(
             $this->getRoute(),
@@ -302,6 +318,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if (!$this->hasGetParam($key)) {
             return null;
         }
+        assert(isset($this->get[$key]));
 
         return $this->get[$key];
     }
@@ -319,10 +336,11 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         return $this->responseRedirect !== null;
     }
 
+    /** @param array<string, string> $params */
     public function setRedirect(
         string $routeID,
         ?array $params = null,
-        ?string $code = null,
+        ?int $code = null,
         ?bool $addToken = null,
         ?string $hashParam = null,
     ): self {
@@ -332,8 +350,8 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if ($params === null) {
             $params = [];
         }
-        if (trim($code) === '') {
-            $code = '301';
+        if ($code === null) {
+            $code = 301;
         }
         if ($addToken === null) {
             $addToken = false;
@@ -343,13 +361,14 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         }
 
         $this->responseRedirect = [
-            'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
             'code' => $code,
+            'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
         ];
 
         return $this;
     }
 
+    /** @param ?array<string, string> $params */
     public function getActionLink(
         string $routeID,
         ?array $params = null,
@@ -375,7 +394,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         }
 
         $notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
-        if (count($notDefinedParams) > 0) {
+        if (is_array($notDefinedParams) && count($notDefinedParams) > 0) {
             $additionalParams = [];
             foreach ($notDefinedParams as $paramKey => $paramValue) {
                 $additionalParams[] = (rawurlencode($paramKey) . '=' . rawurlencode($paramValue));
@@ -392,7 +411,12 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     public function getLink(string $relative): string
     {
-        $path = $this->getDirname($this->server['SCRIPT_NAME']);
+        $scriptName = $this->getServerParam('SCRIPT_NAME');
+        if ($scriptName === null) {
+            throw new RuntimeException();
+        }
+
+        $path = $this->getDirname($scriptName);
 
         $route = '';
         if (trim($path) !== '') {
@@ -427,12 +451,21 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     protected function getRoute(): string
     {
-        $route = $this->server['REQUEST_URI'];
+        $route = $this->getServerParam('REQUEST_URI');
+        if ($route === null) {
+            throw new RuntimeException();
+        }
+
         // Remove beginning slashes, just to be sure
         $route = ltrim($route, '/');
 
         // Get the base path
-        $base = $this->getDirname($this->server['SCRIPT_NAME']);
+        $scriptName = $this->getServerParam('SCRIPT_NAME');
+        if ($scriptName === null) {
+            throw new RuntimeException();
+        }
+
+        $base = $this->getDirname($scriptName);
         // If it is set, remove it from the route
         if ($base !== '' && str_starts_with($route, $base)) {
             $route = substr($route, mb_strlen($base));
@@ -458,9 +491,6 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         $path = trim($path, '/');
         // explode for slashes
         $path = explode('/', $path);
-        if (count($path) < 1) {
-            throw new RuntimeException();
-        }
 
         foreach ($path as $pathKey => $value) {
             // Remove empty paths information (this changes 'blub//didub' to 'blub/didub')

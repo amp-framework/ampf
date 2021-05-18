@@ -42,6 +42,7 @@ class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
         return $this;
     }
 
+    /** @param array<string, string> $params */
     public function routeBean(Controller $controller, ?array $params = null): self
     {
         if ($params === null) {
@@ -50,7 +51,15 @@ class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
 
         try {
             $controller->beforeAction();
-            call_user_func_array([$controller, 'execute'], $params);
+
+            /**
+             * @TODO This currently doesn't honor parameter names: We have the parameter names in $params
+             * (in form of ['param1' => 'value1', ...], but call_user_func_array() just expects an array<int, mixed>
+             * input for the parameters in the correct order by the method definition. Probably should be refactored
+             * here fundamentally to support named parameters, but is a job for later.
+             */
+            call_user_func_array([$controller, 'execute'], array_values($params));
+
             $controller->afterAction();
         } catch (ControllerInterruptedException) {
             // do nothing.

@@ -7,14 +7,13 @@ namespace ampf\router\impl;
 use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\router\RouteResolver;
-use JetBrains\PhpStorm\ArrayShape;
 use RuntimeException;
 
 class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
 {
     use DefaultBeanFactoryAccess;
 
-    /** @var ?array<string, array<string, mixed>> */
+    /** @var ?array<string, array{pattern: string, controller: string}> */
     protected ?array $_config = null;
 
     public function getControllerByRoutePattern(string $routePattern): ?string
@@ -27,7 +26,11 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         return $array[1];
     }
 
-    /** @return ?string[] */
+    /**
+     * @param array<string, string> $params
+     *
+     * @return ?array<string, string>
+     */
     public function getNotDefinedParams(string $routeID, ?array $params = null): ?array
     {
         $routePattern = $this->getRoutePattern($routeID);
@@ -42,7 +45,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         return $this->getAdjustedRouteParams($routePattern, $params)['notUsedParams'];
     }
 
-    /** @return ?string[] */
+    /** @return ?array<string, string> */
     public function getParamsByRoutePattern(string $routePattern): ?array
     {
         $array = $this->getControllerParamsByRoutePattern($routePattern);
@@ -78,13 +81,14 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         return $this->getAdjustedRouteParams($routePattern, $params)['route'];
     }
 
-    /** @param array<string, mixed> $config */
+    /** @param array{routes: array<string, array{pattern: string, controller: string}>} $config */
     public function setConfig(array $config): void
     {
         if (!isset($config['routes'])) {
             throw new RuntimeException();
         }
 
+        /** @var array<string, array{pattern: string, controller: string}> $config */
         $config = $config['routes'];
         if (!is_array($config) || count($config) < 1) {
             throw new RuntimeException();
@@ -92,13 +96,18 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
 
         $correctKeys = ['pattern', 'controller'];
 
-        foreach ($config as $key => $value) {
-            if (!is_string($key) || trim($key) === '') {
+        foreach ($config as $routeId => $routeOptions) {
+            if (!is_string($routeId) || trim($routeId) === '' || !is_array($routeOptions)) {
                 throw new RuntimeException();
             }
 
-            $diff = array_diff(array_keys($value), $correctKeys);
+            $diff = array_diff(array_keys($routeOptions), $correctKeys);
             if (count($diff) !== 0) {
+                throw new RuntimeException();
+            }
+
+            $diff2 = array_diff($correctKeys, array_keys($routeOptions));
+            if (count($diff2) !== 0) {
                 throw new RuntimeException();
             }
         }
@@ -115,17 +124,20 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function cleanMatches(array $matches, array $allowedParams): array
     {
         $result = [];
-        foreach ($matches as $key => $value) {
-            if (in_array($key, $allowedParams, true)) {
-                $result[$key] = $value;
+        foreach ($matches as $paramName => $paramValue) {
+            if (in_array($paramName, $allowedParams, true)) {
+                $result[$paramName] = $paramValue;
             }
         }
 
         return $result;
     }
 
-    /** @return array<string, mixed> */
-    #[ArrayShape(['route' => 'string', 'notUsedParams' => 'array'])]
+    /**
+     * @param array<string, string> $params
+     *
+     * @return array{route: string, notUsedParams: array<string, string>}
+     */
     protected function getAdjustedRouteParams(string $regex, ?array $params = null): array
     {
         if ($params === null) {
@@ -157,19 +169,29 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
             $this->setConfig($this->getBeanFactory()->get('Config'));
         }
 
+        if ($this->_config === null) {
+            throw new RuntimeException();
+        }
+
         return $this->_config;
     }
 
-    /** @return ?mixed[] */
+    /** @return ?array{string, string, array<string, string>} */
     protected function getControllerParamsByRoutePattern(string $routePattern): ?array
     {
-        foreach ($this->getConfig() as $routeID => $value) {
-            $preg = ('/^' . str_replace('/', '\/', $value['pattern']) . '$/');
+        foreach ($this->getConfig() as $routeId => $routeOptions) {
+            $preg = ('/^' . str_replace('/', '\/', $routeOptions['pattern']) . '$/');
+
+            /**
+             * $matches will contain string,string elements because of named parameters in the regex
+             *
+             * @var array<string, string> $matches
+             */
             $matches = [];
             if (preg_match($preg, $routePattern, $matches)) {
-                $matches = $this->cleanMatches($matches, $this->getRouteParams($value['pattern']));
+                $matches = $this->cleanMatches($matches, $this->getRouteParams($routeOptions['pattern']));
 
-                return [$routeID, $value['controller'], $matches];
+                return [$routeId, $routeOptions['controller'], $matches];
             }
         }
 
@@ -180,7 +202,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getRouteParams(string $regex): array
     {
         $matches = [];
-        $catch = '/\(\?P\<(.+)\>[^\)]+\)/';
+        $catch = '/\(\?P\<([^\>]+)\>[^\)]+\)/';
         preg_match_all($catch, $regex, $matches, PREG_PATTERN_ORDER);
 
         return $matches[1];

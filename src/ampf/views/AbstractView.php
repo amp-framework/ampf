@@ -10,7 +10,7 @@ use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use DateTime;
 use DateTimeZone;
-use Exception;
+use RuntimeException;
 
 abstract class AbstractView implements BeanFactoryAccess, View
 {
@@ -21,9 +21,9 @@ abstract class AbstractView implements BeanFactoryAccess, View
     /** @var array<string, mixed> */
     protected array $memory = [];
 
-    protected DateTimeZone $timezone_utc;
+    protected ?DateTimeZone $timezone_utc;
 
-    protected DateTimeZone $timezone_local;
+    protected ?DateTimeZone $timezone_local;
 
     public function get(string $key, mixed $default = null): mixed
     {
@@ -56,8 +56,13 @@ abstract class AbstractView implements BeanFactoryAccess, View
 
         ob_start();
         require $path;
+        $result = ob_get_clean();
 
-        return ob_get_clean();
+        if ($result === false) {
+            throw new RuntimeException();
+        }
+
+        return $result;
     }
 
     public function reset(): void
@@ -106,12 +111,11 @@ abstract class AbstractView implements BeanFactoryAccess, View
     {
         // If not instanceof DateTime, try to create from unix timestamp
         if (!($time instanceof DateTime)) {
-            $time = DateTime::createFromFormat('U', $time, $this->getTimeZoneUTC());
-            if (!$time) {
-                throw new Exception();
+            $time = DateTime::createFromFormat('U', (string)$time, $this->getTimeZoneUTC());
+            if (!($time instanceof DateTime)) {
+                throw new RuntimeException();
             }
         }
-        assert($time instanceof DateTime);
 
         if ($format === null) {
             $format = 'd.m.Y H:i';
@@ -124,9 +128,10 @@ abstract class AbstractView implements BeanFactoryAccess, View
         return $datetime->format($format);
     }
 
+    /** @param ?string[] $args */
     public function t(string $key, ?array $args = null): string
     {
-        return $this->getTranslatorService()->translate($key, $args);
+        return $this->getTranslatorService()->translate($key, $args) ?? '';
     }
 
     protected function getTimeZoneUTC(): DateTimeZone

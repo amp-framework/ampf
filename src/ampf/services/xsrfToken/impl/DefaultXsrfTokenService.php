@@ -8,6 +8,7 @@ use ampf\beans\access\SessionServiceAccess;
 use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\services\xsrfToken\XsrfTokenService;
+use RuntimeException;
 use SplQueue;
 
 class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
@@ -20,6 +21,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
     protected const TOKEN_LEN = 6;
     protected const TOKEN_QUEUE_COUNT = 15;
 
+    /** @var ?\SplQueue<string> */
     protected ?SplQueue $tokenQueue = null;
 
     protected ?string $currentToken = null;
@@ -33,7 +35,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
             // Generate a new token
             $random = random_bytes(static::TOKEN_LEN);
             $random = bin2hex($random);
-            $this->currentToken = substr($random, 0, static::TOKEN_LEN);
+            $this->currentToken = mb_substr($random, 0, static::TOKEN_LEN);
 
             // Store it into the queue
             $tokenQueue->enqueue($this->currentToken);
@@ -45,6 +47,10 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
             // And save back our tokenQueue into the session
             $this->setTokenQueue();
+        }
+
+        if ($this->currentToken === null) {
+            throw new RuntimeException();
         }
 
         return $this->currentToken;
@@ -86,6 +92,8 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
     /**
      * Gets the \SplQueue in which the tokens are being saved
+     *
+     * @return \SplQueue<string>
      */
     protected function getTokenQueue(): SplQueue
     {

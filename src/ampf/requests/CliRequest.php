@@ -13,6 +13,7 @@ interface CliRequest
 
     public function getCmd(string $routeID): string;
 
+    /** @param array<string, string> $params */
     public function getActionCmd(string $routeID, ?array $params = null): string;
 
     public function setResponse(string $response): self;

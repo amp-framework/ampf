@@ -36,6 +36,10 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
             $this->setConfig($this->getBeanFactory()->get('Config'));
         }
 
+        if ($this->_viewDirectory === null) {
+            throw new RuntimeException();
+        }
+
         return $this->_viewDirectory;
     }
 
@@ -50,7 +54,12 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
             throw new RuntimeException();
         }
 
-        $this->_viewDirectory = realpath($config['viewDirectory']);
+        $viewDirectory = realpath($config['viewDirectory']);
+        if ($viewDirectory === false) {
+            throw new RuntimeException();
+        }
+
+        $this->_viewDirectory = $viewDirectory;
     }
 
     protected function isValidFilename(string $filename): bool

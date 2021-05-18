@@ -20,18 +20,23 @@ class DefaultConfigurationService implements ConfigurationService
             $domain = $this->domain;
         }
 
+        if ($domain === null) {
+            throw new RuntimeException();
+        }
+
         while (
-            strpos($domain, '.') !== false
+            str_contains($domain, '.')
             && trim($domain) !== ''
         ) {
-            if (
-                isset($this->config[$domain], $this->config[$domain][$key])
-            ) {
+            if (isset($this->config[$domain], $this->config[$domain][$key])) {
                 return $this->config[$domain][$key];
             }
 
+            /** @phpstan-ignore-next-line */
             $domain = substr($domain, 0, strrpos($domain, '.'));
         }
+
+        return null;
     }
 
     public function setDomain(string $domain): self
