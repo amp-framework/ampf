@@ -21,9 +21,9 @@ abstract class AbstractView implements BeanFactoryAccess, View
     /** @var array<string, mixed> */
     protected array $memory = [];
 
-    protected ?DateTimeZone $timezone_utc;
+    protected ?DateTimeZone $timezone_utc = null;
 
-    protected ?DateTimeZone $timezone_local;
+    protected ?DateTimeZone $timezone_local = null;
 
     public function get(string $key, mixed $default = null): mixed
     {
@@ -78,6 +78,7 @@ abstract class AbstractView implements BeanFactoryAccess, View
 
         // get a new view
         $view = $this->getBeanFactory()->get('View');
+        assert($view instanceof View);
 
         // set the params
         foreach ($params as $key => $value) {
@@ -102,6 +103,13 @@ abstract class AbstractView implements BeanFactoryAccess, View
         }
         if ($thousandsSep === null) {
             $thousandsSep = ' ';
+        }
+
+        if (!is_float($number)) {
+            if (!is_scalar($number)) {
+                throw new RuntimeException();
+            }
+            $number = ((float)$number);
         }
 
         return number_format($number, $decimals, $decPoint, $thousandsSep);

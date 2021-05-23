@@ -9,12 +9,12 @@ use RuntimeException;
 
 class DefaultConfigurationService implements ConfigurationService
 {
-    /** @var array<string, array<string, string>> */
+    /** @var array<string, array<string, mixed>> */
     protected array $config = [];
 
     protected ?string $domain = null;
 
-    public function get(string $key, ?string $domain = null): ?string
+    public function get(string $key, ?string $domain = null): mixed
     {
         if ($domain === null) {
             $domain = $this->domain;

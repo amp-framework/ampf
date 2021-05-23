@@ -121,10 +121,11 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
             return [];
         }
 
-        $serverParam = explode(
-            ',',
-            $this->getServerParam('HTTP_ACCEPT_LANGUAGE'),
-        );
+        $httpAcceptLanguage = $this->getServerParam('HTTP_ACCEPT_LANGUAGE');
+        if (!is_string($httpAcceptLanguage)) {
+            $httpAcceptLanguage = '';
+        }
+        $serverParam = explode(',', $httpAcceptLanguage);
 
         $results = [];
         foreach ($serverParam as $language) {
@@ -301,6 +302,9 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // take the token
         $tokenValue = $this->getGetParam($tokenKey);
+        if (!is_string($tokenValue)) {
+            $tokenValue = '';
+        }
 
         // and return whether it is correct
         return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
@@ -410,7 +414,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     public function getLink(string $relative): string
     {
         $scriptName = $this->getServerParam('SCRIPT_NAME');
-        if ($scriptName === null) {
+        if (!is_string($scriptName)) {
             throw new RuntimeException();
         }
 
@@ -450,7 +454,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     protected function getRoute(): string
     {
         $route = $this->getServerParam('REQUEST_URI');
-        if ($route === null) {
+        if (!is_string($route)) {
             throw new RuntimeException();
         }
 
@@ -459,7 +463,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // Get the base path
         $scriptName = $this->getServerParam('SCRIPT_NAME');
-        if ($scriptName === null) {
+        if (!is_string($scriptName)) {
             throw new RuntimeException();
         }
 

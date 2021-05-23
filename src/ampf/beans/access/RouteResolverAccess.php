@@ -14,7 +14,9 @@ trait RouteResolverAccess
     public function getRouteResolver(): RouteResolver
     {
         if ($this->__routeResolver === null) {
-            $this->setRouteResolver($this->getBeanFactory()->get('RouteResolver'));
+            $routeResolver = $this->getBeanFactory()->get('RouteResolver');
+            assert($routeResolver instanceof RouteResolver);
+            $this->setRouteResolver($routeResolver);
         }
         assert($this->__routeResolver !== null);
 

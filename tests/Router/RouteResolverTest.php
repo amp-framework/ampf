@@ -137,6 +137,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['abc' => 'def']);
     }
 
@@ -145,6 +146,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => 'abc']);
     }
 
@@ -161,6 +163,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => [0 => []]]);
     }
 
@@ -169,6 +172,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => ['' => []]]);
     }
 
@@ -177,6 +181,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => ['defaultRoute' => 'fail']]);
     }
 
@@ -185,6 +190,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => ['defaultRoute' => ['abc']]]);
     }
 
@@ -193,6 +199,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => ['defaultRoute' => ['pattern' => 'abc']]]);
     }
 
@@ -201,6 +208,7 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
+        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['routes' => ['defaultRoute' => ['controller' => 'abc']]]);
     }
 

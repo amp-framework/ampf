@@ -14,7 +14,9 @@ trait ViewResolverAccess
     public function getViewResolver(): ViewResolver
     {
         if ($this->__viewResolver === null) {
-            $this->setViewResolver($this->getBeanFactory()->get('ViewResolver'));
+            $viewResolver = $this->getBeanFactory()->get('ViewResolver');
+            assert($viewResolver instanceof ViewResolver);
+            $this->setViewResolver($viewResolver);
         }
         assert($this->__viewResolver !== null);
 

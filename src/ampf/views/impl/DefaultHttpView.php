@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ampf\views\impl;
 
+use ampf\controller\Controller;
 use ampf\requests\HttpRequest;
 use ampf\router\HttpRouter;
 use ampf\views\AbstractView;
@@ -41,7 +42,7 @@ class DefaultHttpView extends AbstractView implements HttpView
         return $this->getRequest()->getLink($relativeLink);
     }
 
-    /** @param array<string, mixed> $params */
+    /** @param array<string, string> $params */
     public function getActionLink(string $routeID, ?array $params = null, bool $addToken = false): string
     {
         if ($params === null) {
@@ -54,7 +55,9 @@ class DefaultHttpView extends AbstractView implements HttpView
     public function getRequest(): HttpRequest
     {
         if ($this->_request === null) {
-            $this->setRequest($this->getBeanFactory()->get('Request'));
+            $request = $this->getBeanFactory()->get('Request');
+            assert($request instanceof HttpRequest);
+            $this->setRequest($request);
         }
 
         if ($this->_request === null) {
@@ -72,7 +75,9 @@ class DefaultHttpView extends AbstractView implements HttpView
     public function getRouter(): HttpRouter
     {
         if ($this->_router === null) {
-            $this->setRouter($this->getBeanFactory()->get('Router'));
+            $router = $this->getBeanFactory()->get('Router');
+            assert($router instanceof HttpRouter);
+            $this->setRouter($router);
         }
 
         if ($this->_router === null) {
@@ -87,7 +92,7 @@ class DefaultHttpView extends AbstractView implements HttpView
         $this->_router = $router;
     }
 
-    /** @param array<string, mixed> $params */
+    /** @param array<string, string> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {
@@ -96,8 +101,10 @@ class DefaultHttpView extends AbstractView implements HttpView
 
         // get a stub request
         $request = $this->getBeanFactory()->get('RequestStub');
+        assert($request instanceof HttpRequest);
         // get the controller bean and inject the request
         $controller = $this->getBeanFactory()->get($controllerBean);
+        assert($controller instanceof Controller);
         $controller->setRequest($request);
 
         // route it

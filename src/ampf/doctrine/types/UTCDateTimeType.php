@@ -9,10 +9,11 @@ use DateTimeZone;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\ConversionException;
 use Doctrine\DBAL\Types\DateTimeType;
+use RuntimeException;
 
 class UTCDateTimeType extends DateTimeType
 {
-    protected static ?DateTimeZone $utc;
+    protected static ?DateTimeZone $utc = null;
 
     protected static function getUtc(): DateTimeZone
     {
@@ -36,6 +37,10 @@ class UTCDateTimeType extends DateTimeType
     {
         if ($value === null || ($value instanceof DateTime)) {
             return $value;
+        }
+
+        if (!is_string($value)) {
+            throw new RuntimeException();
         }
 
         // Create the DateTime object with UTC timezone

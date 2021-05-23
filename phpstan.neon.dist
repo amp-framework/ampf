@@ -1,5 +1,8 @@
 parameters:
-	level: 8
-	paths:
-		- config
-		- src
+    checkExplicitMixed: true
+    level: 8
+    paths:
+        - .
+    excludePaths:
+        analyse:
+            - vendor/

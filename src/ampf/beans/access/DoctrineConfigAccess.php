@@ -14,7 +14,9 @@ trait DoctrineConfigAccess
     public function getDoctrineConfig(): Config
     {
         if ($this->__doctrineConfig === null) {
-            $this->setDoctrineConfig($this->getBeanFactory()->get('DoctrineConfig'));
+            $doctrineConfig = $this->getBeanFactory()->get('DoctrineConfig');
+            assert($doctrineConfig instanceof Config);
+            $this->setDoctrineConfig($doctrineConfig);
         }
         assert($this->__doctrineConfig !== null);
 

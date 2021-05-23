@@ -8,6 +8,6 @@ interface HttpView extends View
 {
     public function getAssetLink(string $relativeLink): string;
 
-    /** @param ?array<string, mixed> $params */
+    /** @param ?array<string, string> $params */
     public function getActionLink(string $routeID, ?array $params = null, bool $addToken = false): string;
 }

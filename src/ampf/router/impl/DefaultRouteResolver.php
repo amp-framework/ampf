@@ -166,7 +166,11 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getConfig(): array
     {
         if ($this->_config === null) {
-            $this->setConfig($this->getBeanFactory()->get('Config'));
+            $config = $this->getBeanFactory()->get('Config');
+            if (!is_array($config) || !isset($config['routes'])) {
+                throw new RuntimeException();
+            }
+            $this->setConfig($config);
         }
 
         if ($this->_config === null) {
@@ -180,6 +184,10 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getControllerParamsByRoutePattern(string $routePattern): ?array
     {
         foreach ($this->getConfig() as $routeId => $routeOptions) {
+            if (!isset($routeOptions['pattern']) || !is_string($routeOptions['pattern'])) {
+                throw new RuntimeException();
+            }
+
             $preg = ('/^' . str_replace('/', '\/', $routeOptions['pattern']) . '$/');
 
             /**
@@ -216,6 +224,10 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
 
         foreach ($this->getConfig() as $_routeID => $value) {
             if ($_routeID === $routeID) {
+                if (!isset($value['pattern']) || !is_string($value['pattern'])) {
+                    throw new RuntimeException();
+                }
+
                 return $value['pattern'];
             }
         }

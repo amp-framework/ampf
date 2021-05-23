@@ -38,5 +38,5 @@ interface View
     /** @param ?array<string, mixed> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string;
 
-    public function escape(mixed $string): string;
+    public function escape(string $string): string;
 }

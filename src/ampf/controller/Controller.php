@@ -20,8 +20,9 @@ interface Controller
      */
     public function afterAction(): void;
 
-    /**
-     * Execute the given action. The main logic of a controller goes here.
-     */
+    /** Execute the given action. The main logic of a controller goes here. */
     public function execute(): void;
+
+    /** @param \ampf\requests\CliRequest|\ampf\requests\HttpRequest $request */
+    public function setRequest(object $request): void;
 }

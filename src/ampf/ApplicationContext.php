@@ -40,7 +40,9 @@ class ApplicationContext
             } else {
                 // If the value is an array, recurse one level deep
                 if (is_array($value) && $depth === 0) {
-                    $result[$key] = static::mergeConfig($value, $config2[$key], ($depth + 1));
+                    /** @var array<string, mixed> $config2Value */
+                    $config2Value = $config2[$key];
+                    $result[$key] = static::mergeConfig($value, $config2Value, ($depth + 1));
                 } else { // Else just take over the value from config2
                     $result[$key] = $config2[$key];
                 }

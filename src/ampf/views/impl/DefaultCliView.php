@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ampf\views\impl;
 
+use ampf\controller\Controller;
+use ampf\requests\CliRequest;
 use ampf\router\CliRouter;
 use ampf\views\AbstractView;
 use ampf\views\CliView;
@@ -13,12 +15,12 @@ class DefaultCliView extends AbstractView implements CliView
 {
     protected ?CliRouter $_router = null;
 
-    public function escape(mixed $string): string
+    public function escape(string $string): string
     {
         return $string;
     }
 
-    /** @param array<string, mixed> $params */
+    /** @param array<string, string> $params */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {
@@ -27,8 +29,10 @@ class DefaultCliView extends AbstractView implements CliView
 
         // get a stub request
         $request = $this->getBeanFactory()->get('RequestStub');
+        assert($request instanceof CliRequest);
         // get the controller bean and inject the request
         $controller = $this->getBeanFactory()->get($controllerBean);
+        assert($controller instanceof Controller);
         $controller->setRequest($request);
 
         // route it
@@ -52,7 +56,9 @@ class DefaultCliView extends AbstractView implements CliView
     public function getRouter(): CliRouter
     {
         if ($this->_router === null) {
-            $this->setRouter($this->getBeanFactory()->get('Router'));
+            $router = $this->getBeanFactory()->get('Router');
+            assert($router instanceof CliRouter);
+            $this->setRouter($router);
         }
 
         if ($this->_router === null) {

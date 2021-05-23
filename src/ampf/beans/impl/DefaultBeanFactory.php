@@ -39,7 +39,7 @@ class DefaultBeanFactory implements BeanFactory
             return true;
         }
 
-        $config = $this->get('Config');
+        $config = $this->getConfig();
 
         return isset($config['beans'][$beanID]);
     }
@@ -49,7 +49,7 @@ class DefaultBeanFactory implements BeanFactory
         if (isset($this->memory[$beanID])) {
             $bean = $this->memory[$beanID];
         } else {
-            $config = $this->get('Config');
+            $config = $this->getConfig();
 
             $beanConfig = null;
             $bean = null;
@@ -71,13 +71,20 @@ class DefaultBeanFactory implements BeanFactory
         return $bean;
     }
 
+    /** @return array{beans: array<string, array{class: string}>} */
+    public function getConfig(): array
+    {
+        /** @phpstan-ignore-next-line */
+        return $this->get('Config');
+    }
+
     public function is(mixed $object, string $beanID): bool
     {
         if (!is_object($object)) {
             return false;
         }
 
-        $config = $this->get('Config');
+        $config = $this->getConfig();
         if (!isset($config['beans'][$beanID])) {
             return false;
         }
@@ -144,8 +151,15 @@ class DefaultBeanFactory implements BeanFactory
     /** @param array<string, mixed> $beanConfig */
     protected function evalConfigProperties(string $beanID, mixed $bean, array $beanConfig): self
     {
+        // For us, the bean needs to be an object, else we cannot do anything
+        if (!is_object($bean)) {
+            return $this;
+        }
+
         if (isset($beanConfig['properties'])) {
-            foreach ($beanConfig['properties'] as $bean2ID => $field) {
+            /** @var array<string, string> $properties */
+            $properties = $beanConfig['properties'];
+            foreach ($properties as $bean2ID => $field) {
                 $setter = ('set' . ucfirst($field));
                 if (method_exists($bean, $setter)) {
                     $bean->{$setter}($this->get($bean2ID));
@@ -169,7 +183,7 @@ class DefaultBeanFactory implements BeanFactory
     {
         if (isset($beanConfig['parent'])) {
             $parent = $beanConfig['parent'];
-            $config = $this->get('Config');
+            $config = $this->getConfig();
             if (!isset($config['beans'][$parent])) {
                 throw new RuntimeException();
             }

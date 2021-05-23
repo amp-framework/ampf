@@ -74,7 +74,7 @@ abstract class Base extends EntityRepository
     {
         $qb = $this->createQueryBuilder('t');
 
-        return (int)$qb
+        $result = $qb
             ->select(
                 $qb->expr()->count(
                     ('t.' . $this->getClassMetadata()->getSingleIdentifierFieldName()),
@@ -82,6 +82,12 @@ abstract class Base extends EntityRepository
             )
             ->getQuery()->getSingleScalarResult()
         ;
+
+        if (!is_numeric($result)) {
+            throw new RuntimeException();
+        }
+
+        return (int)$result;
     }
 
     /** @param ?T $model */
@@ -96,6 +102,10 @@ abstract class Base extends EntityRepository
     {
         $i = 0;
         foreach ($query->toIterable() as $row) {
+            if (!is_array($row) || count($row) < 1) {
+                throw new RuntimeException();
+            }
+
             $i++;
             $this->getEntityManager()->remove($row[0]);
 

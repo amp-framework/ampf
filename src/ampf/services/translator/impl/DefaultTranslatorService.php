@@ -57,9 +57,6 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         }
 
         $value = $this->getValue($key);
-        if ($value === null) {
-            return null;
-        }
 
         if (is_array($args) && count($args) > 0) {
             $value = vsprintf($value, $args);
@@ -68,13 +65,9 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         return $value;
     }
 
-    /** @param array<string, mixed> $config */
+    /** @param array{"translation.dir": string} $config */
     protected function setConfig(array $config): void
     {
-        if (count($config) < 1) {
-            throw new RuntimeException();
-        }
-
         if (!isset($config['translation.dir'])) {
             throw new RuntimeException();
         }
@@ -93,7 +86,11 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
     protected function getConfig(): array
     {
         if ($this->_config === null) {
-            $this->setConfig($this->getBeanFactory()->get('Config'));
+            $config = $this->getBeanFactory()->get('Config');
+            if (!is_array($config) || !isset($config['translation.dir'])) {
+                throw new RuntimeException();
+            }
+            $this->setConfig($config);
         }
 
         if ($this->_config === null) {
@@ -103,7 +100,7 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         return $this->_config;
     }
 
-    protected function getValue(string $key): mixed
+    protected function getValue(string $key): string
     {
         $config = $this->getConfig();
         if (!isset($config[$key])) {

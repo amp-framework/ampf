@@ -7,9 +7,9 @@ namespace ampf\services\configuration;
 interface ConfigurationService
 {
     /**
-     * Gets a configuration value, optinally by given an override domain.
+     * Gets a configuration value, optionally by given an override domain.
      */
-    public function get(string $key, ?string $domain = null): ?string;
+    public function get(string $key, ?string $domain = null): mixed;
 
     /**
      * Sets a domain for the used configuration. This should be a string in the form

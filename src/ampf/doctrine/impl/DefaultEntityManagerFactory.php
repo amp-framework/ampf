@@ -23,6 +23,8 @@ class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFac
         $doctrine = $this->getDoctrineConfig();
 
         foreach ($doctrine->getTypeOverrides() as $type => $override) {
+            /** @var class-string<\Doctrine\DBAL\Types\Type> $type */
+            /** @var class-string<\Doctrine\DBAL\Types\Type> $override */
             Type::overrideType($type, $override);
         }
 
@@ -34,6 +36,7 @@ class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFac
         if (count($doctrine->getMappingOverrides()) > 0) {
             $platform = $this->_em->getConnection()->getDatabasePlatform();
             foreach ($doctrine->getMappingOverrides() as $mapping => $override) {
+                /** @var string $override */
                 $platform->registerDoctrineTypeMapping($mapping, $override);
             }
         }

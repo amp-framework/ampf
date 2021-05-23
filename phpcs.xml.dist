@@ -10,6 +10,7 @@
         <exclude name="Generic.Files.LineLength.TooLong"/>
         <exclude name="PSR2.Classes.PropertyDeclaration.Underscore"/>
         <exclude name="PSR12.Files.FileHeader.IncorrectOrder"/>
+        <exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
     </rule>
 
     <!--

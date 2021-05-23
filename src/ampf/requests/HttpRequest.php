@@ -15,7 +15,7 @@ interface HttpRequest
     /** @return \stdClass[] */
     public function getAcceptedLanguages(): array;
 
-    /** @param array<string, string> $params */
+    /** @param ?array<string, string> $params */
     public function getActionLink(
         string $routeID,
         ?array $params = null,

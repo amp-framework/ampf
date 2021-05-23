@@ -21,7 +21,11 @@ class DefaultConfig implements BeanFactoryAccess, Config
     public function getConfig(): array
     {
         if ($this->_config === null) {
-            $this->setConfig($this->getBeanFactory()->get('Config'));
+            $config = $this->getBeanFactory()->get('Config');
+            if (!is_array($config) || !isset($config['doctrine']) || !is_array($config['doctrine'])) {
+                throw new RuntimeException();
+            }
+            $this->setConfig($config);
         }
         assert($this->_config !== null);
 
@@ -30,34 +34,36 @@ class DefaultConfig implements BeanFactoryAccess, Config
 
     public function getConfiguration(): Configuration
     {
-        return $this->getConfigValue('configuration');
+        $config = $this->getConfigValue('configuration');
+        assert($config instanceof Configuration);
+
+        return $config;
     }
 
     /** @return array<string, mixed> */
     public function getConnectionParams(): array
     {
+        /** @phpstan-ignore-next-line */
         return $this->getConfigValue('connectionParams');
     }
 
     /** @return array<string, mixed> */
     public function getMappingOverrides(): array
     {
+        /** @phpstan-ignore-next-line */
         return $this->getConfigValue('mappingOverrides');
     }
 
     /** @return array<string, mixed> */
     public function getTypeOverrides(): array
     {
+        /** @phpstan-ignore-next-line */
         return $this->getConfigValue('typeOverrides');
     }
 
-    /** @param ?array{doctrine: array<string, mixed>} $config */
-    public function setConfig(?array $config = null): void
+    /** @param array{doctrine: array<string, mixed>} $config */
+    public function setConfig(array $config): void
     {
-        if ($config === null) {
-            throw new RuntimeException();
-        }
-
         if (count($config['doctrine'] ?? []) < 1) {
             throw new RuntimeException();
         }
