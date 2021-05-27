@@ -90,7 +90,6 @@ abstract class Base extends EntityRepository
         return (int)$result;
     }
 
-    /** @param ?T $model */
     public function is(mixed $model): bool
     {
         $class = $this->getClassName();
