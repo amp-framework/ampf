@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace ampf\controller;
 
+use ampf\requests\CliRequest;
+use ampf\requests\HttpRequest;
+
 interface Controller
 {
     /**
@@ -23,6 +26,5 @@ interface Controller
     /** Execute the given action. The main logic of a controller goes here. */
     public function execute(): void;
 
-    /** @param \ampf\requests\CliRequest|\ampf\requests\HttpRequest $request */
-    public function setRequest(object $request): void;
+    public function setRequest(CliRequest|HttpRequest $request): void;
 }
