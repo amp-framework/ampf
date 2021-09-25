@@ -199,7 +199,12 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
             if (preg_match($preg, $routePattern, $matches)) {
                 $matches = $this->cleanMatches($matches, $this->getRouteParams($routeOptions['pattern']));
 
-                return [$routeId, $routeOptions['controller'], $matches];
+                $controller = $routeOptions['controller'];
+                if (!is_string($controller)) {
+                    throw new RuntimeException();
+                }
+
+                return [$routeId, (string)$controller, $matches];
             }
         }
 
