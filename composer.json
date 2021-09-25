@@ -9,12 +9,12 @@
     }
   },
   "require": {
-    "php": ">=8.0.0",
-    "doctrine/orm": "^2.8",
-    "ext-pdo": "*"
+    "php": ">=8.0",
+    "ext-pdo": "*",
+    "doctrine/orm": "^2.9"
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^3.0",
+    "friendsofphp/php-cs-fixer": "^3.1",
     "phpstan/phpstan": "^0.12",
     "phpunit/phpunit": "^9.5",
     "slevomat/coding-standard": "^7.0"
