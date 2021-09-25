@@ -11,7 +11,8 @@
   "require": {
     "php": ">=8.0",
     "ext-pdo": "*",
-    "doctrine/orm": "^2.9"
+    "doctrine/orm": "^2.9",
+    "symfony/cache": "^5.3"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.1",
