@@ -72,7 +72,7 @@ return [
     // This should be overriden by the unversioned local.php config file
     'doctrine' => [
         'configuration' => Setup::createAnnotationMetadataConfiguration(
-            [null], // Entity paths
+            [], // Entity paths
             true, // Is dev mode?
             null, // Proxy directory
             null, // Cache, instance of \Doctrine\Common\Cache\Cache

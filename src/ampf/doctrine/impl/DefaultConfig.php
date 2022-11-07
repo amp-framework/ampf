@@ -61,7 +61,7 @@ class DefaultConfig implements BeanFactoryAccess, Config
         return $this->getConfigValue('typeOverrides');
     }
 
-    /** @param array{doctrine: array<string, mixed>} $config */
+    /** @param array{doctrine: ?array<string, mixed>} $config */
     public function setConfig(array $config): void
     {
         if (count($config['doctrine'] ?? []) < 1) {

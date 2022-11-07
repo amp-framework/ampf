@@ -10,6 +10,7 @@ use RuntimeException;
 
 /**
  * @internal
+ *
  * @covers \ampf\ApplicationContext
  */
 class ApplicationContextTest extends TestCase

@@ -81,7 +81,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         return $this->getAdjustedRouteParams($routePattern, $params)['route'];
     }
 
-    /** @param array{routes: array<string, array{pattern: string, controller: string}>} $config */
+    /** @param array{routes: ?array<string, array{pattern: string, controller: string}>} $config */
     public function setConfig(array $config): void
     {
         if (!isset($config['routes'])) {

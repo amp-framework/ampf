@@ -47,7 +47,7 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
         return $this->_viewDirectory;
     }
 
-    /** @param array{viewDirectory: string} $config */
+    /** @param array{viewDirectory: ?string} $config */
     public function setConfig(array $config): void
     {
         if (!isset($config['viewDirectory'])) {

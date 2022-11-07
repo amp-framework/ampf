@@ -11,7 +11,9 @@ namespace ampf\services\hasher\impl;
  */
 
 use ampf\services\hasher\HasherService;
+
 use const PASSWORD_BCRYPT;
+
 use RuntimeException;
 
 class DefaultHasherService implements HasherService

@@ -65,7 +65,7 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         return $value;
     }
 
-    /** @param array{"translation.dir": string} $config */
+    /** @param array{"translation.dir": ?string} $config */
     protected function setConfig(array $config): void
     {
         if (!isset($config['translation.dir'])) {

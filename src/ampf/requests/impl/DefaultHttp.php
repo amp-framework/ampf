@@ -18,16 +18,16 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     use RouteResolverAccess;
     use XsrfTokenServiceAccess;
 
-    /** @var ?array<string, string|array> */
+    /** @var ?array<string, string|mixed[]> */
     protected ?array $get = null;
 
-    /** @var ?array<string, string|array> */
+    /** @var ?array<string, string|mixed[]> */
     protected ?array $post = null;
 
-    /** @var ?array<string, string|array> */
+    /** @var ?array<string, string|mixed[]> */
     protected ?array $cookie = null;
 
-    /** @var ?array<string, string|array> */
+    /** @var ?array<string, string|mixed[]> */
     protected ?array $server = null;
 
     protected ?string $responseBody = null;

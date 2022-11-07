@@ -11,6 +11,7 @@ use RuntimeException;
 
 /**
  * @template T of \ampf\doctrine\entities\Base
+ *
  * @template-extends \Doctrine\ORM\EntityRepository<T>
  */
 abstract class Base extends EntityRepository
