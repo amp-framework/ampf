@@ -264,7 +264,6 @@
                 <element value="@package"/>
                 <element value="@copyright"/>
                 <element value="@license"/>
-                <element value="@throws"/>
             </property>
         </properties>
     </rule>
