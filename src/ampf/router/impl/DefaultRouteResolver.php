@@ -145,7 +145,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         }
 
         $matches = [];
-        $catch = '/\(\?P\<(.+)\>[^\)]+\)/';
+        $catch = '/\(\?P\<(.+)\>[^\)]+\)/U';
         preg_match_all($catch, $regex, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
@@ -215,7 +215,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getRouteParams(string $regex): array
     {
         $matches = [];
-        $catch = '/\(\?P\<([^\>]+)\>[^\)]+\)/';
+        $catch = '/\(\?P\<([^\>]+)\>[^\)]+\)/U';
         preg_match_all($catch, $regex, $matches, PREG_PATTERN_ORDER);
 
         return $matches[1];
