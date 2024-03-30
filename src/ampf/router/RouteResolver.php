@@ -15,11 +15,15 @@ interface RouteResolver
      */
     public function getNotDefinedParams(string $routeID, ?array $params = null): ?array;
 
-    /** @return ?array<string, string> */
+    /**
+     * @return ?array<string, string>
+     */
     public function getParamsByRoutePattern(string $routePattern): ?array;
 
     public function getRouteIDByRoutePattern(string $routePattern): ?string;
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function getRoutePatternByRouteID(string $routeID, ?array $params = null): ?string;
 }

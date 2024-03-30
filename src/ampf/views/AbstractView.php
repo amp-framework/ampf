@@ -18,7 +18,9 @@ abstract class AbstractView implements BeanFactoryAccess, View
     use TranslatorServiceAccess;
     use ViewResolverAccess;
 
-    /** @var array<string, mixed> */
+    /**
+     * @var array<string, mixed>
+     */
     protected array $memory = [];
 
     protected ?DateTimeZone $timezone_utc = null;
@@ -49,9 +51,12 @@ abstract class AbstractView implements BeanFactoryAccess, View
         $path = $this->getViewResolver()->getViewFilename($view);
 
         foreach ($this->memory as $key => $value) {
-            if ($key !== 'path' && $key !== 'this') {
-                ${$key} = $value;
+            if ($key === 'path' || $key === 'this') {
+                continue;
             }
+
+            // @phpcs:ignore SlevomatCodingStandard.Variables.DisallowVariableVariable.DisallowedVariableVariable
+            ${$key} = $value;
         }
 
         ob_start();
@@ -98,9 +103,11 @@ abstract class AbstractView implements BeanFactoryAccess, View
         if ($decimals === null) {
             $decimals = 0;
         }
+
         if ($decPoint === null) {
             $decPoint = '.';
         }
+
         if ($thousandsSep === null) {
             $thousandsSep = ' ';
         }
@@ -120,6 +127,7 @@ abstract class AbstractView implements BeanFactoryAccess, View
         // If not instanceof DateTime, try to create from unix timestamp
         if (!($time instanceof DateTime)) {
             $time = DateTime::createFromFormat('U', (string)$time, $this->getTimeZoneUTC());
+
             if (!($time instanceof DateTime)) {
                 throw new RuntimeException();
             }
@@ -136,7 +144,9 @@ abstract class AbstractView implements BeanFactoryAccess, View
         return $datetime->format($format);
     }
 
-    /** @param ?string[] $args */
+    /**
+     * @param ?list<string> $args
+     */
     public function t(string $key, ?array $args = null): string
     {
         return $this->getTranslatorService()->translate($key, $args) ?? '';

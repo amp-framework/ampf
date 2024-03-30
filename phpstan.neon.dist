@@ -1,8 +1,9 @@
 parameters:
     checkExplicitMixed: true
-    level: 8
+    level: max
     paths:
         - .
     excludePaths:
         analyse:
+            - tools/
             - vendor/

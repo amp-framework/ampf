@@ -13,7 +13,7 @@ use ampf\services\timel10n\impl\DefaultTimeL10nService;
 use ampf\services\translator\impl\DefaultTranslatorService;
 use ampf\services\xsrfToken\impl\DefaultXsrfTokenService;
 use ampf\views\impl\DefaultViewResolver;
-use Doctrine\ORM\Tools\Setup;
+use Doctrine\ORM\ORMSetup;
 
 return [
     'beans' => [
@@ -71,12 +71,11 @@ return [
 
     // This should be overriden by the unversioned local.php config file
     'doctrine' => [
-        'configuration' => Setup::createAnnotationMetadataConfiguration(
+        'configuration' => ORMSetup::createAttributeMetadataConfiguration(
             [], // Entity paths
             true, // Is dev mode?
             null, // Proxy directory
             null, // Cache, instance of \Doctrine\Common\Cache\Cache
-            false, // Use simple annotation reader?
         ),
         'connectionParams' => [
             'driver' => 'pdo_mysql',

@@ -1,2 +1,4 @@
+/tools/php-cs-fixer/vendor
+
 /vendor/*
 !/vendor/empty

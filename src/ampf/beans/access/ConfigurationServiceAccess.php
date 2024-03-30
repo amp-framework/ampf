@@ -11,6 +11,8 @@ trait ConfigurationServiceAccess
 {
     protected ?ConfigurationService $__configurationService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getConfigurationService(): ConfigurationService
     {
         if ($this->__configurationService === null) {
@@ -24,6 +26,4 @@ trait ConfigurationServiceAccess
     {
         $this->__configurationService = $configurationService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

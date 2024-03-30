@@ -10,34 +10,49 @@ use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\requests\HttpRequest;
 use RuntimeException;
+use stdClass;
 
-/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
+/**
+ * @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+ */
 class DefaultHttp implements BeanFactoryAccess, HttpRequest
 {
     use DefaultBeanFactoryAccess;
     use RouteResolverAccess;
     use XsrfTokenServiceAccess;
 
-    /** @var ?array<string, string|mixed[]> */
+    /**
+     * @var ?array<string, string|list<mixed>>
+     */
     protected ?array $get = null;
 
-    /** @var ?array<string, string|mixed[]> */
+    /**
+     * @var ?array<string, string|list<mixed>>
+     */
     protected ?array $post = null;
 
-    /** @var ?array<string, string|mixed[]> */
+    /**
+     * @var ?array<string, string|list<mixed>>
+     */
     protected ?array $cookie = null;
 
-    /** @var ?array<string, string|mixed[]> */
+    /**
+     * @var ?array<string, string|list<mixed>>
+     */
     protected ?array $server = null;
 
     protected ?string $responseBody = null;
 
-    /** @var ?array{code: int, target: string} */
+    /**
+     * @var ?array{code: int, target: string}
+     */
     protected ?array $responseRedirect = null;
 
     protected int $responseStatusCode = 200;
 
-    /** @var array<int, string> */
+    /**
+     * @var array<int, string>
+     */
     protected array $headers = [];
 
     public function __construct()
@@ -72,12 +87,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         }
 
         // Delete the cookie in the browser
-        setcookie(
-            $key,
-            '',
-            0,
-            '/',
-        );
+        setcookie($key, '', 0, '/');
 
         // And in our object
         unset($this->cookie[$key]);
@@ -113,7 +123,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     }
 
     /**
-     * @return \stdClass[]
+     * @return list<\stdClass>
      */
     public function getAcceptedLanguages(): array
     {
@@ -122,15 +132,18 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         }
 
         $httpAcceptLanguage = $this->getServerParam('HTTP_ACCEPT_LANGUAGE');
+
         if (!is_string($httpAcceptLanguage)) {
             $httpAcceptLanguage = '';
         }
         $serverParam = explode(',', $httpAcceptLanguage);
 
         $results = [];
+
         foreach ($serverParam as $language) {
             $language = trim($language);
             $quality = ((float)1);
+
             if ($language === '') {
                 continue;
             }
@@ -139,11 +152,13 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
                 [$language, $quality] = explode(';', $language);
                 $language = trim($language);
                 $quality = trim($quality);
+
                 if ($language === '' || $quality === '' || !str_starts_with($quality, 'q=')) {
                     continue;
                 }
 
                 $quality = trim(substr($quality, strlen('q=')));
+
                 if (((string)(float)$quality) !== $quality || $quality > 1 || $quality <= 0) {
                     continue;
                 }
@@ -151,7 +166,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
                 $quality = ((float)$quality);
             }
 
-            $cresult = new \stdClass();
+            $cresult = new stdClass();
             $cresult->language = $language;
             $cresult->quality = $quality;
 
@@ -212,11 +227,13 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     {
         // Get the raw referer
         $referer = $this->getRefererRaw();
+
         if (!$referer) {
             return null;
         }
 
         $httpHost = $this->getServerParam('HTTP_HOST');
+
         if (!is_string($httpHost) || trim($httpHost) === '') {
             throw new RuntimeException();
         }
@@ -226,6 +243,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // Do we have $domain as a domain name in the referer?
         $i = mb_strpos($referer, $domain);
+
         if ($i !== false) {
             // Yes, so remove it from the referer
             $referer = mb_substr($referer, ($i + mb_strlen($domain)));
@@ -235,6 +253,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // Get our app prefix, aka the webserver document root prefix of our app
         $scriptName = $this->getServerParam('SCRIPT_NAME');
+
         if (!is_string($scriptName)) {
             throw new RuntimeException();
         }
@@ -242,6 +261,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
         $i = mb_strpos($referer, $prefix);
+
         if ($prefix !== '' && $i === 0) {
             // Yes, so remove it from the referer
             $referer = mb_substr($referer, ($i + mb_strlen($prefix)));
@@ -261,6 +281,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     public function getRefererRaw(): ?string
     {
         $referer = $this->getServerParam('HTTP_REFERER');
+
         if (!is_string($referer) || trim($referer) === '') {
             return null;
         }
@@ -284,7 +305,9 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         );
     }
 
-    /** @return ?array<string, string> */
+    /**
+     * @return ?array<string, string>
+     */
     public function getRouteParams(): ?array
     {
         return $this->getRouteResolver()->getParamsByRoutePattern(
@@ -295,6 +318,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     public function hasCorrectToken(): bool
     {
         $tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
+
         // no token in request - cannot have correct token
         if (!$this->hasGetParam($tokenKey)) {
             return false;
@@ -302,6 +326,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // take the token
         $tokenValue = $this->getGetParam($tokenKey);
+
         if (!is_string($tokenValue)) {
             $tokenValue = '';
         }
@@ -329,8 +354,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     {
         return
             $this->hasServerParam('REQUEST_METHOD')
-            && $this->getServerParam('REQUEST_METHOD') === 'POST'
-        ;
+            && $this->getServerParam('REQUEST_METHOD') === 'POST';
     }
 
     public function isRedirect(): bool
@@ -338,7 +362,9 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         return $this->responseRedirect !== null;
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function setRedirect(
         string $routeID,
         ?array $params = null,
@@ -349,15 +375,19 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if ($this->responseBody !== null) {
             throw new RuntimeException();
         }
+
         if ($params === null) {
             $params = [];
         }
+
         if ($code === null) {
             $code = 301;
         }
+
         if ($addToken === null) {
             $addToken = false;
         }
+
         if ($hashParam === null) {
             $hashParam = '';
         }
@@ -370,7 +400,9 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         return $this;
     }
 
-    /** @param ?array<string, string> $params */
+    /**
+     * @param ?array<string, string> $params
+     */
     public function getActionLink(
         string $routeID,
         ?array $params = null,
@@ -380,6 +412,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         if ($params === null) {
             $params = [];
         }
+
         if ($hashParam === null) {
             $hashParam = '';
         }
@@ -391,13 +424,16 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         }
 
         $routePattern = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
+
         if ($routePattern === null) {
             throw new RuntimeException("Route pattern not found for routeID {$routeID}");
         }
 
         $notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
+
         if (is_array($notDefinedParams) && count($notDefinedParams) > 0) {
             $additionalParams = [];
+
             foreach ($notDefinedParams as $paramKey => $paramValue) {
                 $additionalParams[] = (rawurlencode($paramKey) . '=' . rawurlencode($paramValue));
             }
@@ -414,6 +450,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     public function getLink(string $relative): string
     {
         $scriptName = $this->getServerParam('SCRIPT_NAME');
+
         if (!is_string($scriptName)) {
             throw new RuntimeException();
         }
@@ -421,6 +458,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         $path = $this->getDirname($scriptName);
 
         $route = '';
+
         if (trim($path) !== '') {
             $route .= ('/' . $path);
         }
@@ -454,6 +492,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     protected function getRoute(): string
     {
         $route = $this->getServerParam('REQUEST_URI');
+
         if (!is_string($route)) {
             throw new RuntimeException();
         }
@@ -463,11 +502,13 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
         // Get the base path
         $scriptName = $this->getServerParam('SCRIPT_NAME');
+
         if (!is_string($scriptName)) {
             throw new RuntimeException();
         }
 
         $base = $this->getDirname($scriptName);
+
         // If it is set, remove it from the route
         if ($base !== '' && str_starts_with($route, $base)) {
             $route = substr($route, mb_strlen($base));
@@ -476,6 +517,7 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         // search for a questionmark and only take the string before it
         // this is done because we don't want to have GET-params into the route
         $questionMarkPosition = strpos($route, '?');
+
         if ($questionMarkPosition !== false) {
             $route = substr($route, 0, $questionMarkPosition);
         }

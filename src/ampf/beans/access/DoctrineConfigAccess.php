@@ -11,6 +11,8 @@ trait DoctrineConfigAccess
 {
     protected ?Config $__doctrineConfig = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getDoctrineConfig(): Config
     {
         if ($this->__doctrineConfig === null) {
@@ -27,6 +29,4 @@ trait DoctrineConfigAccess
     {
         $this->__doctrineConfig = $config;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

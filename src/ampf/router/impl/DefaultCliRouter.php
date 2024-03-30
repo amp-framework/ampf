@@ -19,6 +19,7 @@ class DefaultCliRouter implements BeanFactoryAccess, CliRouter
     public function route(CliRequest $request): self
     {
         $controller = $request->getController();
+
         if (!$this->getBeanFactory()->has($controller)) {
             throw new RuntimeException();
         }
@@ -26,6 +27,7 @@ class DefaultCliRouter implements BeanFactoryAccess, CliRouter
         $params = $request->getRouteParams();
 
         $bean = $this->getBeanFactory()->get($controller);
+
         if (!($bean instanceof Controller)) {
             throw new RuntimeException();
         }
@@ -35,7 +37,9 @@ class DefaultCliRouter implements BeanFactoryAccess, CliRouter
         return $this;
     }
 
-    /** @param array<int, string> $params */
+    /**
+     * @param array<int, string> $params
+     */
     public function routeBean(Controller $controller, ?array $params = null): self
     {
         if ($params === null) {

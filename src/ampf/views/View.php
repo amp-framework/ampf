@@ -16,7 +16,9 @@ interface View
 
     public function reset(): void;
 
-    /** @param ?array<string, mixed> $params */
+    /**
+     * @param ?array<string, mixed> $params
+     */
     public function subRender(string $viewID, ?array $params = null): string;
 
     public function formatNumber(
@@ -27,15 +29,19 @@ interface View
     ): string;
 
     /**
-     * @param \DateTime|numeric|null $time   Either a \DateTime instance or a numeric representing an UNIX timestamp
-     * @param string|null            $format A \DateTime::format compatible string
+     * @param \DateTime|numeric|null $time Either a \DateTime instance or a numeric representing an UNIX timestamp
+     * @param string|null $format A \DateTime::format compatible string
      */
     public function formatTime(mixed $time = null, ?string $format = null): string;
 
-    /** @param ?string[] $args */
+    /**
+     * @param ?list<string> $args
+     */
     public function t(string $key, ?array $args = null): string;
 
-    /** @param ?array<string, mixed> $params */
+    /**
+     * @param ?array<string, mixed> $params
+     */
     public function subRoute(string $controllerBean, ?array $params = null): string;
 
     public function escape(string $string): string;

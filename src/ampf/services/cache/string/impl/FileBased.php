@@ -17,11 +17,13 @@ class FileBased implements StringCacheService
     public function get(string $key): mixed
     {
         $path = $this->getPath($key);
+
         if (!file_exists($path)) {
             return false;
         }
 
         $content = file_get_contents($path);
+
         if ($content === false || trim($content) === '') {
             unlink($path);
 
@@ -29,6 +31,7 @@ class FileBased implements StringCacheService
         }
 
         $json = json_decode($content);
+
         if ($json === null || !is_object($json)) {
             unlink($path);
 
@@ -72,7 +75,9 @@ class FileBased implements StringCacheService
         return true;
     }
 
-    /** @param array<string, mixed> $config */
+    /**
+     * @param array<string, mixed> $config
+     */
     public function setConfig(array $config): void
     {
         if (count($config) < 1) {
@@ -88,6 +93,7 @@ class FileBased implements StringCacheService
         }
 
         $cachedir = realpath($config['stringfilecache']['cachedir']);
+
         if (
             $cachedir === false
             || !is_dir($cachedir)
@@ -98,7 +104,9 @@ class FileBased implements StringCacheService
 
         $this->cacheDir = $cachedir;
 
-        $this->defaultTTL = 3600;
+        $this->defaultTTL = 3_600;
+
+        // @phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
         if (isset($config['stringfilecache']['defaultttl'])) {
             $this->defaultTTL = ((int)$config['stringfilecache']['defaultttl']);
         }

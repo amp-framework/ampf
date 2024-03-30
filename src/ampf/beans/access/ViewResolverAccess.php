@@ -11,6 +11,8 @@ trait ViewResolverAccess
 {
     protected ?ViewResolver $__viewResolver = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getViewResolver(): ViewResolver
     {
         if ($this->__viewResolver === null) {
@@ -27,6 +29,4 @@ trait ViewResolverAccess
     {
         $this->__viewResolver = $viewResolver;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

@@ -47,6 +47,7 @@ class ApplicationContextTest extends TestCase
     {
         $tmpfile1 = null;
         $tmpfile2 = null;
+
         try {
             $tmpfile1 = tempnam(sys_get_temp_dir(), (string)mt_rand());
             $tmpfile2 = tempnam(sys_get_temp_dir(), (string)mt_rand());
@@ -71,6 +72,7 @@ class ApplicationContextTest extends TestCase
             if ($tmpfile1 !== null && $tmpfile1 !== false) {
                 unlink($tmpfile1);
             }
+
             if ($tmpfile2 !== null && $tmpfile2 !== false) {
                 unlink($tmpfile2);
             }

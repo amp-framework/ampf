@@ -19,6 +19,7 @@ class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
     public function route(HttpRequest $request): self
     {
         $controller = $request->getController();
+
         if ($controller === null) {
             throw new RuntimeException();
         }
@@ -28,11 +29,13 @@ class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
         }
 
         $params = $request->getRouteParams();
+
         if (!is_array($params) || count($params) < 1) {
             $params = [];
         }
 
         $bean = $this->getBeanFactory()->get($controller);
+
         if (!($bean instanceof Controller)) {
             throw new RuntimeException();
         }
@@ -42,7 +45,9 @@ class DefaultHttpRouter implements BeanFactoryAccess, HttpRouter
         return $this;
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function routeBean(Controller $controller, ?array $params = null): self
     {
         if ($params === null) {

@@ -6,7 +6,9 @@ namespace ampf;
 
 class Registry
 {
-    /** @var array<string, mixed> */
+    /**
+     * @var array<string, mixed>
+     */
     protected static array $_memory = [];
 
     public static function set(string $key, mixed $value): void

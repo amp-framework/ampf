@@ -11,6 +11,8 @@ interface CliRouter
 {
     public function route(CliRequest $request): self;
 
-    /** @param ?array<string, string> $params */
+    /**
+     * @param ?array<string, string> $params
+     */
     public function routeBean(Controller $controller, ?array $params = null): self;
 }

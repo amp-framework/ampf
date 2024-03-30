@@ -10,13 +10,17 @@ use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\requests\CliRequest;
 use RuntimeException;
 
-/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
+/**
+ * @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+ */
 class DefaultCli implements BeanFactoryAccess, CliRequest
 {
     use DefaultBeanFactoryAccess;
     use RouteResolverAccess;
 
-    /** @var string[] */
+    /**
+     * @var list<string>
+     */
     protected ?array $argv = null;
 
     protected ?string $responseBody = null;
@@ -28,13 +32,12 @@ class DefaultCli implements BeanFactoryAccess, CliRequest
 
     public function getController(): string
     {
-        if (!isset($this->argv[1]) || trim($this->argv[1]) === '') {
-            $arg = '*';
-        } else {
-            $arg = $this->argv[1];
-        }
+        $arg = (isset($this->argv[1]) && trim($this->argv[1]) !== '')
+            ? $this->argv[1]
+            : '*';
 
         $controller = $this->getRouteResolver()->getControllerByRoutePattern($arg);
+
         if ($controller === null) {
             throw new RuntimeException();
         }
@@ -42,10 +45,13 @@ class DefaultCli implements BeanFactoryAccess, CliRequest
         return $controller;
     }
 
-    /** @return string[] */
+    /**
+     * @return list<string>
+     */
     public function getRouteParams(): array
     {
         $arg = $this->argv;
+
         if ($arg === null || count($arg) < 2) {
             $arg = [];
         } else {
@@ -56,7 +62,9 @@ class DefaultCli implements BeanFactoryAccess, CliRequest
         return $arg;
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function getActionCmd(string $routeID, ?array $params = null): string
     {
         if ($params === null) {
@@ -64,6 +72,7 @@ class DefaultCli implements BeanFactoryAccess, CliRequest
         }
 
         $routeID = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
+
         if ($routeID === null) {
             throw new RuntimeException();
         }

@@ -21,7 +21,9 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
     protected const TOKEN_LEN = 6;
     protected const TOKEN_QUEUE_COUNT = 15;
 
-    /** @var ?\SplQueue<string> */
+    /**
+     * @var ?\SplQueue<string>
+     */
     protected ?SplQueue $tokenQueue = null;
 
     protected ?string $currentToken = null;
@@ -74,6 +76,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
         // Get our tokenQueue
         $tokenQueue = $this->getTokenQueue();
+
         // Iterate over the values
         foreach ($tokenQueue as $i => $realToken) {
             // If we found the token
@@ -102,6 +105,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
             if ($this->getSessionService()->hasAttribute(static::TOKEN_ID_SESSION)) {
                 $tokenQueue = $this->getSessionService()->getAttribute(static::TOKEN_ID_SESSION);
+
                 if ($tokenQueue instanceof SplQueue) {
                     $this->tokenQueue = $tokenQueue;
                 }
@@ -116,6 +120,7 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
      */
     protected function setTokenQueue(): void
     {
+        // @phpcs:ignore SlevomatCodingStandard.Functions.RequireSingleLineCall.RequiredSingleLineCall
         $this->getSessionService()->setAttribute(
             static::TOKEN_ID_SESSION,
             $this->tokenQueue,

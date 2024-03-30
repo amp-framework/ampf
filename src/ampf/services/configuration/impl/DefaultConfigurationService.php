@@ -9,7 +9,9 @@ use RuntimeException;
 
 class DefaultConfigurationService implements ConfigurationService
 {
-    /** @var array<string, array<string, mixed>> */
+    /**
+     * @var array<string, array<string, mixed>>
+     */
     protected array $config = [];
 
     protected ?string $domain = null;
@@ -46,7 +48,9 @@ class DefaultConfigurationService implements ConfigurationService
         return $this;
     }
 
-    /** @param array<string, mixed> $config */
+    /**
+     * @param array<string, mixed> $config
+     */
     public function setConfig(array $config): void
     {
         if (

@@ -11,6 +11,8 @@ trait HasherServiceAccess
 {
     protected ?HasherService $__hasherService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getHasherService(): HasherService
     {
         if ($this->__hasherService === null) {
@@ -24,6 +26,4 @@ trait HasherServiceAccess
     {
         $this->__hasherService = $hasherService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

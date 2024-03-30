@@ -23,6 +23,7 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
         }
 
         $path = ($this->getViewDirectory() . '/' . $view);
+
         if (!file_exists($path)) {
             throw new Exception();
         }
@@ -34,6 +35,7 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
     {
         if ($this->_viewDirectory === null) {
             $config = $this->getBeanFactory()->get('Config');
+
             if (!is_array($config) || !isset($config['viewDirectory'])) {
                 throw new RuntimeException();
             }
@@ -47,7 +49,9 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
         return $this->_viewDirectory;
     }
 
-    /** @param array{viewDirectory: ?string} $config */
+    /**
+     * @param array{viewDirectory: ?string} $config
+     */
     public function setConfig(array $config): void
     {
         if (!isset($config['viewDirectory'])) {
@@ -55,6 +59,7 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
         }
 
         $viewDirectory = realpath($config['viewDirectory']);
+
         if ($viewDirectory === false) {
             throw new RuntimeException();
         }
@@ -69,6 +74,7 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
 
         // explode by slashes
         $array = explode('/', $filename);
+
         foreach ($array as $value) {
             // more than 1 dot is not allowed
             if (strpos($value, '..') !== false) {

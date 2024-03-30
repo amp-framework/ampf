@@ -20,7 +20,9 @@ class DefaultCliView extends AbstractView implements CliView
         return $string;
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {

@@ -12,10 +12,14 @@ interface HttpRequest
 
     public function flush(): self;
 
-    /** @return \stdClass[] */
+    /**
+     * @return list<\stdClass>
+     */
     public function getAcceptedLanguages(): array;
 
-    /** @param ?array<string, string> $params */
+    /**
+     * @param ?array<string, string> $params
+     */
     public function getActionLink(
         string $routeID,
         ?array $params = null,
@@ -48,7 +52,9 @@ interface HttpRequest
 
     public function getRouteID(): ?string;
 
-    /** @return ?array<string, string> */
+    /**
+     * @return ?array<string, string>
+     */
     public function getRouteParams(): ?array;
 
     public function getServerParam(string $key): mixed;
@@ -67,7 +73,9 @@ interface HttpRequest
 
     public function isRedirect(): bool;
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function setRedirect(
         string $routeID,
         ?array $params = null,

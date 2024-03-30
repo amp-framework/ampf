@@ -11,6 +11,8 @@ trait XsrfTokenServiceAccess
 {
     protected ?XsrfTokenService $__xsrfTokenService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getXsrfTokenService(): XsrfTokenService
     {
         if ($this->__xsrfTokenService === null) {
@@ -27,6 +29,4 @@ trait XsrfTokenServiceAccess
     {
         $this->__xsrfTokenService = $xsrfTokenService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

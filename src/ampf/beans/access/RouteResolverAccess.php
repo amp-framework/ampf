@@ -11,6 +11,8 @@ trait RouteResolverAccess
 {
     protected ?RouteResolver $__routeResolver = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getRouteResolver(): RouteResolver
     {
         if ($this->__routeResolver === null) {
@@ -27,6 +29,4 @@ trait RouteResolverAccess
     {
         $this->__routeResolver = $routeResolver;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

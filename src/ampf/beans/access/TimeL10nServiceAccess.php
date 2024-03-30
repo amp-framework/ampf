@@ -11,6 +11,8 @@ trait TimeL10nServiceAccess
 {
     protected ?TimeL10nService $__timeL10nService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getTimeL10nService(): TimeL10nService
     {
         if ($this->__timeL10nService === null) {
@@ -24,6 +26,4 @@ trait TimeL10nServiceAccess
     {
         $this->__timeL10nService = $timeL10nService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

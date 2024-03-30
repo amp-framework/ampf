@@ -7,13 +7,14 @@ namespace ampf;
 class ApplicationContext
 {
     /**
-     * @param ?string[] $configFiles
+     * @param ?list<string> $configFiles
      *
      * @return array<string, mixed>
      */
     public static function boot(?array $configFiles = null): array
     {
         $config = [];
+
         if ($configFiles !== null) {
             foreach ($configFiles as $configFile) {
                 $config = self::mergeConfig($config, require $configFile);
@@ -32,6 +33,7 @@ class ApplicationContext
     protected static function mergeConfig(array $config1, array $config2, int $depth = 0): array
     {
         $result = [];
+
         foreach ($config1 as $key => $value) {
             // If config2 has no such entry, just take entry from config1
             if (!isset($config2[$key])) {

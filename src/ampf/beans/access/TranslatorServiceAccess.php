@@ -11,6 +11,8 @@ trait TranslatorServiceAccess
 {
     protected ?TranslatorService $__translatorService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getTranslatorService(): TranslatorService
     {
         if ($this->__translatorService === null) {
@@ -27,6 +29,4 @@ trait TranslatorServiceAccess
     {
         $this->__translatorService = $translatorService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

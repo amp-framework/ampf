@@ -24,6 +24,7 @@ class DefaultHttpView extends AbstractView implements HttpView
             throw new RuntimeException();
         }
 
+        // @phpcs:ignore SlevomatCodingStandard.Functions.RequireSingleLineCall.RequiredSingleLineCall
         return htmlspecialchars(
             (string)$string,
             (ENT_QUOTES | ENT_HTML5),
@@ -42,7 +43,9 @@ class DefaultHttpView extends AbstractView implements HttpView
         return $this->getRequest()->getLink($relativeLink);
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function getActionLink(string $routeID, ?array $params = null, bool $addToken = false): string
     {
         if ($params === null) {
@@ -92,7 +95,9 @@ class DefaultHttpView extends AbstractView implements HttpView
         $this->_router = $router;
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
         if ($params === null) {

@@ -6,15 +6,16 @@ namespace ampf\services\hasher\impl;
 
 /**
  * @phpcs:disable PSR12.Files.FileHeader.IncorrectGrouping
+ *
  * @phpcs:disable PSR12.Files.FileHeader.SpacingAfterBlock
+ *
  * @phpcs:disable SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses.IncorrectlyOrderedUses
  */
 
 use ampf\services\hasher\HasherService;
+use RuntimeException;
 
 use const PASSWORD_BCRYPT;
-
-use RuntimeException;
 
 class DefaultHasherService implements HasherService
 {
@@ -52,6 +53,7 @@ class DefaultHasherService implements HasherService
         $this->sleep();
 
         $hash = password_hash($string, PASSWORD_BCRYPT, ['cost' => '12']);
+
         if (mb_strlen($hash) !== 60) {
             throw new RuntimeException();
         }
@@ -67,8 +69,8 @@ class DefaultHasherService implements HasherService
     {
         usleep(
             mt_rand(
-                (1 * 1000),
-                (5 * 1000),
+                (1 * 1_000),
+                (5 * 1_000),
             ),
         );
     }

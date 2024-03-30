@@ -16,7 +16,9 @@ use RuntimeException;
  */
 abstract class Base extends EntityRepository
 {
-    /** @param array<string, mixed> $criteria */
+    /**
+     * @param array<string, mixed> $criteria
+     */
     public function bulkRemoveBy(array $criteria): int
     {
         if (count($criteria) < 1) {
@@ -27,6 +29,7 @@ abstract class Base extends EntityRepository
         $qb->select('t')->from($this->getClassName(), 't');
 
         $where = $qb->expr()->andX();
+
         foreach ($criteria as $key => $value) {
             if (!is_string($key) || trim($key) === '') {
                 throw new RuntimeException('criteria keys must always be strings');
@@ -53,12 +56,15 @@ abstract class Base extends EntityRepository
         return $this->bulkRemoveQuery($qb->getQuery());
     }
 
-    /** @return T */
+    /**
+     * @return T
+     */
     public function create(): BaseEntity
     {
         $class = $this->getClassName();
 
         $obj = new $class();
+
         if (!($obj instanceof BaseEntity)) {
             throw new RuntimeException();
         }
@@ -101,6 +107,7 @@ abstract class Base extends EntityRepository
     protected function bulkRemoveQuery(Query $query): int
     {
         $i = 0;
+
         foreach ($query->toIterable() as $row) {
             if (!is_array($row) || count($row) < 1) {
                 throw new RuntimeException();
@@ -110,6 +117,7 @@ abstract class Base extends EntityRepository
             $this->getEntityManager()->remove($row[0]);
 
             // Flush every 20 objects. This aint a big number, maybe we need to increase it
+            // @phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
             if (($i % 20) === 0) {
                 $this->getEntityManager()->flush();
                 $this->getEntityManager()->clear();

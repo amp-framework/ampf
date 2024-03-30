@@ -14,6 +14,8 @@ interface BeanFactory
 
     public function is(mixed $object, string $beanID): bool;
 
-    /** @return array<string, int> */
+    /**
+     * @return array<string, int>
+     */
     public function getStatistics(): array;
 }

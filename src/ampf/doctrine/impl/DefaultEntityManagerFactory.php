@@ -8,6 +8,7 @@ use ampf\beans\access\DoctrineConfigAccess;
 use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\doctrine\EntityManagerFactory;
+use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 
@@ -28,13 +29,20 @@ class DefaultEntityManagerFactory implements BeanFactoryAccess, EntityManagerFac
             Type::overrideType($type, $override);
         }
 
-        $this->_em = EntityManager::create(
+        $connection = DriverManager::getConnection(
             $doctrine->getConnectionParams(),
             $doctrine->getConfiguration(),
         );
 
+        $this->_em = new EntityManager(
+            $connection,
+            $doctrine->getConfiguration(),
+        );
+
+        // @phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
         if (count($doctrine->getMappingOverrides()) > 0) {
             $platform = $this->_em->getConnection()->getDatabasePlatform();
+
             foreach ($doctrine->getMappingOverrides() as $mapping => $override) {
                 /** @var string $override */
                 $platform->registerDoctrineTypeMapping($mapping, $override);

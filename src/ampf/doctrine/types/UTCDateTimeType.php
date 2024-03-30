@@ -7,8 +7,8 @@ namespace ampf\doctrine\types;
 use DateTime;
 use DateTimeZone;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\ConversionException;
 use Doctrine\DBAL\Types\DateTimeType;
+use Doctrine\DBAL\Types\Exception\InvalidFormat;
 use RuntimeException;
 
 class UTCDateTimeType extends DateTimeType
@@ -24,7 +24,7 @@ class UTCDateTimeType extends DateTimeType
         return static::$utc;
     }
 
-    public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): mixed
+    public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string
     {
         if ($value instanceof DateTime) {
             $value->setTimezone(static::getUtc());
@@ -33,7 +33,7 @@ class UTCDateTimeType extends DateTimeType
         return parent::convertToDatabaseValue($value, $platform);
     }
 
-    public function convertToPHPValue(mixed $value, AbstractPlatform $platform): mixed
+    public function convertToPHPValue(mixed $value, AbstractPlatform $platform): ?DateTime
     {
         if ($value === null || ($value instanceof DateTime)) {
             return $value;
@@ -51,7 +51,7 @@ class UTCDateTimeType extends DateTimeType
         );
 
         if (!$converted) {
-            throw ConversionException::conversionFailedFormat($value, $this->getName(), $platform->getDateTimeFormatString());
+            throw InvalidFormat::new($value, static::class, $platform->getDateTimeFormatString());
         }
 
         return $converted;

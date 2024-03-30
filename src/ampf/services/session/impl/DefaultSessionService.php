@@ -7,7 +7,9 @@ namespace ampf\services\session\impl;
 use ampf\services\session\SessionService;
 use RuntimeException;
 
-/** @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable */
+/**
+ * @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+ */
 class DefaultSessionService implements SessionService
 {
     public function __construct()
@@ -20,10 +22,12 @@ class DefaultSessionService implements SessionService
     public function destroy(): void
     {
         $_SESSION = [];
+
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
 
             $sessionName = session_name();
+
             if ($sessionName === false) {
                 throw new RuntimeException();
             }
@@ -31,7 +35,7 @@ class DefaultSessionService implements SessionService
             setcookie(
                 $sessionName,
                 '',
-                (time() - 42000),
+                (time() - 42_000),
                 $params['path'],
                 $params['domain'],
                 $params['secure'],

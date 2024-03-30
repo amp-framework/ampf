@@ -11,6 +11,8 @@ trait StringCacheServiceAccess
 {
     protected ?StringCacheService $__stringCacheService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getStringCacheService(): StringCacheService
     {
         if ($this->__stringCacheService === null) {
@@ -24,6 +26,4 @@ trait StringCacheServiceAccess
     {
         $this->__stringCacheService = $stringCacheService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

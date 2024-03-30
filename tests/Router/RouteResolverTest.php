@@ -217,7 +217,11 @@ class RouteResolverTest extends TestCase
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['defaultRoute' => ['controller' => 'abc', 'pattern' => 'def', 'foobar']]]);
+        $routeResolver->setConfig([
+            'routes' => [
+                'defaultRoute' => ['controller' => 'abc', 'pattern' => 'def', 'foobar'],
+            ],
+        ]);
     }
 
     public function testSetConfigTakesConfigCorrectly(): void

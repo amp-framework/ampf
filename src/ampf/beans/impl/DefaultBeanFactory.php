@@ -8,18 +8,26 @@ use ampf\beans\BeanFactory;
 use ampf\beans\BeanFactoryAccess;
 use RuntimeException;
 
-/** @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter */
+/**
+ * @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
+ */
 class DefaultBeanFactory implements BeanFactory
 {
-    /** @var array<string, mixed> */
+    /**
+     * @var array<string, mixed>
+     */
     protected array $memory = [];
 
-    /** @var array<string, int> */
+    /**
+     * @var array<string, int>
+     */
     protected array $statistics = [
         'beansCreated' => 0,
     ];
 
-    /** @param array<string, mixed> $config */
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(array $config)
     {
         $this->memory['BeanFactory'] = $this;
@@ -53,6 +61,7 @@ class DefaultBeanFactory implements BeanFactory
 
             $beanConfig = null;
             $bean = null;
+
             if (isset($config['beans'][$beanID])) {
                 $beanConfig = $config['beans'][$beanID];
                 $_tclass = $beanConfig['class'];
@@ -71,7 +80,9 @@ class DefaultBeanFactory implements BeanFactory
         return $bean;
     }
 
-    /** @return array{beans: array<string, array{class: string}>} */
+    /**
+     * @return array{beans: array<string, array{class: string}>}
+     */
     public function getConfig(): array
     {
         /** @phpstan-ignore-next-line */
@@ -85,6 +96,7 @@ class DefaultBeanFactory implements BeanFactory
         }
 
         $config = $this->getConfig();
+
         if (!isset($config['beans'][$beanID])) {
             return false;
         }
@@ -98,13 +110,17 @@ class DefaultBeanFactory implements BeanFactory
         return $object instanceof $class;
     }
 
-    /** @return array<string, int> */
+    /**
+     * @return array<string, int>
+     */
     public function getStatistics(): array
     {
         return $this->statistics;
     }
 
-    /** @param array<string, mixed> $beanConfig */
+    /**
+     * @param array<string, mixed> $beanConfig
+     */
     protected function evalConfig(string $beanID, mixed $bean, array $beanConfig): self
     {
         return $this
@@ -115,7 +131,9 @@ class DefaultBeanFactory implements BeanFactory
         ;
     }
 
-    /** @param array<string, mixed> $beanConfig */
+    /**
+     * @param array<string, mixed> $beanConfig
+     */
     protected function evalConfigScope(string $beanID, mixed $bean, array $beanConfig): self
     {
         if (trim($beanID) === '') {
@@ -123,6 +141,7 @@ class DefaultBeanFactory implements BeanFactory
         }
 
         $scope = 'singleton';
+
         if (isset($beanConfig['scope'])) {
             $scope = $beanConfig['scope'];
         }
@@ -137,7 +156,9 @@ class DefaultBeanFactory implements BeanFactory
         return $this;
     }
 
-    /** @param array<string, mixed> $beanConfig */
+    /**
+     * @param array<string, mixed> $beanConfig
+     */
     protected function evalConfigInitMethod(string $beanID, mixed $bean, array $beanConfig): self
     {
         if (isset($beanConfig['initMethod'])) {
@@ -148,7 +169,9 @@ class DefaultBeanFactory implements BeanFactory
         return $this;
     }
 
-    /** @param array<string, mixed> $beanConfig */
+    /**
+     * @param array<string, mixed> $beanConfig
+     */
     protected function evalConfigProperties(string $beanID, mixed $bean, array $beanConfig): self
     {
         // For us, the bean needs to be an object, else we cannot do anything
@@ -157,15 +180,19 @@ class DefaultBeanFactory implements BeanFactory
         }
 
         if (isset($beanConfig['properties'])) {
-            /** @var array<string, string> $properties */
+            /**
+             * @var array<string, string> $properties
+             */
             $properties = $beanConfig['properties'];
+
             foreach ($properties as $bean2ID => $field) {
                 $setter = ('set' . ucfirst($field));
-                if (method_exists($bean, $setter)) {
-                    $bean->{$setter}($this->get($bean2ID));
-                } else {
+
+                if (!method_exists($bean, $setter)) {
                     throw new RuntimeException("Property {$field} can not be set due to missing setter");
                 }
+
+                $bean->{$setter}($this->get($bean2ID));
             }
         }
 
@@ -178,12 +205,15 @@ class DefaultBeanFactory implements BeanFactory
         return $this;
     }
 
-    /** @param array<string, mixed> $beanConfig */
+    /**
+     * @param array<string, mixed> $beanConfig
+     */
     protected function evalConfigParent(string $beanID, mixed $bean, array $beanConfig): self
     {
         if (isset($beanConfig['parent'])) {
             $parent = $beanConfig['parent'];
             $config = $this->getConfig();
+
             if (!isset($config['beans'][$parent])) {
                 throw new RuntimeException();
             }

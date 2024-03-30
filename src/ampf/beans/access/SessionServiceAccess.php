@@ -11,6 +11,8 @@ trait SessionServiceAccess
 {
     protected ?SessionService $__sessionService = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getSessionService(): SessionService
     {
         if ($this->__sessionService === null) {
@@ -27,6 +29,4 @@ trait SessionServiceAccess
     {
         $this->__sessionService = $sessionService;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

@@ -11,6 +11,8 @@ trait DoctrineEntityManagerAccess
 {
     protected ?EntityManagerInterface $__doctrineEntityManager = null;
 
+    abstract public function getBeanFactory(): BeanFactory;
+
     public function getDoctrineEntityManager(): EntityManagerInterface
     {
         if ($this->__doctrineEntityManager === null) {
@@ -26,6 +28,4 @@ trait DoctrineEntityManagerAccess
     {
         $this->__doctrineEntityManager = $entityManager;
     }
-
-    abstract public function getBeanFactory(): BeanFactory;
 }

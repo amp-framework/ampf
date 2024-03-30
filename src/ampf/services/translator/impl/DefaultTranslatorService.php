@@ -9,12 +9,16 @@ use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\services\translator\TranslatorService;
 use RuntimeException;
 
-/** @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter */
+/**
+ * @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
+ */
 class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
 {
     use DefaultBeanFactoryAccess;
 
-    /** @var ?array<string, string> */
+    /**
+     * @var ?array<string, string>
+     */
     protected ?array $_config = null;
 
     protected ?string $language = null;
@@ -22,6 +26,7 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
     public function getKey(string $translation, bool $ignoreCase = true): ?string
     {
         $config = $this->getConfig();
+
         foreach ($config as $key => $value) {
             if (mb_strtolower($value) === mb_strtolower($translation)) {
                 return $key;
@@ -49,7 +54,9 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         $this->language = $language;
     }
 
-    /** @param ?string[] $args */
+    /**
+     * @param ?list<string> $args
+     */
     public function translate(string $key, ?array $args = null): ?string
     {
         if (trim($key) === '') {
@@ -65,7 +72,9 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         return $value;
     }
 
-    /** @param array{"translation.dir": ?string} $config */
+    /**
+     * @param array{"translation.dir": ?string} $config
+     */
     protected function setConfig(array $config): void
     {
         if (!isset($config['translation.dir'])) {
@@ -73,6 +82,7 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         }
 
         $transFile = ($config['translation.dir'] . '/' . $this->getLanguage() . '.php');
+
         if (!file_exists($transFile)) {
             throw new RuntimeException();
         }
@@ -82,11 +92,14 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         ob_end_clean();
     }
 
-    /** @return array<string, string> */
+    /**
+     * @return array<string, string>
+     */
     protected function getConfig(): array
     {
         if ($this->_config === null) {
             $config = $this->getBeanFactory()->get('Config');
+
             if (!is_array($config) || !isset($config['translation.dir'])) {
                 throw new RuntimeException();
             }
@@ -103,6 +116,7 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
     protected function getValue(string $key): string
     {
         $config = $this->getConfig();
+
         if (!isset($config[$key])) {
             return $key;
         }
