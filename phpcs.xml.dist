@@ -6,6 +6,7 @@
     <arg value="sp"/>
 
     <rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
     <rule ref="PSR12">
         <exclude name="Generic.Files.LineLength.TooLong"/>
         <exclude name="PSR2.Classes.PropertyDeclaration.Underscore"/>
@@ -46,6 +47,7 @@
         <exclude name="SlevomatCodingStandard.Files.LineLength.LineTooLong"/>
         <exclude name="SlevomatCodingStandard.Files.TypeNameMatchesFileName.NoMatchBetweenTypeNameAndFileName"/>
         <exclude name="SlevomatCodingStandard.Functions.DisallowArrowFunction.DisallowedArrowFunction"/>
+        <exclude name="SlevomatCodingStandard.Functions.DisallowNamedArguments.DisallowedNamedArgument"/>
         <exclude name="SlevomatCodingStandard.Functions.DisallowTrailingCommaInCall.DisallowedTrailingComma"/>
         <exclude name="SlevomatCodingStandard.Functions.DisallowTrailingCommaInDeclaration.DisallowedTrailingComma"/>
         <exclude name="SlevomatCodingStandard.Functions.FunctionLength.FunctionLength"/>
@@ -55,22 +57,16 @@
         <exclude name="SlevomatCodingStandard.Namespaces.UseOnlyWhitelistedNamespaces.NonFullyQualified"/>
         <exclude name="SlevomatCodingStandard.Namespaces.UseSpacing.IncorrectLinesCountBetweenDifferentTypeOfUse"/>
         <exclude name="SlevomatCodingStandard.Numbers.DisallowNumericLiteralSeparator.DisallowedNumericLiteralSeparator"/>
-        <exclude name="SlevomatCodingStandard.Operators.DisallowIncrementAndDecrementOperators.DisallowedPostIncrementOperator"/>
+        <exclude name="SlevomatCodingStandard.Operators.DisallowIncrementAndDecrementOperators"/>
+        <exclude name="SlevomatCodingStandard.Operators.RequireOnlyStandaloneIncrementAndDecrementOperators" />
         <exclude name="SlevomatCodingStandard.PHP.UselessParentheses.UselessParentheses"/>
         <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectStrictTypesFormat"/>
         <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint"/>
     </rule>
 
-    <rule ref="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat">
+    <rule ref="SlevomatCodingStandard.Attributes.AttributesOrder">
         <properties>
-            <property name="withSpaces" type="bool" value="false"/>
-            <property name="shortNullable" type="bool" value="true"/>
-            <property name="nullPosition" type="string" value="first"/>
-        </properties>
-    </rule>
-    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
-        <properties>
-            <property name="spacesCountAroundEqualsSign" type="int" value="0"/>
+            <property name="orderAlphabetically" type="bool" value="true"/>
         </properties>
     </rule>
     <rule ref="SlevomatCodingStandard.Classes.ClassStructure">
@@ -95,22 +91,18 @@
             </property>
         </properties>
     </rule>
-    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses">
-        <properties>
-            <property name="searchAnnotations" type="bool" value="true"/>
-        </properties>
-    </rule>
-    <rule ref="SlevomatCodingStandard.Variables.UnusedVariable">
-        <properties>
-            <property name="ignoreUnusedValuesWhenOnlyKeysAreUsedInForeach" type="bool" value="true"/>
-        </properties>
-    </rule>
     <rule ref="SlevomatCodingStandard.Classes.ConstantSpacing">
         <properties>
             <property name="minLinesCountBeforeWithComment" type="int" value="1"/>
             <property name="maxLinesCountBeforeWithComment" type="int" value="1"/>
             <property name="minLinesCountBeforeWithoutComment" type="int" value="0"/>
             <property name="maxLinesCountBeforeWithoutComment" type="int" value="1"/>
+        </properties>
+    </rule>
+    <rule ref="SlevomatCodingStandard.Classes.EmptyLinesAroundClassBraces">
+        <properties>
+            <property name="linesCountAfterOpeningBrace" type="int" value="0"/>
+            <property name="linesCountBeforeClosingBrace" type="int" value="0"/>
         </properties>
     </rule>
     <rule ref="SlevomatCodingStandard.Classes.MethodSpacing">
@@ -133,6 +125,18 @@
             <property name="linesCountBeforeFirstUseWhenFirstInClass" type="int" value="0"/>
         </properties>
     </rule>
+    <rule ref="SlevomatCodingStandard.Commenting.ForbiddenAnnotations">
+        <properties>
+            <property name="forbiddenAnnotations" type="array">
+                <element value="@author"/>
+                <element value="@created"/>
+                <element value="@version"/>
+                <element value="@package"/>
+                <element value="@copyright"/>
+                <element value="@license"/>
+            </property>
+        </properties>
+    </rule>
     <rule ref="SlevomatCodingStandard.ControlStructures.JumpStatementsSpacing">
         <properties>
             <property name="allowSingleLineYieldStacking" type="bool" value="false"/>
@@ -153,15 +157,15 @@
             <property name="allowMultiLine" type="bool" value="false"/>
         </properties>
     </rule>
+    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses">
+        <properties>
+            <property name="searchAnnotations" type="bool" value="true"/>
+        </properties>
+    </rule>
     <rule ref="SlevomatCodingStandard.Numbers.RequireNumericLiteralSeparator">
         <properties>
             <property name="minDigitsBeforeDecimalPoint" type="int" value="7"/>
             <property name="minDigitsAfterDecimalPoint" type="int" value="7"/>
-        </properties>
-    </rule>
-    <rule ref="SlevomatCodingStandard.PHP.ReferenceSpacing">
-        <properties>
-            <property name="spacesCountAfterReference" type="int" value="0"/>
         </properties>
     </rule>
     <rule ref="SlevomatCodingStandard.Operators.NegationOperatorSpacing">
@@ -174,9 +178,14 @@
             <property name="spacesCountAfterOperator" type="int" value="0"/>
         </properties>
     </rule>
-    <rule ref="SlevomatCodingStandard.Whitespaces.DuplicateSpaces">
+    <rule ref="SlevomatCodingStandard.PHP.ReferenceSpacing">
         <properties>
-            <property name="ignoreSpacesInAnnotation" type="bool" value="true"/>
+            <property name="spacesCountAfterReference" type="int" value="0"/>
+        </properties>
+    </rule>
+    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
+        <properties>
+            <property name="spacesCountAroundEqualsSign" type="int" value="0"/>
         </properties>
     </rule>
     <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHintSpacing">
@@ -184,25 +193,46 @@
             <property name="spacesCountBeforeColon" type="int" value="0"/>
         </properties>
     </rule>
-    <rule ref="SlevomatCodingStandard.Classes.EmptyLinesAroundClassBraces">
+    <rule ref="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat">
         <properties>
-            <property name="linesCountAfterOpeningBrace" type="int" value="0"/>
-            <property name="linesCountBeforeClosingBrace" type="int" value="0"/>
+            <property name="withSpaces" type="bool" value="false"/>
+            <property name="shortNullable" type="bool" value="true"/>
+            <property name="nullPosition" type="string" value="first"/>
         </properties>
     </rule>
-    <rule ref="SlevomatCodingStandard.Commenting.ForbiddenAnnotations">
+    <rule ref="SlevomatCodingStandard.Variables.UnusedVariable">
         <properties>
-            <property name="forbiddenAnnotations" type="array">
-                <element value="@author"/>
-                <element value="@created"/>
-                <element value="@version"/>
-                <element value="@package"/>
-                <element value="@copyright"/>
-                <element value="@license"/>
-            </property>
+            <property name="ignoreUnusedValuesWhenOnlyKeysAreUsedInForeach" type="bool" value="true"/>
         </properties>
+    </rule>
+    <rule ref="SlevomatCodingStandard.Whitespaces.DuplicateSpaces">
+        <properties>
+            <property name="ignoreSpacesInAnnotation" type="bool" value="true"/>
+        </properties>
+    </rule>
+
+    <!-- Excludes for templates -->
+    <rule ref="Generic.ControlStructures.InlineControlStructure.NotAllowed">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
+    <rule ref="Generic.WhiteSpace.ScopeIndent.Incorrect">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>
     <rule ref="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
+    <rule ref="SlevomatCodingStandard.ControlStructures.BlockControlStructureSpacing">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
+    <rule ref="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseParenthesis">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
+    <rule ref="Squiz.ControlStructures.ControlSignature.SpaceAfterKeyword">
         <exclude-pattern>*\.html\.php$</exclude-pattern>
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>

@@ -24,6 +24,7 @@ return $config
         'class_attributes_separation' => false,
         'concat_space' => ['spacing' => 'one'],
         'echo_tag_syntax' => ['format' => 'short'],
+        'fully_qualified_strict_types' => false,
         'global_namespace_import' => [],
         'increment_style' => ['style' => 'post'],
         'method_argument_space' => ['on_multiline' => 'ignore', 'after_heredoc' => true],
@@ -33,6 +34,15 @@ return $config
         'no_superfluous_elseif' => false,
         'no_unneeded_control_parentheses' => ['statements' => []],
         'phpdoc_align' => false,
+        'phpdoc_separation' => [
+            'groups' => [
+                ['author', 'copyright', 'license'],
+                ['category', 'package', 'subpackage'],
+                ['ORM\*'],
+                ['property', 'property-read', 'property-write'],
+                ['deprecated', 'link', 'see', 'since']
+            ],
+        ],
         'phpdoc_summary' => false,
         'phpdoc_to_comment' => false,
         'trailing_comma_in_multiline' => ['after_heredoc' => true, 'elements' => ['arrays', 'arguments', 'parameters']],
