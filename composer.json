@@ -12,12 +12,12 @@
     "php": ">=8.3",
     "ext-pdo": "*",
     "doctrine/cache": "^2.2",
-    "doctrine/orm": "^3.1",
-    "symfony/cache": "^7.0"
+    "doctrine/orm": "^3.2",
+    "symfony/cache": "^7.1"
   },
   "require-dev": {
-    "phpstan/phpstan": "^1.10",
-    "phpunit/phpunit": "^11.0",
+    "phpstan/phpstan": "^1.11",
+    "phpunit/phpunit": "^11.2",
     "slevomat/coding-standard": "^8.15"
   },
   "config": {
