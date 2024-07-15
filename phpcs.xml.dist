@@ -220,6 +220,10 @@
         <exclude-pattern>*\.html\.php$</exclude-pattern>
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>
+    <rule ref="PSR12.ControlStructures.ControlStructureSpacing.CloseParenthesisIndent">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
     <rule ref="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration">
         <exclude-pattern>*\.html\.php$</exclude-pattern>
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
