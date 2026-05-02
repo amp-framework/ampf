@@ -60,6 +60,9 @@ class DefaultConfigurationService implements ConfigurationService
             throw new RuntimeException();
         }
 
-        $this->config = $config['configuration.service'];
+        /** @var array<string, array<string, mixed>> $configservice */
+        $configservice = $config['configuration.service'];
+
+        $this->config = $configservice;
     }
 }

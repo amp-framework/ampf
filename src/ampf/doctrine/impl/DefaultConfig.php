@@ -25,11 +25,13 @@ class DefaultConfig implements BeanFactoryAccess, Config
     public function getConfig(): array
     {
         if ($this->_config === null) {
+            /** @var array{doctrine: array<string, mixed>} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['doctrine']) || !is_array($config['doctrine'])) {
                 throw new RuntimeException();
             }
+
             $this->setConfig($config);
         }
         assert($this->_config !== null);

@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait DoctrineEntityManagerAccess
 {
     protected ?EntityManagerInterface $__doctrineEntityManager = null;

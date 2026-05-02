@@ -14,6 +14,7 @@ use ampf\services\translator\impl\DefaultTranslatorService;
 use ampf\services\xsrfToken\impl\DefaultXsrfTokenService;
 use ampf\views\impl\DefaultViewResolver;
 use Doctrine\ORM\ORMSetup;
+use PDO\Mysql;
 
 return [
     'beans' => [
@@ -75,7 +76,7 @@ return [
             [], // Entity paths
             true, // Is dev mode?
             null, // Proxy directory
-            null, // Cache, instance of \Doctrine\Common\Cache\Cache
+            null, // Cache, instance of \Psr\Cache\CacheItemPoolInterface
         ),
         'connectionParams' => [
             'driver' => 'pdo_mysql',
@@ -85,7 +86,7 @@ return [
             'dbname' => 'ampf',
             'charset' => 'utf8mb4',
             'driverOptions' => [
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = 'UTC';",
+                Mysql::ATTR_INIT_COMMAND => "SET time_zone = 'UTC';",
             ],
         ],
         'typeOverrides' => [

@@ -63,14 +63,13 @@ abstract class Base extends EntityRepository
     {
         $class = $this->getClassName();
 
+        // @phpcs:ignore SlevomatCodingStandard.PHP.RequireExplicitAssertion.RequiredExplicitAssertion
+        // @var T $obj
         $obj = new $class();
 
         if (!($obj instanceof BaseEntity)) {
             throw new RuntimeException();
         }
-        /** @phpcs:disable SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable */
-        /** @var T $obj */
-        /** @phpcs:enable SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable */
 
         $this->getEntityManager()->persist($obj);
 
@@ -110,6 +109,10 @@ abstract class Base extends EntityRepository
 
         foreach ($query->toIterable() as $row) {
             if (!is_array($row) || count($row) < 1) {
+                throw new RuntimeException();
+            }
+
+            if (!is_object($row[0])) {
                 throw new RuntimeException();
             }
 

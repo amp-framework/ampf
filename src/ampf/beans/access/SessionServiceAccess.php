@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\session\SessionService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait SessionServiceAccess
 {
     protected ?SessionService $__sessionService = null;

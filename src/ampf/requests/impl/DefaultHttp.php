@@ -8,6 +8,7 @@ use ampf\beans\access\RouteResolverAccess;
 use ampf\beans\access\XsrfTokenServiceAccess;
 use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
+use ampf\Functions;
 use ampf\requests\HttpRequest;
 use RuntimeException;
 use stdClass;
@@ -22,22 +23,22 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
     use XsrfTokenServiceAccess;
 
     /**
-     * @var ?array<string, string|list<mixed>>
+     * @var ?array<string, string|array<mixed, mixed>>
      */
     protected ?array $get = null;
 
     /**
-     * @var ?array<string, string|list<mixed>>
+     * @var ?array<string, string|array<mixed, mixed>>
      */
     protected ?array $post = null;
 
     /**
-     * @var ?array<string, string|list<mixed>>
+     * @var ?array<string, string|array<mixed, mixed>>
      */
     protected ?array $cookie = null;
 
     /**
-     * @var ?array<string, string|list<mixed>>
+     * @var ?array<string, string|array<mixed, mixed>>
      */
     protected ?array $server = null;
 
@@ -57,10 +58,10 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     public function __construct()
     {
-        $this->get = $_GET;
-        $this->post = $_POST;
-        $this->cookie = $_COOKIE;
-        $this->server = $_SERVER;
+        $this->get = Functions::cleanGPCSLists($_GET);
+        $this->post = Functions::cleanGPCSLists($_POST);
+        $this->cookie = Functions::cleanGPCSLists($_COOKIE);
+        $this->server = Functions::cleanGPCSLists($_SERVER);
 
         // Set some default headers regarding browser caching
         $this->addHeader('Content-Type', 'text/html; charset=UTF-8');

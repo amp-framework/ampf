@@ -19,7 +19,7 @@ use const PASSWORD_BCRYPT;
 
 class DefaultHasherService implements HasherService
 {
-    protected const TOKEN_TIMING_ATT = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
+    protected const string TOKEN_TIMING_ATT = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
 
     public function avoidTimingAttack(string $input): void
     {

@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\translator\TranslatorService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait TranslatorServiceAccess
 {
     protected ?TranslatorService $__translatorService = null;

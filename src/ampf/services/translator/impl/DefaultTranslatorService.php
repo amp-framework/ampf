@@ -88,8 +88,20 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
         }
 
         ob_start();
-        $this->_config = require $transFile;
+        $transConfig = require $transFile;
         ob_end_clean();
+
+        if (!is_array($transConfig)) {
+            throw new RuntimeException();
+        }
+
+        foreach ($transConfig as $key => $value) {
+            if (!is_string($key) || !is_string($value)) {
+                throw new RuntimeException();
+            }
+        }
+
+        $this->_config = $transConfig;
     }
 
     /**
@@ -98,11 +110,13 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
     protected function getConfig(): array
     {
         if ($this->_config === null) {
+            /** @var array{'translation.dir': string|null} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['translation.dir'])) {
                 throw new RuntimeException();
             }
+
             $this->setConfig($config);
         }
 

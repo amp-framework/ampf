@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\views\ViewResolver;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait ViewResolverAccess
 {
     protected ?ViewResolver $__viewResolver = null;

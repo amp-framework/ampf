@@ -50,6 +50,45 @@ abstract class Functions
     }
 
     /**
+     * @param ?array<mixed, mixed> $list
+     *
+     * @return ?array<string, string|array<mixed, mixed>>
+     */
+    public static function cleanGPCSLists(?array $list): ?array
+    {
+        if (!is_array($list)) {
+            return null;
+        }
+
+        $result = [];
+
+        foreach ($list as $key => $value) {
+            if (is_scalar($value)) {
+                $result[static::convertToString($key)] = static::convertToString($value);
+            } elseif (is_array($value)) {
+                $result[static::convertToString($key)] = $value;
+            } else {
+                throw new RuntimeException();
+            }
+        }
+
+        return $result;
+    }
+
+    public static function convertToString(mixed $var): string
+    {
+        if (is_string($var)) {
+            return $var;
+        }
+
+        if (is_scalar($var)) {
+            return (string)$var;
+        }
+
+        throw new RuntimeException();
+    }
+
+    /**
      * @return list<mixed>
      */
     public static function decodeJSONArray(string $json): array
@@ -60,6 +99,12 @@ abstract class Functions
             return [];
         }
 
-        return $array;
+        foreach ($array as $key) {
+            if (!is_string($key)) {
+                throw new RuntimeException();
+            }
+        }
+
+        return array_values($array);
     }
 }

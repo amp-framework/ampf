@@ -34,7 +34,7 @@ class DefaultHttpView extends AbstractView implements HttpView
 
     public function getAssetLink(string $relativeLink): string
     {
-        if (!is_string($relativeLink) || trim($relativeLink) === '') {
+        if (trim($relativeLink) === '') {
             throw new RuntimeException();
         }
 
@@ -139,6 +139,7 @@ class DefaultHttpView extends AbstractView implements HttpView
         // this will hold the path result
         $result = [];
 
+        /** @phpcs:disable SlevomatCodingStandard.ControlStructures.EarlyExit.UselessElseIf */
         foreach ($array as $value) {
             if ($value === '') {
                 continue;
@@ -152,6 +153,7 @@ class DefaultHttpView extends AbstractView implements HttpView
                 $result[] = $value;
             }
         }
+        /** @phpcs:enable SlevomatCodingStandard.ControlStructures.EarlyExit.UselessElseIf */
 
         // return it
         return implode('/', $result);
@@ -165,7 +167,9 @@ class DefaultHttpView extends AbstractView implements HttpView
     {
         if ($this->getRequest()->hasPostParam($param)) {
             return $this->getRequest()->getPostParam($param);
-        } elseif ($this->getRequest()->hasGetParam($param)) {
+        }
+
+        if ($this->getRequest()->hasGetParam($param)) {
             return $this->getRequest()->getGetParam($param);
         }
 

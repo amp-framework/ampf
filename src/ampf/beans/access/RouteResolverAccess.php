@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\router\RouteResolver;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait RouteResolverAccess
 {
     protected ?RouteResolver $__routeResolver = null;

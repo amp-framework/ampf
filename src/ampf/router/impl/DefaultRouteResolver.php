@@ -189,11 +189,13 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getConfig(): array
     {
         if ($this->_config === null) {
+            /** @var array{routes: array<string, array{pattern: string, controller: string}>} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['routes'])) {
                 throw new RuntimeException();
             }
+
             $this->setConfig($config);
         }
 
@@ -224,6 +226,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
             $matches = [];
 
             if (preg_match($preg, $routePattern, $matches)) {
+                /** @phpstan-ignore argument.type */
                 $matches = $this->cleanMatches($matches, $this->getRouteParams($routeOptions['pattern']));
 
                 $controller = $routeOptions['controller'];

@@ -17,7 +17,11 @@ class ApplicationContext
 
         if ($configFiles !== null) {
             foreach ($configFiles as $configFile) {
-                $config = self::mergeConfig($config, require $configFile);
+                /** @var array<string, mixed> $config2 */
+                $config2 = require $configFile;
+                assert(is_array($config2));
+
+                $config = self::mergeConfig($config, $config2);
             }
         }
 
@@ -35,6 +39,8 @@ class ApplicationContext
         $result = [];
 
         foreach ($config1 as $key => $value) {
+            /** @var array<string, mixed> $value */
+
             // If config2 has no such entry, just take entry from config1
             if (!isset($config2[$key])) {
                 $result[$key] = $value;

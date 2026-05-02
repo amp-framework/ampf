@@ -92,7 +92,13 @@ class FileBased implements StringCacheService
             throw new RuntimeException();
         }
 
-        $cachedir = realpath($config['stringfilecache']['cachedir']);
+        $cachedir = $config['stringfilecache']['cachedir'];
+
+        if (!is_string($cachedir)) {
+            throw new RuntimeException();
+        }
+
+        $cachedir = realpath($cachedir);
 
         if (
             $cachedir === false
@@ -108,7 +114,13 @@ class FileBased implements StringCacheService
 
         // @phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
         if (isset($config['stringfilecache']['defaultttl'])) {
-            $this->defaultTTL = ((int)$config['stringfilecache']['defaultttl']);
+            $defaultttl = $config['stringfilecache']['defaultttl'];
+
+            if (!is_scalar($defaultttl)) {
+                throw new RuntimeException();
+            }
+
+            $this->defaultTTL = ((int)$defaultttl);
         }
     }
 

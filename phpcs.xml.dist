@@ -137,6 +137,13 @@
             </property>
         </properties>
     </rule>
+    <rule ref="SlevomatCodingStandard.ControlStructures.EarlyExit">
+        <properties>
+            <property name="ignoreStandaloneIfInScope" type="bool" value="true"/>
+            <property name="ignoreOneLineTrailingIf" type="bool" value="true"/>
+            <property name="ignoreTrailingIfWithOneInstruction" type="bool" value="true"/>
+        </properties>
+    </rule>
     <rule ref="SlevomatCodingStandard.ControlStructures.JumpStatementsSpacing">
         <properties>
             <property name="allowSingleLineYieldStacking" type="bool" value="false"/>
@@ -193,9 +200,9 @@
             <property name="spacesCountBeforeColon" type="int" value="0"/>
         </properties>
     </rule>
-    <rule ref="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat">
+    <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat">
         <properties>
-            <property name="withSpaces" type="bool" value="false"/>
+            <property name="withSpacesAroundOperators" type="bool" value="false"/>
             <property name="shortNullable" type="bool" value="true"/>
             <property name="nullPosition" type="string" value="first"/>
         </properties>

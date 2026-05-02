@@ -16,10 +16,10 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
     use DefaultBeanFactoryAccess;
     use SessionServiceAccess;
 
-    protected const TOKEN_ID_REQUEST = 'stkn';
-    protected const TOKEN_ID_SESSION = '_xsrfToken';
-    protected const TOKEN_LEN = 6;
-    protected const TOKEN_QUEUE_COUNT = 15;
+    protected const string TOKEN_ID_REQUEST = 'stkn';
+    protected const string TOKEN_ID_SESSION = '_xsrfToken';
+    protected const int TOKEN_LEN = 6;
+    protected const int TOKEN_QUEUE_COUNT = 15;
 
     /**
      * @var ?\SplQueue<string>
@@ -35,7 +35,10 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
             $tokenQueue = $this->getTokenQueue();
 
             // Generate a new token
+
+            // @phpstan-ignore argument.type
             $random = random_bytes(static::TOKEN_LEN);
+
             $random = bin2hex($random);
             $this->currentToken = mb_substr($random, 0, static::TOKEN_LEN);
 

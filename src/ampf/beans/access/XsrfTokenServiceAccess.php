@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\xsrfToken\XsrfTokenService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait XsrfTokenServiceAccess
 {
     protected ?XsrfTokenService $__xsrfTokenService = null;

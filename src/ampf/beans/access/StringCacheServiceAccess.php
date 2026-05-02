@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\cache\string\StringCacheService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait StringCacheServiceAccess
 {
     protected ?StringCacheService $__stringCacheService = null;

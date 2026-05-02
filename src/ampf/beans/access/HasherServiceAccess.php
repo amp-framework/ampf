@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\hasher\HasherService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait HasherServiceAccess
 {
     protected ?HasherService $__hasherService = null;

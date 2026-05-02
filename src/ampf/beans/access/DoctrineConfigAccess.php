@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\doctrine\Config;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait DoctrineConfigAccess
 {
     protected ?Config $__doctrineConfig = null;

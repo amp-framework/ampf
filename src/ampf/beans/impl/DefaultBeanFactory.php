@@ -212,11 +212,14 @@ class DefaultBeanFactory implements BeanFactory
     {
         if (isset($beanConfig['parent'])) {
             $parent = $beanConfig['parent'];
+            assert(is_string($parent));
+
             $config = $this->getConfig();
 
             if (!isset($config['beans'][$parent])) {
                 throw new RuntimeException();
             }
+
             $parentConfig = $config['beans'][$parent];
             $this->evalConfig('', $bean, $parentConfig);
         }

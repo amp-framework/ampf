@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\configuration\ConfigurationService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait ConfigurationServiceAccess
 {
     protected ?ConfigurationService $__configurationService = null;

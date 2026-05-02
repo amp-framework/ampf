@@ -7,6 +7,9 @@ namespace ampf\beans\access;
 use ampf\beans\BeanFactory;
 use ampf\services\timel10n\TimeL10nService;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait TimeL10nServiceAccess
 {
     protected ?TimeL10nService $__timeL10nService = null;

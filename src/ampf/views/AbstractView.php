@@ -95,7 +95,7 @@ abstract class AbstractView implements BeanFactoryAccess, View
     }
 
     public function formatNumber(
-        mixed $number,
+        string $number,
         ?int $decimals = null,
         ?string $decPoint = null,
         ?string $thousandsSep = null,
@@ -112,14 +112,7 @@ abstract class AbstractView implements BeanFactoryAccess, View
             $thousandsSep = ' ';
         }
 
-        if (!is_float($number)) {
-            if (!is_scalar($number)) {
-                throw new RuntimeException();
-            }
-            $number = ((float)$number);
-        }
-
-        return number_format($number, $decimals, $decPoint, $thousandsSep);
+        return number_format((float)$number, $decimals, $decPoint, $thousandsSep);
     }
 
     public function formatTime(mixed $time = null, ?string $format = null): string
