@@ -95,7 +95,7 @@ abstract class AbstractView implements BeanFactoryAccess, View
     }
 
     public function formatNumber(
-        string $number,
+        float|int|string $number,
         ?int $decimals = null,
         ?string $decPoint = null,
         ?string $thousandsSep = null,

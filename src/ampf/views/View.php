@@ -22,7 +22,7 @@ interface View
     public function subRender(string $viewID, ?array $params = null): string;
 
     public function formatNumber(
-        string $number,
+        float|int|string $number,
         ?int $decimals = null,
         ?string $decPoint = null,
         ?string $thousandsSep = null,

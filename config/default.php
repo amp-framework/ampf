@@ -14,7 +14,7 @@ use ampf\services\translator\impl\DefaultTranslatorService;
 use ampf\services\xsrfToken\impl\DefaultXsrfTokenService;
 use ampf\views\impl\DefaultViewResolver;
 use Doctrine\ORM\ORMSetup;
-use PDO\Mysql;
+use Pdo\Mysql;
 
 return [
     'beans' => [
