@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ruleset name="Tipgame">
+<ruleset name="Ampf">
     <config name="installed_paths" value="../../slevomat/coding-standard"/>
 
     <ini name="memory_limit" value="512M"/>
@@ -31,6 +31,7 @@
         <exclude name="SlevomatCodingStandard.Classes.TraitUseSpacing.IncorrectLinesCountBeforeFirstUse"/>
         <exclude name="SlevomatCodingStandard.Commenting.DisallowCommentAfterCode.DisallowedCommentAfterCode"/>
         <exclude name="SlevomatCodingStandard.Commenting.DocCommentSpacing.IncorrectLinesCountBetweenDifferentAnnotationsTypes"/>
+        <exclude name="SlevomatCodingStandard.Commenting.RequireOneDocComment.MultipleDocComments"/>
         <exclude name="SlevomatCodingStandard.Commenting.RequireOneLineDocComment.MultiLineDocComment"/>
         <exclude name="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment.MultiLinePropertyComment"/>
         <exclude name="SlevomatCodingStandard.Complexity.Cognitive.ComplexityTooHigh"/>
@@ -228,6 +229,10 @@
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>
     <rule ref="PSR12.ControlStructures.ControlStructureSpacing.CloseParenthesisIndent">
+        <exclude-pattern>*\.html\.php$</exclude-pattern>
+        <exclude-pattern>*\.txt\.php$</exclude-pattern>
+    </rule>
+    <rule ref="PSR12.Files.FileHeader.SpacingAfterDocblockBlock">
         <exclude-pattern>*\.html\.php$</exclude-pattern>
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>
