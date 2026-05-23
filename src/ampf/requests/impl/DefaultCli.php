@@ -27,7 +27,7 @@ class DefaultCli implements BeanFactoryAccess, CliRequest
 
     public function __construct()
     {
-        /** @var list<string> $argv */
+        /** @var array<string> $argv */
         $argv = $GLOBALS['argv'];
 
         $this->argv = array_values($argv);

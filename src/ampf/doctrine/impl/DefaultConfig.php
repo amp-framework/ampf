@@ -25,7 +25,6 @@ class DefaultConfig implements BeanFactoryAccess, Config
     public function getConfig(): array
     {
         if ($this->_config === null) {
-            /** @var array{doctrine: array<string, mixed>} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['doctrine']) || !is_array($config['doctrine'])) {
@@ -83,15 +82,25 @@ class DefaultConfig implements BeanFactoryAccess, Config
     }
 
     /**
-     * @param array{doctrine: ?array<string, mixed>} $config
+     * @param array{doctrine: array<mixed, mixed>} $config
      */
     public function setConfig(array $config): void
     {
-        if (count($config['doctrine'] ?? []) < 1) {
+        if (count($config['doctrine']) < 1) {
             throw new RuntimeException();
         }
 
-        $this->_config = $config['doctrine'];
+        $doctrineConfig = [];
+
+        foreach ($config['doctrine'] as $key => $value) {
+            if (!is_string($key)) {
+                throw new RuntimeException();
+            }
+
+            $doctrineConfig[$key] = $value;
+        }
+
+        $this->_config = $doctrineConfig;
     }
 
     protected function getConfigValue(string $value): mixed

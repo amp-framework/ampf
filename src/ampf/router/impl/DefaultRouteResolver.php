@@ -93,42 +93,11 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     }
 
     /**
-     * @param array{routes: ?array<string, array{pattern: string, controller: string}>} $config
+     * @param array{routes: mixed} $config
      */
     public function setConfig(array $config): void
     {
-        if (!isset($config['routes'])) {
-            throw new RuntimeException();
-        }
-
-        /**
-         * @var array<string, array{pattern: string, controller: string}> $config
-         */
-        $config = $config['routes'];
-
-        if (!is_array($config) || count($config) < 1) {
-            throw new RuntimeException();
-        }
-
-        $correctKeys = ['pattern', 'controller'];
-
-        foreach ($config as $routeId => $routeOptions) {
-            if (!is_string($routeId) || trim($routeId) === '' || !is_array($routeOptions)) {
-                throw new RuntimeException();
-            }
-
-            $diff = array_diff(array_keys($routeOptions), $correctKeys);
-
-            if (count($diff) !== 0) {
-                throw new RuntimeException();
-            }
-
-            $diff2 = array_diff($correctKeys, array_keys($routeOptions));
-
-            if (count($diff2) !== 0) {
-                throw new RuntimeException();
-            }
-        }
+        $config = $this->validateRouteConfig($config['routes']);
 
         $this->_config = $config;
     }
@@ -189,7 +158,6 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     protected function getConfig(): array
     {
         if ($this->_config === null) {
-            /** @var array{routes: array<string, array{pattern: string, controller: string}>} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['routes'])) {
@@ -271,5 +239,39 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, array{pattern: string, controller: string}>
+     */
+    protected function validateRouteConfig(mixed $config): array
+    {
+        if (!is_array($config)) {
+            throw new RuntimeException();
+        }
+
+        $result = [];
+
+        foreach ($config as $key => $value) {
+            if (!is_string($key) || trim($key) === '') {
+                throw new RuntimeException();
+            }
+
+            if (!is_array($value)) {
+                throw new RuntimeException();
+            }
+
+            if (!isset($value['pattern']) || !isset($value['controller'])) {
+                throw new RuntimeException();
+            }
+
+            if (!is_string($value['pattern']) || !is_string($value['controller'])) {
+                throw new RuntimeException();
+            }
+
+            $result[$key] = ['pattern' => $value['pattern'], 'controller' => $value['controller']];
+        }
+
+        return $result;
     }
 }

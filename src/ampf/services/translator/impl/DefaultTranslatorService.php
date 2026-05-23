@@ -110,14 +110,19 @@ class DefaultTranslatorService implements BeanFactoryAccess, TranslatorService
     protected function getConfig(): array
     {
         if ($this->_config === null) {
-            /** @var array{'translation.dir': string|null} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['translation.dir'])) {
                 throw new RuntimeException();
             }
 
-            $this->setConfig($config);
+            $translationDir = $config['translation.dir'];
+
+            if (!is_string($translationDir)) {
+                throw new RuntimeException();
+            }
+
+            $this->setConfig(['translation.dir' => $translationDir]);
         }
 
         if ($this->_config === null) {

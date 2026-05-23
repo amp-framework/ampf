@@ -1,6 +1,5 @@
 parameters:
     checkExplicitMixed: true
-    treatPhpDocTypesAsCertain: false
     level: max
     paths:
         - .

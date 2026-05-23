@@ -31,7 +31,7 @@ abstract class Base extends EntityRepository
         $where = $qb->expr()->andX();
 
         foreach ($criteria as $key => $value) {
-            if (!is_string($key) || trim($key) === '') {
+            if (trim($key) === '') {
                 throw new RuntimeException('criteria keys must always be strings');
             }
 
@@ -67,6 +67,7 @@ abstract class Base extends EntityRepository
         // @var T $obj
         $obj = new $class();
 
+        // @phpstan-ignore-next-line
         if (!($obj instanceof BaseEntity)) {
             throw new RuntimeException();
         }

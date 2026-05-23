@@ -34,14 +34,19 @@ class DefaultViewResolver implements BeanFactoryAccess, ViewResolver
     public function getViewDirectory(): string
     {
         if ($this->_viewDirectory === null) {
-            /** @var array{viewDirectory: string} $config */
             $config = $this->getBeanFactory()->get('Config');
 
             if (!is_array($config) || !isset($config['viewDirectory'])) {
                 throw new RuntimeException();
             }
 
-            $this->setConfig($config);
+            $viewDirectory = $config['viewDirectory'];
+
+            if (!is_string($viewDirectory)) {
+                throw new RuntimeException();
+            }
+
+            $this->setConfig(['viewDirectory' => $viewDirectory]);
         }
 
         if ($this->_viewDirectory === null) {
