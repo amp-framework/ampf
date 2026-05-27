@@ -237,6 +237,9 @@
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>
     <rule ref="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration">
+        <properties>
+            <property name="allowAboveNonAssignment" type="bool" value="true"/>
+        </properties>
         <exclude-pattern>*\.html\.php$</exclude-pattern>
         <exclude-pattern>*\.txt\.php$</exclude-pattern>
     </rule>

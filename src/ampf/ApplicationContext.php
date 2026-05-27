@@ -18,7 +18,7 @@ class ApplicationContext
         if ($configFiles !== null) {
             foreach ($configFiles as $configFile) {
                 $config2 = require $configFile;
-                $config2 = Functions::assertStringMixedArray($config2);
+                Functions::assertStringMixedArray($config2);
 
                 $config = self::mergeConfig($config, $config2);
             }
@@ -38,21 +38,23 @@ class ApplicationContext
         $result = [];
 
         foreach ($config1 as $key => $value) {
-            $value = Functions::assertStringMixedArray($value);
-
             // If config2 has no such entry, just take entry from config1
-            if (!isset($config2[$key])) {
+            if (!array_key_exists($key, $config2)) {
                 $result[$key] = $value;
-                unset($config2[$key]);
             } else {
                 // If the value is an array, recurse one level deep
-                if ($depth === 0) {
-                    /** @var array<string, mixed> $config2Value */
+                if (is_array($value) && $depth === 0) {
+                    Functions::assertStringMixedArray($value);
+
+                    // The value from config2 also needs to be an array
                     $config2Value = $config2[$key];
+                    Functions::assertStringMixedArray($config2Value);
+
                     $result[$key] = static::mergeConfig($value, $config2Value, ($depth + 1));
                 } else { // Else just take over the value from config2
                     $result[$key] = $config2[$key];
                 }
+
                 unset($config2[$key]);
             }
         }

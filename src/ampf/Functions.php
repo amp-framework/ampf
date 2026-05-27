@@ -14,25 +14,19 @@ use const PREG_SPLIT_NO_EMPTY;
 abstract class Functions
 {
     /**
-     * @return array<string, mixed>
+     * @phpstan-assert array<string, mixed> $array
      */
-    public static function assertStringMixedArray(mixed $array): array
+    public static function assertStringMixedArray(mixed $array): void
     {
         if (!is_array($array)) {
             throw new RuntimeException();
         }
 
-        $result = [];
-
         foreach ($array as $key => $value) {
             if (!is_string($key)) {
                 throw new RuntimeException();
             }
-
-            $result[$key] = $value;
         }
-
-        return $result;
     }
 
     /**
