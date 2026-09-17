@@ -108,17 +108,9 @@ abstract class Base extends EntityRepository
     {
         $i = 0;
 
-        foreach ($query->toIterable() as $row) {
-            if (!is_array($row) || count($row) < 1) {
-                throw new RuntimeException();
-            }
-
-            if (!is_object($row[0])) {
-                throw new RuntimeException();
-            }
-
+        foreach ($query->toIterable() as $object) {
             $i++;
-            $this->getEntityManager()->remove($row[0]);
+            $this->getEntityManager()->remove($object);
 
             // Flush every 20 objects. This aint a big number, maybe we need to increase it
             // @phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
