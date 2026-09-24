@@ -145,6 +145,24 @@ abstract class AbstractView implements BeanFactoryAccess, View
         return $this->getTranslatorService()->translate($key, $args) ?? '';
     }
 
+    /**
+     * @param ?list<string> $args
+     */
+    public function te(string $key, ?array $args = null): string
+    {
+        if ($args === null) {
+            return $this->t($key);
+        }
+
+        $escaped = [];
+
+        foreach ($args as $arg) {
+            $escaped[] = $this->escape($arg);
+        }
+
+        return $this->t($key, $escaped);
+    }
+
     protected function getTimeZoneUTC(): DateTimeZone
     {
         if ($this->timezone_utc === null) {

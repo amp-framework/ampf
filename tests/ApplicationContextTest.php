@@ -14,7 +14,9 @@ use RuntimeException;
  * @internal
  *
  * @phpcs:disable PSR12.Classes.AnonClassDeclaration.SpaceAfterKeyword
+ *
  * @phpcs:disable SlevomatCodingStandard.ControlStructures.JumpStatementsSpacing.IncorrectLinesCountAfterControlStructure
+ *
  * @phpcs:disable SlevomatCodingStandard.ControlStructures.JumpStatementsSpacing.IncorrectLinesCountAfterLastControlStructure
  *
  * @covers \ampf\ApplicationContext

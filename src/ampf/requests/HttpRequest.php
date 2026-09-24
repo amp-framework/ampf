@@ -6,9 +6,20 @@ namespace ampf\requests;
 
 interface HttpRequest
 {
+    /**
+     * @throws \RuntimeException for a blank name or value, a name that is no token, a value with a control character
+     */
     public function addHeader(string $key, string $value): self;
 
-    public function destroyCookieParam(string $key): self;
+    /**
+     * Deletes the cookie in the browser (an empty, expired cookie with the attributes it was set with) and in this
+     * request; nothing when the request does not carry it.
+     *
+     * @param array<string, mixed> $options the attributes, as setCookieParam() takes them
+     *
+     * @throws \InvalidArgumentException for an unknown or malformed attribute
+     */
+    public function destroyCookieParam(string $key, array $options = []): self;
 
     public function flush(): self;
 
@@ -83,6 +94,18 @@ interface HttpRequest
         ?bool $addToken = null,
         ?string $hashParam = null,
     ): self;
+
+    /**
+     * Sets the cookie in the browser and in this request at once. $options names the attributes that differ from
+     * the configuration's `cookies` block and the defaults: `path` ("/"), `domain` (""), `secure` (null: exactly
+     * when the request came over https), `httponly` (true), `samesite` ("Lax"; "Strict" or "None", which needs
+     * `secure`). $expires is a UNIX time; 0 makes a cookie that ends with the browser session.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @throws \InvalidArgumentException for an unknown or malformed attribute
+     */
+    public function setCookieParam(string $key, string $value, int $expires = 0, array $options = []): self;
 
     public function setResponse(string $response): self;
 

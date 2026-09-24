@@ -10,6 +10,7 @@ use ampf\beans\BeanFactoryAccess;
 use ampf\beans\impl\DefaultBeanFactoryAccess;
 use ampf\Functions;
 use ampf\requests\HttpRequest;
+use InvalidArgumentException;
 use RuntimeException;
 use stdClass;
 
@@ -56,6 +57,12 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
      */
     protected array $headers = [];
 
+    /** Whether the text holds a C0 control character or DEL, a horizontal tab excepted. */
+    protected static function hasControlCharacter(string $text): bool
+    {
+        return preg_match('/[\x00-\x08\x0A-\x1F\x7F]/', $text) === 1;
+    }
+
     public function __construct()
     {
         $this->get = Functions::cleanGPCSLists($_GET);
@@ -76,19 +83,31 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
             throw new RuntimeException();
         }
 
+        // A header's name is a token, and its value one line: nothing a client sent reaches header() otherwise
+        if (preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/D', $key) !== 1) {
+            throw new RuntimeException('A header name must be a token.');
+        }
+
+        if (static::hasControlCharacter($value)) {
+            throw new RuntimeException('A header value must not contain a control character.');
+        }
+
         $this->headers[] = "{$key}: {$value}";
 
         return $this;
     }
 
-    public function destroyCookieParam(string $key): self
+    /**
+     * @param array<string, mixed> $options
+     */
+    public function destroyCookieParam(string $key, array $options = []): self
     {
         if (!$this->hasCookieParam($key)) {
             return $this;
         }
 
-        // Delete the cookie in the browser
-        setcookie($key, '', 0, '/');
+        // Delete the cookie in the browser: an empty value, expired, with the attributes it was set with
+        $this->sendCookie($key, '', ['expires' => 0] + $this->getCookieOptions($options));
 
         // And in our object
         unset($this->cookie[$key]);
@@ -103,6 +122,17 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
 
     public function flush(): self
     {
+        // Everything is checked before the first byte goes out: a refused header ends the request as an error
+        foreach ($this->headers as $header) {
+            if (static::hasControlCharacter($header)) {
+                throw new RuntimeException('A header must not contain a control character.');
+            }
+        }
+
+        if ($this->responseRedirect !== null && static::hasControlCharacter($this->responseRedirect['target'])) {
+            throw new RuntimeException('A redirect target must not contain a control character.');
+        }
+
         http_response_code($this->responseStatusCode);
 
         foreach ($this->headers as $header) {
@@ -229,28 +259,19 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         // Get the raw referer
         $referer = $this->getRefererRaw();
 
-        if (!$referer) {
+        if ($referer === null) {
             return null;
         }
 
-        $httpHost = $this->getServerParam('HTTP_HOST');
+        // Ours only when its origin is this request's host: a path of another site means nothing here
+        $path = $this->getRefererPathOnThisHost($referer);
 
-        if (!is_string($httpHost) || trim($httpHost) === '') {
-            throw new RuntimeException();
+        if ($path === null) {
+            return null;
         }
 
-        // Get the HTTP host, aka domain name of this project
-        $domain = ('://' . $httpHost . '/');
-
-        // Do we have $domain as a domain name in the referer?
-        $i = mb_strpos($referer, $domain);
-
-        if ($i !== false) {
-            // Yes, so remove it from the referer
-            $referer = mb_substr($referer, ($i + mb_strlen($domain)));
-        }
         // Trim beginning slashes of the resulting referer...
-        $referer = ltrim($referer, '/');
+        $referer = ltrim($path, '/');
 
         // Get our app prefix, aka the webserver document root prefix of our app
         $scriptName = $this->getServerParam('SCRIPT_NAME');
@@ -393,9 +414,15 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
             $hashParam = '';
         }
 
+        $target = $this->getActionLink($routeID, $params, $addToken, $hashParam);
+
+        if (static::hasControlCharacter($target)) {
+            throw new RuntimeException('A redirect target must not contain a control character.');
+        }
+
         $this->responseRedirect = [
             'code' => $code,
-            'target' => $this->getActionLink($routeID, $params, $addToken, $hashParam),
+            'target' => $target,
         ];
 
         return $this;
@@ -468,6 +495,19 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         return $route;
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
+    public function setCookieParam(string $key, string $value, int $expires = 0, array $options = []): self
+    {
+        $this->sendCookie($key, $value, ['expires' => $expires] + $this->getCookieOptions($options));
+
+        // Visible to the rest of this request at once
+        $this->cookie[$key] = $value;
+
+        return $this;
+    }
+
     public function setResponse(string $response): self
     {
         if ($this->responseRedirect !== null) {
@@ -488,6 +528,133 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         $this->responseStatusCode = $statusCode;
 
         return $this;
+    }
+
+    /**
+     * A cookie's attributes: the call's over the configuration's `cookies` block over the defaults — the whole
+     * site, not readable by scripts, not sent with cross-site subrequests (Lax), and Secure — `secure` null —
+     * exactly when the request came over https.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @return array{path: string, domain: string, secure: bool, httponly: bool, samesite: 'Lax'|'Strict'|'None'}
+     */
+    protected function getCookieOptions(array $options): array
+    {
+        $path = '/';
+        $domain = '';
+        $secure = null;
+        $httpOnly = true;
+        $sameSite = 'Lax';
+
+        foreach ([$this->getCookieDefaults(), $options] as $layer) {
+            foreach ($layer as $name => $value) {
+                if ($name === 'path' && is_string($value) && !static::hasControlCharacter($value)) {
+                    $path = $value;
+                } elseif ($name === 'domain' && is_string($value) && !static::hasControlCharacter($value)) {
+                    $domain = $value;
+                } elseif ($name === 'secure' && ($value === null || is_bool($value))) {
+                    $secure = $value;
+                } elseif ($name === 'httponly' && is_bool($value)) {
+                    $httpOnly = $value;
+                } elseif ($name === 'samesite' && ($value === 'Lax' || $value === 'Strict' || $value === 'None')) {
+                    $sameSite = $value;
+                } else {
+                    throw new InvalidArgumentException('Unknown or malformed cookie attribute ' . $name . '.');
+                }
+            }
+        }
+
+        $secure ??= $this->isHttpsRequest();
+
+        if ($sameSite === 'None' && !$secure) {
+            throw new InvalidArgumentException('A SameSite=None cookie must be Secure.');
+        }
+
+        return [
+            'path' => $path,
+            'domain' => $domain,
+            'secure' => $secure,
+            'httponly' => $httpOnly,
+            'samesite' => $sameSite,
+        ];
+    }
+
+    /**
+     * The configuration's `cookies` block: the attributes every cookie of the application gets unless the call
+     * names its own. Empty when the request runs without a bean factory.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getCookieDefaults(): array
+    {
+        if ($this->__beanFactory === null) {
+            return [];
+        }
+
+        $config = $this->getBeanFactory()->get('Config');
+        $cookies = is_array($config)
+            ? ($config['cookies'] ?? [])
+            : [];
+
+        if (!is_array($cookies)) {
+            throw new InvalidArgumentException('The configuration\'s cookies block must be an array.');
+        }
+
+        $defaults = [];
+
+        foreach ($cookies as $name => $value) {
+            $defaults[(string)$name] = $value;
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * The path and query of a Referer whose origin is this request's host (scheme http or https; the host and the
+     * port compared with the Host header, a default port counting as none), null for any other.
+     */
+    protected function getRefererPathOnThisHost(string $referer): ?string
+    {
+        $httpHost = $this->getServerParam('HTTP_HOST');
+
+        if (!is_string($httpHost) || trim($httpHost) === '') {
+            return null;
+        }
+
+        $parts = parse_url($referer);
+
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return null;
+        }
+
+        $defaultPort = $scheme === 'https'
+            ? 443
+            : 80;
+        $origin = strtolower($parts['host']);
+
+        if (isset($parts['port']) && $parts['port'] !== $defaultPort) {
+            $origin .= ':' . $parts['port'];
+        }
+
+        $host = strtolower(trim($httpHost));
+
+        if (str_ends_with($host, ':' . $defaultPort)) {
+            $host = substr($host, 0, -strlen(':' . $defaultPort));
+        }
+
+        if (!hash_equals($host, $origin)) {
+            return null;
+        }
+
+        return ($parts['path'] ?? '/')
+            . (isset($parts['query']) ? '?' . $parts['query'] : '');
     }
 
     protected function getRoute(): string
@@ -526,6 +693,24 @@ class DefaultHttp implements BeanFactoryAccess, HttpRequest
         // Remove beginning slashes again, just to be sure...
         // There still might be some when running directly on a domain and not in a subdirectory
         return ltrim($route, '/');
+    }
+
+    /** Whether the web server says the request came over TLS (its HTTPS variable, "off" meaning not). */
+    protected function isHttpsRequest(): bool
+    {
+        $https = $this->getServerParam('HTTPS');
+
+        return is_string($https) && $https !== '' && strtolower($https) !== 'off';
+    }
+
+    /**
+     * Hands a cookie to PHP: the one place a cookie leaves the request, so that a test can record it instead.
+     *
+     * @param array{expires: int, path: string, domain: string, secure: bool, httponly: bool, samesite: 'Lax'|'Strict'|'None'} $options
+     */
+    protected function sendCookie(string $key, string $value, array $options): void
+    {
+        setcookie($key, $value, $options);
     }
 
     protected function getDirname(string $path): string

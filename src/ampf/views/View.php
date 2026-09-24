@@ -35,9 +35,20 @@ interface View
     public function formatTime(mixed $time = null, ?string $format = null): string;
 
     /**
+     * The translation of the key with the arguments put in as they are (vsprintf()): for arguments that already are
+     * the view's output format (markup, a formatted number). Text from anywhere else goes through te().
+     *
      * @param ?list<string> $args
      */
     public function t(string $key, ?array $args = null): string;
+
+    /**
+     * The translation of the key with every argument escaped for the view's output first (escape()): for arguments
+     * that are text — a name, a title, anything a user or another system wrote.
+     *
+     * @param ?list<string> $args
+     */
+    public function te(string $key, ?array $args = null): string;
 
     /**
      * @param ?array<string, mixed> $params

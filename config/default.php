@@ -100,6 +100,31 @@ return [
 
     'translation.dir' => null,
 
+    // The attributes DefaultHttp::setCookieParam() gives a cookie unless the call names its own. secure: true,
+    // false, or null for "exactly when the request came over https" (the web server's HTTPS variable).
+    'cookies' => [
+        'path' => '/',
+        'domain' => '',
+        'secure' => null,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ],
+
+    // The session (DefaultSessionService), applied before the session starts: its cookie's attributes (secure as
+    // above), strict mode (an id the server never issued is replaced, not adopted) and cookies only.
+    'session' => [
+        'cookie' => [
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => null,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ],
+        'use_strict_mode' => true,
+        'use_only_cookies' => true,
+    ],
+
     'stringfilecache' => [
         'cachedir' => null,
         'defaultttl' => null,

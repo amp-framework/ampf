@@ -19,7 +19,6 @@ class RouteResolverTest extends TestCase
     public function testCleanMatches(): void
     {
         $method = new ReflectionMethod(DefaultRouteResolver::class, 'cleanMatches');
-        $method->setAccessible(true);
 
         $routeResolver = new DefaultRouteResolver();
 
@@ -46,7 +45,6 @@ class RouteResolverTest extends TestCase
     public function testGetControllerParamsByRoutePattern(): void
     {
         $method = new ReflectionMethod(DefaultRouteResolver::class, 'getControllerParamsByRoutePattern');
-        $method->setAccessible(true);
 
         $routeResolver = new DefaultRouteResolver();
 
@@ -110,7 +108,6 @@ class RouteResolverTest extends TestCase
     public function testGetRouteParams(): void
     {
         $method = new ReflectionMethod(DefaultRouteResolver::class, 'getRouteParams');
-        $method->setAccessible(true);
 
         $routeResolver = new DefaultRouteResolver();
 
@@ -132,12 +129,75 @@ class RouteResolverTest extends TestCase
         }
     }
 
+    /**
+     * A route parameter is the text of one path segment in a link: whatever it holds, it cannot end the segment,
+     * start a query or a fragment, or break the line of a Location header.
+     */
+    public function testRouteParametersAreEncodedIntoTheLink(): void
+    {
+        $routeResolver = new DefaultRouteResolver();
+        $routeResolver->setConfig(['routes' => [
+            'show' => ['controller' => 'ShowController', 'pattern' => 'show/(?P<pathInfo>.*)'],
+            'twoParams' => ['controller' => 'TwoController', 'pattern' => 'user/(?P<userId>.*)/(?P<action>.*)'],
+            'step' => ['controller' => 'StepController', 'pattern' => 'password-reset/(?P<step>\\d+)'],
+        ]]);
+
+        $links = [
+            // What applications pass (ids, id-password, words) comes out as it went in
+            ['show', ['pathInfo' => '1358130'], 'show/1358130'],
+            ['show', ['pathInfo' => '1358130-a1b2c3d4'], 'show/1358130-a1b2c3d4'],
+            ['step', ['step' => '2'], 'password-reset/2'],
+            ['twoParams', ['userId' => '42', 'action' => 'delete'], 'user/42/delete'],
+            ['show', ['pathInfo' => 'A_b.c~d-e'], 'show/A_b.c~d-e'],
+            // Everything else is percent-encoded
+            ['show', ['pathInfo' => "1\r\nLocation: https://evil.example/"], 'show/1%0D%0ALocation%3A%20https%3A%2F%2Fevil.example%2F'],
+            ['show', ['pathInfo' => '1/../../admin'], 'show/1%2F..%2F..%2Fadmin'],
+            ['show', ['pathInfo' => '1?stkn=x#top'], 'show/1%3Fstkn%3Dx%23top'],
+            ['show', ['pathInfo' => '100%'], 'show/100%25'],
+            ['show', ['pathInfo' => '\\evil.example'], 'show/%5Cevil.example'],
+            ['show', ['pathInfo' => 'Grüße'], 'show/Gr%C3%BC%C3%9Fe'],
+            ['twoParams', ['userId' => 'a b', 'action' => "\0"], 'user/a%20b/%00'],
+        ];
+
+        foreach ($links as [$routeId, $params, $expected]) {
+            static::assertSame($expected, $routeResolver->getRoutePatternByRouteID($routeId, $params), $expected);
+        }
+    }
+
+    /** The parameters a route pattern does not name are handed back as they are (they become the query string). */
+    public function testParametersTheRouteDoesNotNameAreHandedBack(): void
+    {
+        $routeResolver = new DefaultRouteResolver();
+        $routeResolver->setConfig(['routes' => [
+            'show' => ['controller' => 'ShowController', 'pattern' => 'show/(?P<pathInfo>.*)'],
+        ]]);
+
+        static::assertSame(
+            ['re' => 'a b/c'],
+            $routeResolver->getNotDefinedParams('show', ['pathInfo' => '1', 're' => 'a b/c']),
+        );
+    }
+
+    /** "$" ends the route: a route with a line feed after it matches no pattern that does not take one. */
+    public function testAPatternDoesNotMatchBeforeAFinalLineFeed(): void
+    {
+        $routeResolver = new DefaultRouteResolver();
+        $routeResolver->setConfig(['routes' => [
+            'admin' => ['controller' => 'AdminController', 'pattern' => 'admin'],
+            'step' => ['controller' => 'StepController', 'pattern' => 'password-reset/(?P<step>\\d+)'],
+        ]]);
+
+        static::assertSame('admin', $routeResolver->getRouteIDByRoutePattern('admin'));
+        static::assertNull($routeResolver->getRouteIDByRoutePattern("admin\n"));
+        static::assertSame(['step' => '2'], $routeResolver->getParamsByRoutePattern('password-reset/2'));
+        static::assertNull($routeResolver->getRouteIDByRoutePattern("password-reset/2\n"));
+    }
+
     public function testSetConfigThrowsExceptionIfConfigDoesntContainRoutes(): void
     {
         $routeResolver = new DefaultRouteResolver();
 
         static::expectException(RuntimeException::class);
-        /** @phpstan-ignore-next-line */
         $routeResolver->setConfig(['abc' => 'def']);
     }
 
@@ -220,7 +280,6 @@ class RouteResolverTest extends TestCase
     public function testSetConfigTakesConfigCorrectly(): void
     {
         $method = new ReflectionMethod(DefaultRouteResolver::class, 'getConfig');
-        $method->setAccessible(true);
 
         $routeResolver = new DefaultRouteResolver();
         $routeResolver->setConfig(['routes' => [

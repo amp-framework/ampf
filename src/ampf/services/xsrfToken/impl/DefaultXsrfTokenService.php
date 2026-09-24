@@ -11,6 +11,10 @@ use ampf\services\xsrfToken\XsrfTokenService;
 use RuntimeException;
 use SplQueue;
 
+/**
+ * One-time request tokens against cross-site request forgery: 128 random bits as 32 hex characters, kept in a
+ * session-backed queue of the last TOKEN_QUEUE_COUNT issued ones. A token is accepted once.
+ */
 class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 {
     use DefaultBeanFactoryAccess;
@@ -18,7 +22,12 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
     protected const string TOKEN_ID_REQUEST = 'stkn';
     protected const string TOKEN_ID_SESSION = '_xsrfToken';
-    protected const int TOKEN_LEN = 6;
+
+    /**
+     * The random bytes of a token; its text is their hex form, twice as long (TOKEN_LEN).
+     */
+    protected const int TOKEN_BYTES = 16;
+    protected const int TOKEN_LEN = 32;
     protected const int TOKEN_QUEUE_COUNT = 15;
 
     /**
@@ -34,13 +43,9 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
             // Get the tokenQueue from the session
             $tokenQueue = $this->getTokenQueue();
 
-            // Generate a new token
-
+            // Generate a new token: every hex character of it is random
             // @phpstan-ignore argument.type
-            $random = random_bytes(static::TOKEN_LEN);
-
-            $random = bin2hex($random);
-            $this->currentToken = mb_substr($random, 0, static::TOKEN_LEN);
+            $this->currentToken = bin2hex(random_bytes(static::TOKEN_BYTES));
 
             // Store it into the queue
             $tokenQueue->enqueue($this->currentToken);
@@ -68,12 +73,9 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
     public function isCorrectToken(string $token): bool
     {
-        // Make sure the token has the correct format
-        if (trim($token) === '') {
-            return false;
-        }
-
-        if (mb_strlen($token) !== static::TOKEN_LEN) {
+        // Make sure the token has the correct format: anything else was never issued (a token issued before
+        // tokens had their current length included)
+        if (strlen($token) !== static::TOKEN_LEN || !ctype_xdigit($token)) {
             return false;
         }
 
@@ -82,8 +84,8 @@ class DefaultXsrfTokenService implements BeanFactoryAccess, XsrfTokenService
 
         // Iterate over the values
         foreach ($tokenQueue as $i => $realToken) {
-            // If we found the token
-            if (hash_equals($token, $realToken)) {
+            // If we found the token (the known string first, the given one second: hash_equals()'s order)
+            if (hash_equals($realToken, $token)) {
                 // Remove it from our tokenQueue
                 $tokenQueue->offsetUnset($i);
                 // And save back the queue to the session

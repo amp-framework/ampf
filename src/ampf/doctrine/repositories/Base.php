@@ -109,6 +109,10 @@ abstract class Base extends EntityRepository
         $i = 0;
 
         foreach ($query->toIterable() as $object) {
+            if (!is_object($object)) {
+                throw new RuntimeException('The query did not select entities.');
+            }
+
             $i++;
             $this->getEntityManager()->remove($object);
 

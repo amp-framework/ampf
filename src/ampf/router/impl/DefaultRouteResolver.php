@@ -93,10 +93,14 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
     }
 
     /**
-     * @param array{routes: mixed} $config
+     * @param array<mixed> $config the configuration, whose `routes` are taken
      */
     public function setConfig(array $config): void
     {
+        if (!array_key_exists('routes', $config)) {
+            throw new RuntimeException('The configuration has no routes.');
+        }
+
         $config = $this->validateRouteConfig($config['routes']);
 
         $this->_config = $config;
@@ -144,7 +148,9 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
                 throw new RuntimeException('Missing parameter ' . $match[1]);
             }
 
-            $replace = $params[$match[1]];
+            // A parameter is one path segment's text in the link: "/", "?", "#", "%", spaces and control
+            // characters are encoded, an id or a word stays as it is
+            $replace = rawurlencode($params[$match[1]]);
             unset($params[$match[1]]);
             $regex = str_replace($search, $replace, $regex);
         }
@@ -184,7 +190,8 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
                 throw new RuntimeException();
             }
 
-            $preg = ('/^' . str_replace('/', '\/', $routeOptions['pattern']) . '$/');
+            // D: "$" ends the route, it does not match before a final line feed
+            $preg = ('/^' . str_replace('/', '\/', $routeOptions['pattern']) . '$/D');
 
             /**
              * $matches will contain string,string elements because of named parameters in the regex
@@ -246,7 +253,7 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
      */
     protected function validateRouteConfig(mixed $config): array
     {
-        if (!is_array($config)) {
+        if (!is_array($config) || count($config) < 1) {
             throw new RuntimeException();
         }
 
@@ -261,7 +268,11 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
                 throw new RuntimeException();
             }
 
-            if (!isset($value['pattern']) || !isset($value['controller'])) {
+            // A route names its pattern and its controller, and nothing else
+            $keys = array_keys($value);
+            sort($keys);
+
+            if ($keys !== ['controller', 'pattern']) {
                 throw new RuntimeException();
             }
 
@@ -269,7 +280,8 @@ class DefaultRouteResolver implements BeanFactoryAccess, RouteResolver
                 throw new RuntimeException();
             }
 
-            $result[$key] = ['pattern' => $value['pattern'], 'controller' => $value['controller']];
+            /** @var array{pattern: string, controller: string} $value the options as configured, in their order */
+            $result[$key] = $value;
         }
 
         return $result;
