@@ -2,45 +2,27 @@
 
 declare(strict_types=1);
 
-use ampf\requests\impl\DefaultCli;
-use ampf\router\impl\DefaultCliRouter;
-use ampf\router\impl\DefaultRouteResolver;
-use ampf\views\impl\DefaultCliView;
+use ampf\Request\CliRequest;
+use ampf\Router\CliRouter;
+use ampf\View\CliView;
 
+/*
+ * The command line's beans, loaded after config/default.php by a CLI entry point. 'Router', 'Request',
+ * 'RequestStub' and 'View' are roles the two transports fill with different classes, so they are keyed by name, not
+ * by type.
+ */
 return [
     'routes' => [],
 
     'beans' => [
-        /**
-         * Routing stuff
-         */
-        'RouteResolver' => [
-            'class' => DefaultRouteResolver::class,
-        ],
-        'Router' => [
-            'class' => DefaultCliRouter::class,
-        ],
-
-        /**
-         * Request stuff
-         */
-        'Request' => [
-            'class' => DefaultCli::class,
-        ],
-        'RequestStub' => [
-            'class' => DefaultCli::class,
-            'parent' => 'Request',
-            'scope' => 'prototype',
-        ],
-
-        /**
-         * View stuff
-         */
-        'View' => [
-            'class' => DefaultCliView::class,
-            'scope' => 'prototype',
-        ],
+        'Router' => ['class' => CliRouter::class],
+        'Request' => ['class' => CliRequest::class],
+        // The request of a sub-request (CliView::subRoute()): configured like 'Request', a new one for each use
+        'RequestStub' => ['class' => CliRequest::class, 'parent' => 'Request', 'scope' => 'prototype'],
+        // A new view for each use, so one template's variables never reach the next (subRender())
+        'View' => ['class' => CliView::class, 'scope' => 'prototype'],
     ],
 
+    // The directory of the templates (ViewResolver); the application names its own
     'viewDirectory' => null,
 ];

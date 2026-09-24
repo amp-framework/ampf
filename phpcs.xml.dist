@@ -63,6 +63,14 @@
         <exclude name="SlevomatCodingStandard.PHP.UselessParentheses.UselessParentheses"/>
         <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectStrictTypesFormat"/>
         <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint"/>
+        <!--
+            Annotations reference imported classes by their short name, as the code does: PHP-CS-Fixer's
+            global_namespace_import rewrites them that way, and this sniff would demand the fully qualified name back
+            on every pass.
+        -->
+        <exclude name="SlevomatCodingStandard.Namespaces.FullyQualifiedClassNameInAnnotation"/>
+        <!-- Deprecated since Slevomat 8.16 and gone in 9; DNFTypeHintFormat (below) replaces it. -->
+        <exclude name="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat"/>
     </rule>
 
     <rule ref="SlevomatCodingStandard.Attributes.AttributesOrder">
@@ -156,6 +164,9 @@
             <property name="linesCountAfterWhenLastInCaseOrDefault" type="int" value="0"/>
             <property name="linesCountAfterWhenLastInLastCaseOrDefault" type="int" value="0"/>
         </properties>
+        <!-- Consecutive PHPUnit provider yields otherwise get contradictory spacing rules. -->
+        <exclude-pattern>tests/Unit/*</exclude-pattern>
+        <exclude-pattern>tests/Integration/*</exclude-pattern>
     </rule>
     <rule ref="SlevomatCodingStandard.Functions.ArrowFunctionDeclaration">
         <properties>

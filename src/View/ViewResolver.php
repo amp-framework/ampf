@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ampf\View;
+
+use ampf\Bean\BeanFactoryAccessInterface;
+use ampf\BeanAccess\BeanFactoryAccess;
+use Exception;
+use RuntimeException;
+
+/**
+ * Templates under the configuration's `viewDirectory`: a name of letters, digits, `_`, `.` and `-` per path segment,
+ * never `..`, for a file that exists.
+ */
+class ViewResolver implements BeanFactoryAccessInterface, ViewResolverInterface
+{
+    use BeanFactoryAccess;
+
+    protected ?string $viewDirectory = null;
+
+    public function getViewFilename(string $view): string
+    {
+        if (!$this->isValidFilename($view)) {
+            throw new Exception();
+        }
+
+        $path = ($this->getViewDirectory() . '/' . $view);
+
+        if (!file_exists($path)) {
+            throw new Exception();
+        }
+
+        return $path;
+    }
+
+    public function getViewDirectory(): string
+    {
+        if ($this->viewDirectory === null) {
+            $config = $this->getBeanFactory()->get('Config');
+
+            if (!is_array($config) || !isset($config['viewDirectory'])) {
+                throw new RuntimeException();
+            }
+
+            $viewDirectory = $config['viewDirectory'];
+
+            if (!is_string($viewDirectory)) {
+                throw new RuntimeException();
+            }
+
+            $this->setConfig(['viewDirectory' => $viewDirectory]);
+        }
+
+        if ($this->viewDirectory === null) {
+            throw new RuntimeException();
+        }
+
+        return $this->viewDirectory;
+    }
+
+    /**
+     * @param array{viewDirectory: ?string} $config
+     */
+    public function setConfig(array $config): void
+    {
+        if (!isset($config['viewDirectory'])) {
+            throw new RuntimeException();
+        }
+
+        $viewDirectory = realpath($config['viewDirectory']);
+
+        if ($viewDirectory === false) {
+            throw new RuntimeException();
+        }
+
+        $this->viewDirectory = $viewDirectory;
+    }
+
+    protected function isValidFilename(string $filename): bool
+    {
+        // replace backslashes with slashes (windows)
+        $filename = str_replace('\\', '/', $filename);
+
+        // explode by slashes
+        $array = explode('/', $filename);
+
+        foreach ($array as $value) {
+            // more than 1 dot is not allowed
+            if (strpos($value, '..') !== false) {
+                return false;
+            }
+
+            // A-Z a-z 0-9 _ . -
+            if (!preg_match('/^[A-Za-z0-9_\.\-]+$/', $value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}

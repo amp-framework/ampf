@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace ampfTest\Support;
+namespace ampf\Tests\Support;
 
-use ampf\services\session\SessionService;
+use ampf\Service\Session\SessionServiceInterface;
 
 /**
  * A session in an array, for the tests of the services that keep something in the session: no session_start(), no
  * cookie. close() and destroy() behave as PHP's session does for the code above it: nothing written afterwards is
- * kept.
+ * kept; regenerateId() and renew() give the session a new id, which id() shows.
  */
-final class ArraySessionService implements SessionService
+final class ArraySessionService implements SessionServiceInterface
 {
     /**
      * @var array<string, mixed>
@@ -19,6 +19,8 @@ final class ArraySessionService implements SessionService
     private array $values = [];
 
     private bool $open = true;
+
+    private int $id = 1;
 
     public function close(): void
     {
@@ -39,6 +41,23 @@ final class ArraySessionService implements SessionService
     public function hasAttribute(string $key): bool
     {
         return isset($this->values[$key]);
+    }
+
+    /** The session's id: 1 at first, one more after each regenerateId() and renew(). */
+    public function id(): int
+    {
+        return $this->id;
+    }
+
+    public function regenerateId(): void
+    {
+        $this->id++;
+    }
+
+    public function renew(): void
+    {
+        $this->values = [];
+        $this->id++;
     }
 
     public function removeAttribute(string $key): void

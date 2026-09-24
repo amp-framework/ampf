@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace ampfTest\Support;
+namespace ampf\Tests\Support;
 
-use ampf\services\translator\TranslatorService;
+use ampf\Service\Translator\TranslatorServiceInterface;
 
 /**
- * Translations from an array, put together as DefaultTranslatorService does (vsprintf() over the text).
+ * Translations from an array, put together as TranslatorService does (vsprintf() over the text).
  *
  * @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
  */
-final class ArrayTranslatorService implements TranslatorService
+final readonly class ArrayTranslatorService implements TranslatorServiceInterface
 {
     /**
      * @param array<string, string> $texts
      */
-    public function __construct(private readonly array $texts)
+    public function __construct(private array $texts)
     {
     }
 

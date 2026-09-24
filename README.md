@@ -1,15 +1,268 @@
-# ampf - ampf MVC PHP framework
+# ampf — the ampf MVC PHP framework
 
-ampf is a PHP MVC framework designed to be simple and stupid. The core of ampf is a dependency-injenction container which does *no magic* and can be configured to your needs. The idea behind ampf is that this DI container handles all your PHP objects, regardless how they act and what they do. You configure it the way *you* want and it will handle everything.
+ampf is a small PHP MVC framework built around one idea: an explicitly configured, lazy dependency container — the **bean factory** — that does no magic. Configuration is PHP files returning arrays; routes map to controller beans; controllers prepare a response on the request object; PHP templates render through view objects. Nothing is discovered, autowired or scanned: every bean, route and directory is named in configuration.
 
-This approach has some big advantages (e.g. ampf won't open a database connection unless you really are going to use it, it won't open up a PHP session unless you really are going to use it, etc), as the objects are created on-demand when someone asks the DI container to give him a specific instance.
+Because every object is created on its first use, an application opens no database connection unless a request uses the database, and starts no PHP session unless a request uses the session.
 
-You configure the ampf framework through normal .php files which then return an array with configuration values. 
+ampf requires PHP 8.5 with `ctype`, `json`, `mbstring`, `pdo`, `pdo_mysql` and `session`; it uses Doctrine ORM 3 and `symfony/cache`. Its API may change between revisions — [`UPGRADING.md`](UPGRADING.md) lists what an application has to change.
 
-ampf is still under heavy development and hence its API may change heavily in future.
+```sh
+composer require amp-framework/ampf:dev-master
+```
 
-## How to build a webapp based on ampf
+## 1. Boot
 
-When you want to build a new webapp based on ampf, you'd have to do the folllowing:
+An entry point does five things:
 
-*TO DO*
+```php
+use ampf\Bean\BeanFactory;
+use ampf\Bootstrap\ApplicationContext;
+use ampf\Request\HttpRequestInterface;
+use ampf\Router\HttpRouterInterface;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// 1. runtime options: error handling, time zone, encoding
+date_default_timezone_set('UTC');
+mb_internal_encoding('UTF-8');
+
+// 2. the configuration: an ordered list of PHP files, each returning an array, merged into one
+$config = ApplicationContext::boot([
+    __DIR__ . '/../vendor/amp-framework/ampf/config/default.php', // the framework's defaults
+    __DIR__ . '/../vendor/amp-framework/ampf/config/http.php',    // the framework's web beans
+    __DIR__ . '/../config/default.php',                           // the application's beans and settings
+    __DIR__ . '/../config/http.php',                              // the application's controllers and routes
+    __DIR__ . '/../config/local.php',                             // machine settings (database, keys): not in Git
+]);
+
+// 3. the bean factory over it
+$beanFactory = new BeanFactory($config);
+
+// 4. route the request
+$router = $beanFactory->get('Router');
+assert($router instanceof HttpRouterInterface);
+$request = $beanFactory->get('Request');
+assert($request instanceof HttpRequestInterface);
+$router->route($request);
+
+// 5. send the status code, the headers and the body (or the redirect)
+$request->flush();
+```
+
+A command line entry point loads `config/cli.php` (the framework's and the application's) in place of `http.php` and asserts `CliRouterInterface`/`CliRequestInterface`. Every listed file must exist (`require`, no silent skip). The files are executable PHP that runs inside `boot()`'s scope: loading configuration can run code, and a file that assigns a variable named `$config` overwrites the merge accumulated so far — never name one that way. Never boot the real application to obtain a test's dependencies; build a test configuration instead.
+
+## 2. Configuration merge — one level deep
+
+`ApplicationContext::boot()` merges **only one level below the top-level keys**. A later file wins, but:
+
+| Entry | Effect of a later definition |
+| --- | --- |
+| a scalar (`viewDirectory`, `translation.dir`) | replaced |
+| `beans`, `routes` | the maps are combined by key; a later definition of one bean or route **replaces that entry's whole options array** |
+| `doctrine`, `stringfilecache`, `cookies`, `session`, … | combined by key; a nested array (`connectionParams`, `session.cookie`) is replaced as a whole |
+| `configuration.service` | combined by domain; a later `'.myapp' => [...]` **replaces the whole domain** — repeat every key the domain needs |
+
+Consequences: overriding the `View` bean needs both `class` and `scope` (supplying only one loses the other); an empty `'routes' => []` erases nothing; existing keys keep their position and new keys append, so a route added in a later file lands **after** an existing catch-all — keep fallback routes last. A top-level array that two files define must be keyed by strings (a list cannot be merged: `boot()` throws). The whole merged array is the bean `Config`. Top-level keys with dots (`translation.dir`) are literal keys, not paths.
+
+## 3. Beans
+
+A bean id is an explicit string. A **service** is keyed by its interface (`SessionServiceInterface::class`), and an application replaces the framework's implementation by configuring another class under the same key. The four **roles** the two transports fill with classes of their own are keyed by name: `Router`, `Request`, `RequestStub` and `View`. Two beans exist in every factory: `BeanFactory` (the factory itself) and `Config` (the merged configuration).
+
+```php
+return [
+    'beans' => [
+        ReportServiceInterface::class => ['class' => ReportService::class],
+        SessionServiceInterface::class => ['class' => MySessionService::class], // replaces the framework's
+        'ReportController' => ['class' => ReportController::class],             // controllers: named by the routes
+        'View' => ['class' => MyHttpView::class, 'scope' => 'prototype'],
+    ],
+];
+```
+
+| Option | Meaning |
+| --- | --- |
+| `class` | instantiated with `new $class()` — **no constructor arguments, no autowiring** |
+| `scope` | `singleton` (default: cached in this factory instance) or `prototype` (a new object for every lookup) |
+| `properties` | map of **dependency bean id → setter suffix**: `['Config' => 'config']` resolves the `Config` bean and calls `setConfig($config)` (a missing setter throws) |
+| `initMethod` | a method without arguments, called after the properties are set |
+| `parent` | another bean's definition applied to the object first — configuration reuse, not inheritance; the child's `class` is instantiated |
+
+Initialisation order: parent configuration → property injection → `initMethod` → scope caching. Any object implementing `ampf\Bean\BeanFactoryAccessInterface` receives the factory itself during property injection (`setBeanFactory()`), which is how the framework's and an application's classes reach their dependencies. Because caching happens *after* initialisation, an eager dependency cycle recurses — resolve dependencies lazily (section 4).
+
+`get($id, $creator)` accepts a fallback callable for ids without a definition (the repositories, section 9); a configured definition wins over the callable; an unknown id without a callable throws `No configuration for bean …`. `set($id, $object)` puts an object in place of a bean by hand (tests use it for doubles) and wins over the configuration. A singleton belongs to one factory instance — there is no cross-request cache; a long-running CLI keeps its singletons alive.
+
+## 4. Access traits — lazy, typed dependencies
+
+Instead of constructor injection, a class implements `BeanFactoryAccessInterface`, uses the `ampf\BeanAccess\BeanFactoryAccess` trait (it stores the factory) and one small trait per dependency. The framework ships one for each of its services:
+
+| Trait | Getter |
+| --- | --- |
+| `ampf\BeanAccess\RouteResolverAccess` | `getRouteResolver(): RouteResolverInterface` |
+| `ampf\BeanAccess\ViewResolverAccess` | `getViewResolver(): ViewResolverInterface` |
+| `ampf\BeanAccess\Service\ConfigurationServiceAccess` | `getConfigurationService()` |
+| `ampf\BeanAccess\Service\HasherServiceAccess` | `getHasherService()` |
+| `ampf\BeanAccess\Service\SessionServiceAccess` | `getSessionService()` |
+| `ampf\BeanAccess\Service\StringCacheServiceAccess` | `getStringCacheService()` |
+| `ampf\BeanAccess\Service\TimeL10nServiceAccess` | `getTimeL10nService()` |
+| `ampf\BeanAccess\Service\TranslatorServiceAccess` | `getTranslatorService()` |
+| `ampf\BeanAccess\Service\XsrfTokenServiceAccess` | `getXsrfTokenService()` |
+| `ampf\BeanAccess\Doctrine\DoctrineConfigAccess` | `getDoctrineConfig()` |
+| `ampf\BeanAccess\Doctrine\DoctrineEntityManagerAccess` | `getDoctrineEntityManager(): EntityManagerInterface` |
+| `ampf\BeanAccess\Doctrine\Repository\AbstractRepoAccess` | the base of a repository's trait (section 9) |
+
+An application writes the same shape for its own beans — `use AbstractAccess;` declares the `getBeanFactory()` the host provides:
+
+```php
+trait ReportServiceAccess
+{
+    use AbstractAccess;
+
+    protected ?ReportServiceInterface $__reportService = null;
+
+    public function getReportService(): ReportServiceInterface
+    {
+        if ($this->__reportService === null) {
+            $object = $this->getBeanFactory()->get(ReportServiceInterface::class);
+            assert($object instanceof ReportServiceInterface);
+            $this->setReportService($object);
+        }
+
+        assert($this->__reportService instanceof ReportServiceInterface);
+
+        return $this->__reportService;
+    }
+
+    public function setReportService(ReportServiceInterface $object): void
+    {
+        $this->__reportService = $object;
+    }
+}
+```
+
+The trait of `…\Service\Report\ReportServiceInterface` is `…\BeanAccess\Service\ReportServiceAccess`: one namespace level above the interface's own. The setter lets a test hand in a double without a bean factory. The `assert()` states the expected type; it is no validation of hostile input and can be disabled by runtime configuration. A trait caches what it fetched for the lifetime of its host — a controller's getter of a *prototype* bean hands out the same object twice.
+
+## 5. Routes and the controller lifecycle
+
+A route is an id mapped to a regular-expression **pattern** and a **controller bean id**:
+
+```php
+'routes' => [
+    'report/view' => [
+        'pattern' => 'report/(?P<reportId>[1-9][0-9]*)',
+        'controller' => 'ReportController',
+    ],
+],
+```
+
+`RouteResolver` anchors the pattern to the whole route (`/^…$/D`: `$` never matches before a final line feed), takes the **first** match in configuration order, extracts the named captures as parameters, and builds links the other way round by substituting the named-capture expressions with the parameters, percent-encoded (`getRoutePatternByRouteID()`; parameters the pattern does not name become the query string). Patterns omit the leading slash; the homepage's pattern is the empty string; a catch-all is `(?P<pathInfo>.*)`, last.
+
+`HttpRouter::route()` asks the request for its controller bean, checks that the bean exists and implements `ampf\Controller\ControllerInterface`, then runs:
+
+```text
+beforeAction() → execute(...routeParameters) → afterAction()
+```
+
+`ControllerInterface` declares `beforeAction(): void`, `afterAction(): void`, `execute(): void` and `setRequest(CliRequestInterface|HttpRequestInterface $request): void`; a concrete `execute()` adds the parameters its route captures — passed **positionally** in capture order, so the method's parameter order must match the pattern, and each should be optional (`?string $reportId = null`) for the interface's zero-argument signature. Throwing `ampf\Controller\ControllerInterruptedException` stops the lifecycle (the router catches it): a login guard sets a redirect and throws, and neither `execute()` nor `afterAction()` runs. Setting a redirect alone does not stop execution — return or throw.
+
+Routes enforce nothing: the HTTP method, authentication, ownership and token checks are the controller's job. Wrapping the response in a layout is an application convention (typically in the `afterAction()` of a base controller), not framework behaviour.
+
+## 6. The HTTP request
+
+`ampf\Request\HttpRequest` implements `HttpRequestInterface` (the `Request` bean, a singleton; `RequestStub` is a prototype configured like it, for sub-requests). It reads `$_GET`, `$_POST`, `$_COOKIE` and `$_SERVER` once, in its constructor (scalars as strings; arrays kept), derives the route from `REQUEST_URI` minus the script's directory and the query string, and collects the response until `flush()`.
+
+- **Input.** `hasGetParam()`/`getGetParam()`, `hasPostParam()`/`getPostParam()`, `getCookieParam()`, `getServerParam()` return what PHP received — a form field can be a string **or an array** (`name[]=`). The typed readers give each call site the shape it expects and treat the other one as absent: `getGetString()`/`getPostString()` (`''` when absent or an array), `getParamString()` (the form first, then the query), `getParamStrings()` (`name[]=` as a list of strings; a single value is a one-item list), `getPostStringMap()` (`name[key]=` with its string values). `getBody()` is the raw body (an API client's JSON), read once. `isPostRequest()`; `getAcceptedLanguages()` parses `Accept-Language`; `getRefererLocalized()` is the Referer relative to this application — only a Referer whose http(s) origin is the request's own host counts; any other, and a request without `HTTP_HOST`, gives null. `comesFromThisSite()` is false when the browser says the request came from another site (`Sec-Fetch-Site: cross-site` or `same-site`): such a request may show a page, but should change nothing on the user's behalf.
+- **Output.** `setResponse(string)`, `getResponse()`, `setStatusCode(int)`, `addHeader()` (refuses a name that is no token and a value with a control character), `setRedirect(routeID, params, code, addToken, hashParam)` (the default code is 301 — pass 303 after a POST; a redirect and a body exclude each other; a target with a control character is refused), `isRedirect()`. Every response gets `Content-Type: text/html; charset=UTF-8` and headers that forbid caching unless the controller replaces them. `flush()` checks every header before the first byte goes out and leaves PHP's own `X-Powered-By` out.
+- **Links.** `getActionLink(routeID, params, addToken, hashParam)` builds a URL from a route id: the application's base path (the directory of `SCRIPT_NAME`) first, the route's own parameters `rawurlencode()`d into the path, the others as the query string. A parameter may be any scalar — an entity's id is an int —, null is an empty value. `getLink(relative)` prefixes a relative path with the base path.
+- **Tokens.** `hasCorrectToken()` checks the **query parameter** named by `XsrfTokenServiceInterface::getTokenIDForRequest()` (`stkn`), and a valid token is consumed: one-time, 32 hex characters (128 random bits), compared with `hash_equals()`, from a session-backed queue of the last 15. A hidden POST field does not satisfy it: generate the form's URL with `addToken: true` and check the token before every change. Tokens do not replace ownership checks.
+- **Cookies.** `setCookieParam(key, value, expires = 0, options = [])` gives a cookie the attributes of the configuration's `cookies` block — path `/`, HttpOnly, SameSite=Lax, and Secure where `secure` is null exactly when the request came over https — which a call may change (`['httponly' => false]` for a cookie the page's script reads); `destroyCookieParam(key, options = [])` deletes one with the same attributes. Every cookie leaves through the protected `sendCookie()`, the seam a test request overrides to record them.
+
+## 7. Views and templates
+
+`ampf\View\AbstractView` holds a template's variables (`set()`, `get()`, `has()`, `reset()`); `render($template)` resolves the file under `viewDirectory` (`ViewResolver`: letters, digits, `_`, `.` and `-` per path segment, never `..`, and the file must exist), extracts the variables into the template's scope, `require`s it under output buffering and returns the string — inside the template `$this` is the view. **Never name a template variable `$key` or `$value`**: `render()` extracts them with `foreach ($this->memory as $key => $value)`, so those two arrive with the loop's last values. A variable that is `null` counts as absent (`has()` is `isset()`).
+
+The HTML view `ampf\View\HttpView` adds:
+
+- `escape(mixed)` — `htmlspecialchars` with `ENT_QUOTES | ENT_HTML5`; throws on a non-scalar, including `null` — normalise first.
+- `getActionLink(routeID, params, addToken)` and `getAssetLink(relative)` (resolves `.`/`..`, prefixes the base path); `getParamString(name)` — a submitted value as text, what a form shown again puts back into its fields.
+- `t(key, args)` — the translator (`vsprintf` over the text; an argument the text has no placeholder for is dropped without a word). `te(key, args)` is `t()` with every argument escaped first — the one to use when an argument is a user's text.
+- `formatNumber(number, decimals, decPoint, thousandsSep)` (defaults `.` and a space — applications override), `formatTime(time, format)` (a `DateTime` or a UNIX timestamp, converted to the default time zone, default `d.m.Y H:i`).
+- `subRender(template, params)` — renders a partial in a **new** `View` bean with only the passed keys (nothing of the parent's variables is copied; keep `View` a prototype).
+- `subRoute(controllerBean, params)` — runs a controller through a `RequestStub` and returns its output: a sub-request, not a partial. Prefer `subRender()` for shared markup.
+
+HTML escaping is not JavaScript or JSON encoding; use the right encoding for each context. Keep validation, queries and calculation out of templates.
+
+## 8. The command line
+
+`ampf\Request\CliRequest` takes `argv[1]` as the route (`*` when absent) and passes the remaining arguments **positionally** to `execute()` — there is no named-capture extraction on the command line. `CliRouter` runs the same lifecycle; `CliView` renders text templates (`escape()` changes nothing); `flush()` prints the response. `php bin/index.php <route> [arguments…]` is the usual invocation.
+
+## 9. Doctrine
+
+The framework registers two beans: `DoctrineConfigInterface` (`DoctrineConfig`, which reads the merged `doctrine` block) and `EntityManagerFactoryInterface` (`EntityManagerFactory`), whose `get()` returns the one entity manager of the bean factory, created at the first call. Under `doctrine`:
+
+| Key | Purpose |
+| --- | --- |
+| `configuration` | the ORM `Configuration` object — build it with `ampf\Bootstrap\DoctrineConfiguration::create([entity directories], cache directory)`: the attribute mapping, entities as PHP's native lazy objects (no proxy classes), and in production the mapping, the parsed queries and the results kept as PHP files in the cache directory (empty it on every deploy); without a cache directory (development) nothing is kept |
+| `connectionParams` | the DBAL connection array |
+| `typeOverrides` | DBAL type replacements; the framework maps `datetime`/`datetimetz` to its `UTCDateTimeType` (datetimes are stored in UTC) |
+| `mappingOverrides` | database type → DBAL type mappings registered on the platform (the framework's default maps `enum` to `string`; an application may set `[]`) |
+
+Base classes: `ampf\Doctrine\Entity\AbstractEntity` (empty) and `ampf\Doctrine\Repository\AbstractRepo`, an `EntityRepository` with `create()` (`new` + `persist()`), `findAllCount()`, `bulkRemoveBy(criteria)` (flushing every 20 removals), `is()`, and typed readers for query results — `entityList(query)`, `entityOrNull(query)`, `intResult(query)`, `intExecute(query)` —, since the ORM's `getResult()` is `mixed` to static analysis. Repositories are created by Doctrine from the entity's `repositoryClass`, never as plain beans: a repository's access trait uses `AbstractRepoAccess`, whose `getDoctrineEntityRepository(Entity::class, Repo::class)` registers the repository in the bean factory under `'Doctrine.Repository.' . Entity::class` at its first use. Nothing in the framework flushes for you; services decide the transaction boundaries. Schema management is the application's responsibility.
+
+## 10. The services the framework preconfigures
+
+| Bean id | Class | Notes |
+| --- | --- | --- |
+| `SessionServiceInterface` | `SessionService` | starts at its first use, after `session_set_cookie_params()` from the `session.cookie` block (HttpOnly, SameSite=Lax, Secure by the request's scheme) and strict mode and cookies only from `session`; `get/set/has/removeAttribute()`, `regenerateId()` (a new id for the same data: at a login), `renew()` (an empty session under a new id that stays open: at a logout, so its message is kept), `destroy()` (deletes the cookie with the same attributes), `close()` (writes the session and releases its lock; later writes are not kept) |
+| `XsrfTokenServiceInterface` | `XsrfTokenService` | one-time tokens of 32 hex characters (`random_bytes(16)`) in a session-backed queue of 15, refused unless they have that shape; `getNewToken()` (one per request), `isCorrectToken()`, the request parameter name `stkn` |
+| `TranslatorServiceInterface` | `TranslatorService` | loads `translation.dir/<language>.php` (a `string => string` array; anything else throws) once `setLanguage()` was called; an unknown key translates to itself |
+| `ConfigurationServiceInterface` | `ConfigurationService` | reads `configuration.service`: `setDomain('.app.de_DE')`, then `get('key')` walks the domain up (`.app.de_DE` → `.app`) until a domain defines the key; `null` otherwise. Not the same thing as the `Config` bean |
+| `StringCacheServiceInterface` | `FileStringCacheService` | a file cache of strings under `stringfilecache.cachedir` with `defaultttl` (whole rendered pages, say); writes are atomic (a temporary file, then `rename()`), one write in a hundred sweeps the expired entries, `sweep()` does it on demand (a cron job); `enabled: false` switches it off — nothing is stored or served |
+| `HasherServiceInterface` | `HasherService` | `hash()` (bcrypt at cost 12; refuses a NUL byte), `check()` (false, after a dummy verification, for a blank string and for a stored value that is no bcrypt hash), `needsRehash()`, `avoidTimingAttack()` |
+| `TimeL10nServiceInterface` | `TimeL10nService` | UTC datetime ↔ UNIX time |
+| `ViewResolverInterface` | `ViewResolver` | template path resolution under `viewDirectory` |
+| `RouteResolverInterface` | `RouteResolver` | the routes, both directions (section 5) |
+
+## 11. The configuration keys
+
+| Key | Read by | Default |
+| --- | --- | --- |
+| `beans`, `routes` | the bean factory, `RouteResolver` | sections 3 and 5 |
+| `viewDirectory` | `ViewResolver` | `null` — the application names its templates' directory |
+| `translation.dir` | `TranslatorService` | `null` — the application names its translations' directory |
+| `doctrine` | `DoctrineConfig` | section 9 |
+| `cookies` | `HttpRequest::setCookieParam()` | path `/`, domain `''`, `secure` null (by the request's scheme), HttpOnly, SameSite=Lax |
+| `session` | `SessionService` | `cookie` (lifetime 0 and the attributes above), `use_strict_mode` and `use_only_cookies` true |
+| `stringfilecache` | `FileStringCacheService` | `cachedir` null (the application names one before it uses the cache), `defaultttl` null (an hour), `enabled` true |
+| `configuration.service` | `ConfigurationService` | `'.ampf' => []` |
+
+## 12. The source tree
+
+`ampf\` is `src/` (PSR-4); a namespace is singular and PascalCase, an interface carries the `Interface` suffix and its default implementation sits next to it.
+
+| Namespace | Contents |
+| --- | --- |
+| `ampf\Bootstrap` | `ApplicationContext` (the configuration), `DoctrineConfiguration` (the ORM configuration) |
+| `ampf\Bean` | the bean factory and its interfaces |
+| `ampf\BeanAccess` | the access traits (section 4) |
+| `ampf\Controller` | `ControllerInterface`, `ControllerInterruptedException` |
+| `ampf\Request` | the HTTP and the command line request |
+| `ampf\Router` | the two routers and the route resolver |
+| `ampf\View` | the views and the template resolver |
+| `ampf\Service` | one namespace per service: `Configuration`, `Hasher`, `Session`, `StringCache`, `TimeL10n`, `Translator`, `XsrfToken` |
+| `ampf\Doctrine` | the entity manager factory, `Entity\AbstractEntity`, `Repository\AbstractRepo`, `Type\UTCDateTimeType` |
+| `ampf\Helper` | `Functions` (type checks), `Registry` |
+
+## 13. Working on ampf
+
+[`AGENTS.md`](AGENTS.md) has the conventions and the working rules; the tests live under `tests/` (`ampf\Tests\`). The checks — each at zero findings — are Composer scripts:
+
+```sh
+composer phpcs        # PHP_CodeSniffer (phpcs.xml.dist, the standard applications extend)
+composer cs:check     # PHP-CS-Fixer, dry run (composer cs:fix applies it)
+composer phpstan      # PHPStan at the maximum level
+composer test         # PHPUnit
+```
+
+## License
+
+MIT, see [LICENSE](LICENSE).

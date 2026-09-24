@@ -1,4 +1,5 @@
-/tools/php-cs-fixer/vendor
+/cache/*
+!/cache/CACHEDIR.TAG
 
 /vendor/*
-!/vendor/empty
+!/vendor/CACHEDIR.TAG

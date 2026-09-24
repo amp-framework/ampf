@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace ampfTest\Support;
+namespace ampf\Tests\Support;
 
-use ampf\services\hasher\impl\DefaultHasherService;
+use ampf\Service\Hasher\HasherService;
 
 /**
  * The real hasher, counting the expensive verifications it runs (the time a check takes).
  */
-final class CountingHasherService extends DefaultHasherService
+final class CountingHasherService extends HasherService
 {
     private int $verifications = 0;
 

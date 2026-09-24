@@ -2,82 +2,78 @@
 
 declare(strict_types=1);
 
-use ampf\doctrine\impl\DefaultConfig;
-use ampf\doctrine\impl\DefaultEntityManagerFactory;
-use ampf\doctrine\types\UTCDateTimeType;
-use ampf\services\cache\string\impl\FileBased;
-use ampf\services\configuration\impl\DefaultConfigurationService;
-use ampf\services\hasher\impl\DefaultHasherService;
-use ampf\services\session\impl\DefaultSessionService;
-use ampf\services\timel10n\impl\DefaultTimeL10nService;
-use ampf\services\translator\impl\DefaultTranslatorService;
-use ampf\services\xsrfToken\impl\DefaultXsrfTokenService;
-use ampf\views\impl\DefaultViewResolver;
-use Doctrine\ORM\ORMSetup;
+use ampf\Bootstrap\DoctrineConfiguration;
+use ampf\Doctrine\DoctrineConfig;
+use ampf\Doctrine\DoctrineConfigInterface;
+use ampf\Doctrine\EntityManagerFactory;
+use ampf\Doctrine\EntityManagerFactoryInterface;
+use ampf\Doctrine\Type\UTCDateTimeType;
+use ampf\Router\RouteResolver;
+use ampf\Router\RouteResolverInterface;
+use ampf\Service\Configuration\ConfigurationService;
+use ampf\Service\Configuration\ConfigurationServiceInterface;
+use ampf\Service\Hasher\HasherService;
+use ampf\Service\Hasher\HasherServiceInterface;
+use ampf\Service\Session\SessionService;
+use ampf\Service\Session\SessionServiceInterface;
+use ampf\Service\StringCache\FileStringCacheService;
+use ampf\Service\StringCache\StringCacheServiceInterface;
+use ampf\Service\TimeL10n\TimeL10nService;
+use ampf\Service\TimeL10n\TimeL10nServiceInterface;
+use ampf\Service\Translator\TranslatorService;
+use ampf\Service\Translator\TranslatorServiceInterface;
+use ampf\Service\XsrfToken\XsrfTokenService;
+use ampf\Service\XsrfToken\XsrfTokenServiceInterface;
+use ampf\View\ViewResolver;
+use ampf\View\ViewResolverInterface;
 use Pdo\Mysql;
 
+/*
+ * The framework's defaults, the first file every entry point loads (then config/http.php or config/cli.php, then the
+ * application's own files). The files are merged one level deep (ApplicationContext::boot()): a later file replaces
+ * one bean or one route as a whole, and inside the other blocks one key as a whole.
+ *
+ * A service is keyed by its interface; an application replaces it by configuring another class under the same key.
+ */
 return [
     'beans' => [
         /**
-         * Database stuff
+         * Doctrine
          */
-        'DoctrineConfig' => [
-            'class' => DefaultConfig::class,
-        ],
-        'EntityManagerFactory' => [
-            'class' => DefaultEntityManagerFactory::class,
-            'initMethod' => 'init',
-        ],
+        DoctrineConfigInterface::class => ['class' => DoctrineConfig::class],
+        EntityManagerFactoryInterface::class => ['class' => EntityManagerFactory::class, 'initMethod' => 'init'],
 
         /**
-         * View stuff
+         * Routes and templates
          */
-        'ViewResolver' => [
-            'class' => DefaultViewResolver::class,
-        ],
+        RouteResolverInterface::class => ['class' => RouteResolver::class, 'properties' => ['Config' => 'config']],
+        ViewResolverInterface::class => ['class' => ViewResolver::class],
 
         /**
          * Services
          */
-        'ConfigurationService' => [
-            'class' => DefaultConfigurationService::class,
-            'properties' => [
-                'Config' => 'config',
-            ],
+        ConfigurationServiceInterface::class => [
+            'class' => ConfigurationService::class,
+            'properties' => ['Config' => 'config'],
         ],
-        'HasherService' => [
-            'class' => DefaultHasherService::class,
+        HasherServiceInterface::class => ['class' => HasherService::class],
+        SessionServiceInterface::class => ['class' => SessionService::class],
+        StringCacheServiceInterface::class => [
+            'class' => FileStringCacheService::class,
+            'properties' => ['Config' => 'config'],
         ],
-        'StringCacheService' => [
-            'class' => FileBased::class,
-            'properties' => [
-                'Config' => 'config',
-            ],
-        ],
-        'SessionService' => [
-            'class' => DefaultSessionService::class,
-        ],
-        'TimeL10nService' => [
-            'class' => DefaultTimeL10nService::class,
-        ],
-        'TranslatorService' => [
-            'class' => DefaultTranslatorService::class,
-        ],
-        'XsrfTokenService' => [
-            'class' => DefaultXsrfTokenService::class,
-        ],
+        TimeL10nServiceInterface::class => ['class' => TimeL10nService::class],
+        TranslatorServiceInterface::class => ['class' => TranslatorService::class],
+        XsrfTokenServiceInterface::class => ['class' => XsrfTokenService::class],
     ],
 
+    // The routes (route id => pattern and controller bean): the application's http.php and cli.php name them
     'routes' => [],
 
-    // This should be overriden by the unversioned local.php config file
+    // The database: an application names its configuration (DoctrineConfiguration::create() with its entity
+    // directories) and its connection in an unversioned local file
     'doctrine' => [
-        'configuration' => ORMSetup::createAttributeMetadataConfiguration(
-            [], // Entity paths
-            true, // Is dev mode?
-            null, // Proxy directory
-            null, // Cache, instance of \Psr\Cache\CacheItemPoolInterface
-        ),
+        'configuration' => DoctrineConfiguration::create([]),
         'connectionParams' => [
             'driver' => 'pdo_mysql',
             'host' => 'localhost',
@@ -89,18 +85,21 @@ return [
                 Mysql::ATTR_INIT_COMMAND => "SET time_zone = 'UTC';",
             ],
         ],
+        // Every datetime is stored in UTC
         'typeOverrides' => [
             'datetime' => UTCDateTimeType::class,
             'datetimetz' => UTCDateTimeType::class,
         ],
+        // Database types read as DBAL types (the platform's type mappings); an application may set []
         'mappingOverrides' => [
             'enum' => 'string',
         ],
     ],
 
+    // The directory of the translation files (TranslatorService: <language>.php)
     'translation.dir' => null,
 
-    // The attributes DefaultHttp::setCookieParam() gives a cookie unless the call names its own. secure: true,
+    // The attributes HttpRequest::setCookieParam() gives a cookie unless the call names its own. secure: true,
     // false, or null for "exactly when the request came over https" (the web server's HTTPS variable).
     'cookies' => [
         'path' => '/',
@@ -110,8 +109,8 @@ return [
         'samesite' => 'Lax',
     ],
 
-    // The session (DefaultSessionService), applied before the session starts: its cookie's attributes (secure as
-    // above), strict mode (an id the server never issued is replaced, not adopted) and cookies only.
+    // The session (SessionService), applied before the session starts: its cookie's attributes (secure as above),
+    // strict mode (an id the server never issued is replaced, not adopted) and cookies only.
     'session' => [
         'cookie' => [
             'lifetime' => 0,
@@ -125,11 +124,16 @@ return [
         'use_only_cookies' => true,
     ],
 
+    // The string cache (FileStringCacheService): its directory, the default time to live in seconds (an hour when
+    // null), and whether it is on — a development machine switches it off, so a cached page hides no change.
     'stringfilecache' => [
         'cachedir' => null,
         'defaultttl' => null,
+        'enabled' => true,
     ],
 
+    // The application's settings by domain (ConfigurationService): '.app' => [...], '.app.de' => [...]. A later file
+    // replaces a whole domain, so an override repeats every key the domain needs.
     'configuration.service' => [
         '.ampf' => [],
     ],
