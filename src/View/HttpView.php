@@ -7,7 +7,6 @@ namespace ampf\View;
 use ampf\Controller\ControllerInterface;
 use ampf\Request\HttpRequestInterface;
 use ampf\Router\HttpRouterInterface;
-use Exception;
 use RuntimeException;
 
 /** The HTML view: escaping for HTML, links through the request, sub-requests through the router. */
@@ -17,29 +16,30 @@ class HttpView extends AbstractView implements HttpViewInterface
 
     protected ?HttpRouterInterface $router = null;
 
+    /**
+     * @throws RuntimeException for a value that is no scalar
+     */
     public function escape(mixed $string): string
     {
         if (!is_scalar($string)) {
-            throw new RuntimeException();
+            throw new RuntimeException('Only a scalar can be escaped for HTML, not ' . get_debug_type($string) . '.');
         }
 
-        // @phpcs:ignore SlevomatCodingStandard.Functions.RequireSingleLineCall.RequiredSingleLineCall
-        return htmlspecialchars(
-            (string)$string,
-            (ENT_QUOTES | ENT_HTML5),
-            'UTF-8',
-        );
+        return htmlspecialchars((string)$string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
+    /**
+     * The link of a file under the web root: "." and ".." are resolved first, and no link leaves the web root.
+     *
+     * @throws RuntimeException for a blank path, and for a path that leaves the web root
+     */
     public function getAssetLink(string $relativeLink): string
     {
         if (trim($relativeLink) === '') {
-            throw new RuntimeException();
+            throw new RuntimeException('An asset link needs the path of the asset.');
         }
 
-        $relativeLink = $this->solveSymbolicPath($relativeLink);
-
-        return $this->getRequest()->getLink($relativeLink);
+        return $this->getRequest()->getLink($this->solveSymbolicPath($relativeLink));
     }
 
     /**
@@ -55,16 +55,19 @@ class HttpView extends AbstractView implements HttpViewInterface
         return $this->getRequest()->getParamString($name);
     }
 
+    /**
+     * @throws RuntimeException when the bean 'Request' is no web request
+     */
     public function getRequest(): HttpRequestInterface
     {
         if ($this->request === null) {
             $request = $this->getBeanFactory()->get('Request');
-            assert($request instanceof HttpRequestInterface);
-            $this->setRequest($request);
-        }
 
-        if ($this->request === null) {
-            throw new RuntimeException();
+            if (!$request instanceof HttpRequestInterface) {
+                throw new RuntimeException('The bean Request is no web request, but ' . get_debug_type($request) . '.');
+            }
+
+            $this->request = $request;
         }
 
         return $this->request;
@@ -75,16 +78,19 @@ class HttpView extends AbstractView implements HttpViewInterface
         $this->request = $request;
     }
 
+    /**
+     * @throws RuntimeException when the bean 'Router' is no web router
+     */
     public function getRouter(): HttpRouterInterface
     {
         if ($this->router === null) {
             $router = $this->getBeanFactory()->get('Router');
-            assert($router instanceof HttpRouterInterface);
-            $this->setRouter($router);
-        }
 
-        if ($this->router === null) {
-            throw new RuntimeException();
+            if (!$router instanceof HttpRouterInterface) {
+                throw new RuntimeException('The bean Router is no web router, but ' . get_debug_type($router) . '.');
+            }
+
+            $this->router = $router;
         }
 
         return $this->router;
@@ -96,66 +102,57 @@ class HttpView extends AbstractView implements HttpViewInterface
     }
 
     /**
-     * @param array<string, string> $params
+     * What the controller bean responds to the parameters, run on a request of its own (the bean 'RequestStub'):
+     * execute() takes them by their names.
+     *
+     * @param ?array<string, string> $params
+     *
+     * @throws RuntimeException when the bean 'RequestStub' is no web request, or the controller bean no controller
      */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
-        if ($params === null) {
-            $params = [];
+        $request = $this->getBeanFactory()->get('RequestStub');
+
+        if (!$request instanceof HttpRequestInterface) {
+            throw new RuntimeException('The bean RequestStub is no web request, but ' . get_debug_type($request) . '.');
         }
 
-        // get a stub request
-        $request = $this->getBeanFactory()->get('RequestStub');
-        assert($request instanceof HttpRequestInterface);
-        // get the controller bean and inject the request
         $controller = $this->getBeanFactory()->get($controllerBean);
-        assert($controller instanceof ControllerInterface);
-        $controller->setRequest($request);
 
-        // route it
+        if (!$controller instanceof ControllerInterface) {
+            throw new RuntimeException(
+                'The controller bean ' . $controllerBean . ' is no ' . ControllerInterface::class . ', but '
+                . get_debug_type($controller) . '.',
+            );
+        }
+
+        $controller->setRequest($request);
         $this->getRouter()->routeBean($controller, $params);
 
-        // get the response
-        ob_start();
-        $request->flush();
-        $result = ob_get_clean();
-
-        // and, finally, return it
-        if ($result === false) {
-            throw new RuntimeException();
-        }
-
-        return $result;
+        return $this->capture($request->flush(...));
     }
 
+    /**
+     * The path with its "." and ".." segments resolved, and without empty ones.
+     *
+     * @throws RuntimeException for a path whose ".." leaves the web root
+     */
     protected function solveSymbolicPath(string $path): string
     {
-        // strip of trailing slashes
-        $path = trim($path, '/');
-
-        // explode for slashes
-        $array = explode('/', $path);
-
-        // this will hold the path result
         $result = [];
 
-        /** @phpcs:disable SlevomatCodingStandard.ControlStructures.EarlyExit.UselessElseIf */
-        foreach ($array as $value) {
-            if ($value === '') {
-                continue;
-            } elseif ($value === '.') {
-                continue;
-            } elseif ($value === '..' && count($result) === 0) {
-                throw new Exception();
-            } elseif (str_starts_with($value, '..')) {
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '..') {
+                if ($result === []) {
+                    throw new RuntimeException('The asset path ' . $path . ' leaves the web root.');
+                }
+
                 array_pop($result);
-            } else {
-                $result[] = $value;
+            } elseif ($segment !== '' && $segment !== '.') {
+                $result[] = $segment;
             }
         }
-        /** @phpcs:enable SlevomatCodingStandard.ControlStructures.EarlyExit.UselessElseIf */
 
-        // return it
         return implode('/', $result);
     }
 }

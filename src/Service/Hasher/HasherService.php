@@ -54,24 +54,18 @@ class HasherService implements HasherServiceInterface
     public function hash(string $string): string
     {
         if (trim($string) === '') {
-            throw new RuntimeException('String to hash needs to be not-blank.');
+            throw new RuntimeException('A blank string is no secret to hash.');
         }
 
         // bcrypt cannot hash past a NUL byte (password_hash() throws a ValueError); no browser sends one in a form
         if (str_contains($string, "\0")) {
-            throw new InvalidArgumentException('String to hash must not contain a NUL byte.');
+            throw new InvalidArgumentException('bcrypt cannot hash a string with a NUL byte.');
         }
 
         // Randomly sleep some milliseconds
         $this->sleep();
 
-        $hash = password_hash($string, PASSWORD_BCRYPT, ['cost' => static::COST]);
-
-        if (strlen($hash) !== 60) {
-            throw new RuntimeException();
-        }
-
-        return $hash;
+        return password_hash($string, PASSWORD_BCRYPT, ['cost' => static::COST]);
     }
 
     public function needsRehash(string $storedHash): bool

@@ -16,26 +16,22 @@ class ConfigurationService implements ConfigurationServiceInterface
 
     protected ?string $domain = null;
 
+    /**
+     * @throws RuntimeException when neither the call nor setDomain() names a domain
+     */
     public function get(string $key, ?string $domain = null): mixed
     {
-        if ($domain === null) {
-            $domain = $this->domain;
-        }
+        $domain ??= $this->domain ?? throw new RuntimeException(
+            'The configuration service has no domain: name one, or set one with setDomain().',
+        );
 
-        if ($domain === null) {
-            throw new RuntimeException();
-        }
+        // ".app.de.admin", then ".app.de", then ".app": the narrowest domain that has the key wins
+        for ($parts = explode('.', $domain); count($parts) > 1; array_pop($parts)) {
+            $value = $this->config[implode('.', $parts)][$key] ?? null;
 
-        while (
-            str_contains($domain, '.')
-            && trim($domain) !== ''
-        ) {
-            if (isset($this->config[$domain], $this->config[$domain][$key])) {
-                return $this->config[$domain][$key];
+            if ($value !== null) {
+                return $value;
             }
-
-            /** @phpstan-ignore-next-line */
-            $domain = substr($domain, 0, strrpos($domain, '.'));
         }
 
         return null;
@@ -50,19 +46,30 @@ class ConfigurationService implements ConfigurationServiceInterface
 
     /**
      * @param array<string, mixed> $config
+     *
+     * @throws RuntimeException when the block is no array of domains
      */
     public function setConfig(array $config): void
     {
-        if (
-            !isset($config['configuration.service'])
-            || !is_array($config['configuration.service'])
-        ) {
-            throw new RuntimeException();
+        $domains = $config['configuration.service'] ?? null;
+
+        if (!is_array($domains)) {
+            throw new RuntimeException(
+                'The configuration\'s configuration.service must be an array of domains, not ' . get_debug_type(
+                    $domains,
+                ) . '.',
+            );
         }
 
-        /** @var array<string, array<string, mixed>> $configservice */
-        $configservice = $config['configuration.service'];
+        foreach ($domains as $domain => $values) {
+            if (!is_string($domain) || !is_array($values)) {
+                throw new RuntimeException(
+                    'The configuration\'s configuration.service must map each domain to an array of its values.',
+                );
+            }
+        }
 
-        $this->config = $configservice;
+        /** @var array<string, array<string, mixed>> $domains the keys of a domain's values are PHP's array keys */
+        $this->config = $domains;
     }
 }

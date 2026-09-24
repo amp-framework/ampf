@@ -31,6 +31,11 @@ final class XsrfTokenServiceTest extends TestCase
         self::assertCount(50, array_unique($tokens), 'every request is handed a token of its own');
     }
 
+    public function testARequestCarriesItsTokenAsStkn(): void
+    {
+        self::assertSame('stkn', $this->newRequest()->getTokenIDForRequest());
+    }
+
     public function testATokenIsAcceptedOnce(): void
     {
         $token = $this->newRequest()->getNewToken();

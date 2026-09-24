@@ -6,10 +6,12 @@ namespace ampf\Tests\Unit\Doctrine\Repository;
 
 use ampf\Bootstrap\DoctrineConfiguration;
 use ampf\Doctrine\Repository\AbstractRepo;
+use ampf\Tests\Support\Doctrine\PlainEntity;
 use ampf\Tests\Support\Doctrine\SampleEntity;
 use ampf\Tests\Support\Doctrine\SampleRepo;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Tools\SchemaTool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -59,8 +61,111 @@ final class AbstractRepoTest extends TestCase
         $this->store('alpha');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Expected an instance of ' . SampleEntity::class);
+        $this->expectExceptionMessage(
+            'The query\'s result holds something other than a ' . SampleEntity::class . ': array.',
+        );
         $this->repository->findNamesAsEntities();
+    }
+
+    public function testTheEntitiesThatMatchTheCriteriaAreRemoved(): void
+    {
+        $this->store(...array_fill(0, 45, 'alpha'));
+        $this->store('beta', 'gamma');
+
+        $beta = $this->repository->findOneNamed('beta')?->getId();
+
+        self::assertSame(
+            45,
+            $this->repository->bulkRemoveBy(['name' => 'alpha']),
+            'flushed after every 20 and at the end',
+        );
+        self::assertSame(0, $this->repository->bulkRemoveBy(['name' => null]), 'null matches NULL');
+        self::assertSame(0, $this->repository->bulkRemoveBy(['name' => 'gamma', 'id' => $beta]), 'every criterion');
+        self::assertSame(1, $this->repository->bulkRemoveBy(['name' => 'beta', 'id' => $beta]));
+        self::assertSame(1, $this->repository->findAllCount());
+        self::assertSame('gamma', $this->repository->findOneNamed('gamma')?->getName());
+    }
+
+    public function testARemovalWithoutCriteriaIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A removal without criteria would empty the whole table: use a query for that.');
+
+        $this->repository->bulkRemoveBy([]);
+    }
+
+    public function testACriterionNeedsAField(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A criterion needs the name of a field.');
+
+        $this->repository->bulkRemoveBy(['name' => 'alpha', ' ' => 'beta']);
+    }
+
+    public function testRowsThatAreNoEntitiesAreNotRemoved(): void
+    {
+        $this->store('alpha');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The query did not select entities.');
+
+        $this->repository->removeNames();
+    }
+
+    public function testACreatedEntityIsPersistedButNotFlushed(): void
+    {
+        $entity = $this->repository->create();
+
+        self::assertTrue($this->entityManager->contains($entity));
+        self::assertSame(0, $this->repository->findAllCount());
+    }
+
+    public function testAnEntityOfTheRepositorysClassIsOne(): void
+    {
+        self::assertTrue($this->repository->is(new SampleEntity()));
+        self::assertFalse($this->repository->is(new PlainEntity()));
+        self::assertFalse($this->repository->is(null));
+    }
+
+    public function testARowThatIsNoEntityIsRefusedAsTheOne(): void
+    {
+        $this->store('alpha');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The query\'s result is no ' . SampleEntity::class . ', but array.');
+
+        $this->repository->findOneNameAsEntity();
+    }
+
+    public function testAResultThatIsNoNumberIsRefused(): void
+    {
+        $this->store('alpha');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The query\'s result is no number, but string.');
+
+        $this->repository->countNames();
+    }
+
+    public function testASelectChangesNoRows(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The query\'s result is no number of rows, but array.');
+
+        $this->repository->renameBySelecting();
+    }
+
+    public function testAnotherEntitysRepositoryIsAnAbstractRepo(): void
+    {
+        self::assertSame($this->repository, $this->repository->repositoryOf(SampleEntity::class));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The repository of ' . PlainEntity::class . ' is no ' . AbstractRepo::class . ', but '
+            . EntityRepository::class . '.',
+        );
+
+        $this->repository->repositoryOf(PlainEntity::class);
     }
 
     protected function setUp(): void

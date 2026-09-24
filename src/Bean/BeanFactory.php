@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ampf\Bean;
 
+use ampf\Helper\Functions;
+use ReflectionClass;
 use RuntimeException;
 
 /**
@@ -12,10 +14,20 @@ use RuntimeException;
  * a BeanFactoryAccessInterface, the `initMethod` — and kept as a singleton unless its `scope` is `prototype`. The
  * factory is its own bean 'BeanFactory', the merged configuration the bean 'Config'.
  *
- * @phpcs:disable SlevomatCodingStandard.Functions.UnusedParameter.UnusedParameter
+ * A definition is checked when its bean is first created: an unknown option, a class that does not exist or cannot
+ * be instantiated, an unknown scope, a missing setter or init method and a cycle of parents are refused with a
+ * message that names the bean.
  */
 class BeanFactory implements BeanFactoryInterface
 {
+    /**
+     * The options a bean definition may name.
+     */
+    protected const array OPTIONS = ['class', 'scope', 'properties', 'initMethod', 'parent'];
+
+    protected const string SINGLETON = 'singleton';
+    protected const string PROTOTYPE = 'prototype';
+
     /**
      * @var array<string, mixed>
      */
@@ -46,71 +58,65 @@ class BeanFactory implements BeanFactoryInterface
 
     public function has(string $beanID): bool
     {
-        if (isset($this->memory[$beanID])) {
-            return true;
-        }
-
-        $config = $this->getConfig();
-
-        return isset($config['beans'][$beanID]);
+        return isset($this->memory[$beanID]) || isset($this->getDefinitions()[$beanID]);
     }
 
     public function get(string $beanID, ?callable $creatorFunc = null): mixed
     {
         if (isset($this->memory[$beanID])) {
-            $bean = $this->memory[$beanID];
-        } else {
-            $config = $this->getConfig();
-
-            $beanConfig = null;
-            $bean = null;
-
-            if (isset($config['beans'][$beanID])) {
-                $beanConfig = $config['beans'][$beanID];
-                $class = $beanConfig['class'];
-                $bean = new $class();
-            } elseif (is_callable($creatorFunc)) {
-                $beanConfig = [];
-                $bean = $creatorFunc($this, $beanConfig);
-            } else {
-                throw new RuntimeException("No configuration for bean {$beanID} found");
-            }
-
-            $this->evalConfig($beanID, $bean, $beanConfig);
-            $this->statistics['beansCreated']++;
+            return $this->memory[$beanID];
         }
+
+        $definition = $this->getDefinition($beanID);
+
+        if ($definition !== null) {
+            $class = $definition['class'];
+            $bean = new $class();
+        } elseif ($creatorFunc !== null) {
+            $definition = [];
+            $bean = $creatorFunc($this, $definition);
+        } else {
+            throw new RuntimeException('No configuration for bean ' . $beanID . ' found.');
+        }
+
+        if (is_object($bean)) {
+            $this->configure($beanID, $bean, $definition, [$beanID]);
+        }
+
+        if (($definition['scope'] ?? static::SINGLETON) === static::SINGLETON) {
+            $this->memory[$beanID] = $bean;
+        }
+
+        $this->statistics['beansCreated']++;
 
         return $bean;
     }
 
     /**
-     * @return array{beans: array<string, array{class: string}>}
+     * The merged configuration: the bean 'Config'.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws RuntimeException when the bean 'Config' was replaced by something else than the configuration
      */
     public function getConfig(): array
     {
-        /** @phpstan-ignore-next-line */
-        return $this->get('Config');
+        $config = $this->memory['Config'] ?? null;
+
+        try {
+            Functions::assertStringMixedArray($config);
+        } catch (RuntimeException $e) {
+            throw new RuntimeException('The bean Config is no configuration: ' . $e->getMessage(), 0, $e);
+        }
+
+        return $config;
     }
 
     public function is(mixed $object, string $beanID): bool
     {
-        if (!is_object($object)) {
-            return false;
-        }
+        $definition = $this->getDefinition($beanID);
 
-        $config = $this->getConfig();
-
-        if (!isset($config['beans'][$beanID])) {
-            return false;
-        }
-
-        $class = $config['beans'][$beanID]['class'];
-
-        if (!class_exists($class)) {
-            return false;
-        }
-
-        return $object instanceof $class;
+        return $definition !== null && $object instanceof $definition['class'];
     }
 
     /**
@@ -122,111 +128,159 @@ class BeanFactory implements BeanFactoryInterface
     }
 
     /**
-     * @param array<string, mixed> $beanConfig
+     * Applies the definition to the new bean: first its parent's (and so on up the chain), then its properties, the
+     * factory for a BeanFactoryAccessInterface, and its init method.
+     *
+     * @param array<string, mixed> $definition a checked definition, or [] for a bean of a creator function
+     * @param list<string> $chain the bean and the parents whose definitions are being applied, for the cycle check
      */
-    protected function evalConfig(string $beanID, mixed $bean, array $beanConfig): self
+    protected function configure(string $beanID, object $bean, array $definition, array $chain): void
     {
-        return $this
-            ->evalConfigParent($beanID, $bean, $beanConfig)
-            ->evalConfigProperties($beanID, $bean, $beanConfig)
-            ->evalConfigInitMethod($beanID, $bean, $beanConfig)
-            ->evalConfigScope($beanID, $bean, $beanConfig)
-        ;
-    }
+        $parent = $definition['parent'] ?? null;
 
-    /**
-     * @param array<string, mixed> $beanConfig
-     */
-    protected function evalConfigScope(string $beanID, mixed $bean, array $beanConfig): self
-    {
-        if (trim($beanID) === '') {
-            return $this;
-        }
-
-        $scope = 'singleton';
-
-        if (isset($beanConfig['scope'])) {
-            $scope = $beanConfig['scope'];
-        }
-
-        if ($scope === 'prototype') {
-            // do nothing
-        } else {
-            // handle as if scope == 'singleton'
-            $this->memory[$beanID] = $bean;
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param array<string, mixed> $beanConfig
-     */
-    protected function evalConfigInitMethod(string $beanID, mixed $bean, array $beanConfig): self
-    {
-        if (isset($beanConfig['initMethod'])) {
-            $initMethod = $beanConfig['initMethod'];
-            $bean->{$initMethod}();
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param array<string, mixed> $beanConfig
-     */
-    protected function evalConfigProperties(string $beanID, mixed $bean, array $beanConfig): self
-    {
-        // For us, the bean needs to be an object, else we cannot do anything
-        if (!is_object($bean)) {
-            return $this;
-        }
-
-        if (isset($beanConfig['properties'])) {
-            /**
-             * @var array<string, string> $properties
-             */
-            $properties = $beanConfig['properties'];
-
-            foreach ($properties as $bean2ID => $field) {
-                $setter = ('set' . ucfirst($field));
-
-                if (!method_exists($bean, $setter)) {
-                    throw new RuntimeException("Property {$field} can not be set due to missing setter");
-                }
-
-                $bean->{$setter}($this->get($bean2ID));
+        if (is_string($parent)) {
+            if (in_array($parent, $chain, true)) {
+                throw new RuntimeException(
+                    'The bean ' . $chain[0] . ' has a cycle of parents: ' . implode(' > ', [...$chain, $parent]) . '.',
+                );
             }
+
+            $this->configure(
+                $parent,
+                $bean,
+                $this->getDefinition($parent) ?? throw new RuntimeException(
+                    'The bean ' . $beanID . ' names the parent ' . $parent . ', which has no configuration.',
+                ),
+                [...$chain, $parent],
+            );
         }
 
-        // Inject us, if wanted. This is done through an interface and not through
-        // the normal properties configuration, as this is needed way too much.
+        /** @var array<string, string> $properties */
+        $properties = $definition['properties'] ?? [];
+
+        foreach ($properties as $dependency => $suffix) {
+            $setter = 'set' . ucfirst($suffix);
+
+            if (!method_exists($bean, $setter)) {
+                throw new RuntimeException(
+                    'The bean ' . $beanID . ' cannot take the bean ' . $dependency . ': ' . $bean::class
+                    . ' has no method ' . $setter . '().',
+                );
+            }
+
+            $bean->{$setter}($this->get($dependency));
+        }
+
+        // The factory itself goes to every bean that asks for it through the interface: nearly every bean does
         if ($bean instanceof BeanFactoryAccessInterface) {
             $bean->setBeanFactory($this);
         }
 
-        return $this;
+        $initMethod = $definition['initMethod'] ?? null;
+
+        if (!is_string($initMethod)) {
+            return;
+        }
+
+        if (!is_callable([$bean, $initMethod])) {
+            throw new RuntimeException(
+                'The bean ' . $beanID . ' names the init method ' . $initMethod . '(), which ' . $bean::class
+                . ' does not have as a public method.',
+            );
+        }
+
+        $bean->{$initMethod}();
     }
 
     /**
-     * @param array<string, mixed> $beanConfig
+     * The bean's checked definition, null when the configuration has none.
+     *
+     * @return ?array{class: class-string, scope?: string, properties?: array<string, string>, initMethod?: string, parent?: string}
+     *
+     * @throws RuntimeException for a definition the factory cannot follow
      */
-    protected function evalConfigParent(string $beanID, mixed $bean, array $beanConfig): self
+    protected function getDefinition(string $beanID): ?array
     {
-        if (isset($beanConfig['parent'])) {
-            $parent = $beanConfig['parent'];
-            assert(is_string($parent));
+        $definition = $this->getDefinitions()[$beanID] ?? null;
 
-            $config = $this->getConfig();
-
-            if (!isset($config['beans'][$parent])) {
-                throw new RuntimeException();
-            }
-
-            $parentConfig = $config['beans'][$parent];
-            $this->evalConfig('', $bean, $parentConfig);
+        if ($definition === null) {
+            return null;
         }
 
-        return $this;
+        if (!is_array($definition)) {
+            throw new RuntimeException(
+                'The bean ' . $beanID . ' must be defined by an array, not ' . get_debug_type($definition) . '.',
+            );
+        }
+
+        foreach (array_keys($definition) as $option) {
+            if (!in_array($option, self::OPTIONS, true)) {
+                throw new RuntimeException(
+                    'The bean ' . $beanID . ' has the unknown option ' . $option . ' (known are '
+                    . implode(', ', self::OPTIONS) . ').',
+                );
+            }
+        }
+
+        $class = $definition['class'] ?? null;
+
+        if (!is_string($class) || !class_exists($class)) {
+            throw new RuntimeException('The bean ' . $beanID . ' names no class that exists.');
+        }
+
+        if (!new ReflectionClass($class)->isInstantiable()) {
+            throw new RuntimeException(
+                'The bean ' . $beanID . ' names the class ' . $class . ', which cannot be instantiated.',
+            );
+        }
+
+        $scope = $definition['scope'] ?? static::SINGLETON;
+
+        if ($scope !== static::SINGLETON && $scope !== static::PROTOTYPE) {
+            throw new RuntimeException('The bean ' . $beanID . ' has a scope other than singleton and prototype.');
+        }
+
+        $properties = $definition['properties'] ?? [];
+
+        if (!is_array($properties)) {
+            throw new RuntimeException('The bean ' . $beanID . ' must list its properties in an array.');
+        }
+
+        foreach ($properties as $dependency => $suffix) {
+            if (!is_string($dependency) || !is_string($suffix) || $suffix === '') {
+                throw new RuntimeException(
+                    'The bean ' . $beanID . ' must list its properties as bean id => setter suffix.',
+                );
+            }
+        }
+
+        foreach (['initMethod', 'parent'] as $option) {
+            $value = $definition[$option] ?? null;
+
+            if ($value !== null && (!is_string($value) || $value === '')) {
+                throw new RuntimeException('The bean ' . $beanID . ' must name its ' . $option . ' by a string.');
+            }
+        }
+
+        /** @var array{class: class-string, scope?: string, properties?: array<string, string>, initMethod?: string, parent?: string} $definition */
+        return $definition;
+    }
+
+    /**
+     * The configuration's `beans`: bean id => definition.
+     *
+     * @return array<mixed>
+     */
+    protected function getDefinitions(): array
+    {
+        $beans = $this->getConfig()['beans'] ?? [];
+
+        if (!is_array($beans)) {
+            throw new RuntimeException(
+                'The configuration\'s beans must be an array, not ' . get_debug_type($beans) . '.',
+            );
+        }
+
+        return $beans;
     }
 }

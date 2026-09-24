@@ -24,37 +24,32 @@ class CliRouter implements BeanFactoryAccessInterface, CliRouterInterface
         $controller = $request->getController();
 
         if (!$this->getBeanFactory()->has($controller)) {
-            throw new RuntimeException();
+            throw new RuntimeException('The controller bean ' . $controller . ' has no configuration.');
         }
-
-        $params = $request->getRouteParams();
 
         $bean = $this->getBeanFactory()->get($controller);
 
-        if (!($bean instanceof ControllerInterface)) {
-            throw new RuntimeException();
+        if (!$bean instanceof ControllerInterface) {
+            throw new RuntimeException(
+                'The controller bean ' . $controller . ' is no ' . ControllerInterface::class . ', but '
+                . get_debug_type($bean) . '.',
+            );
         }
 
-        $this->routeBean($bean, $params);
-
-        return $this;
+        return $this->routeBean($bean, $request->getRouteParams());
     }
 
     /**
-     * @param array<int, string> $params
+     * @param ?array<int|string, string> $params the command line's arguments, handed to execute() in their order
      */
     public function routeBean(ControllerInterface $controller, ?array $params = null): self
     {
-        if ($params === null) {
-            $params = [];
-        }
-
         try {
             $controller->beforeAction();
-            call_user_func_array([$controller, 'execute'], $params);
+            call_user_func_array([$controller, 'execute'], array_values($params ?? []));
             $controller->afterAction();
         } catch (ControllerInterruptedException) {
-            // do nothing.
+            // The controller ended its lifecycle: nothing after the throw runs
         }
 
         return $this;

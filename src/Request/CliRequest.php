@@ -7,6 +7,7 @@ namespace ampf\Request;
 use ampf\Bean\BeanFactoryAccessInterface;
 use ampf\BeanAccess\BeanFactoryAccess;
 use ampf\BeanAccess\RouteResolverAccess;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -22,31 +23,39 @@ class CliRequest implements BeanFactoryAccessInterface, CliRequestInterface
     /**
      * @var list<string>
      */
-    protected ?array $argv = null;
+    protected array $argv = [];
 
     protected ?string $responseBody = null;
 
-    public function __construct()
-    {
-        /** @var array<string> $argv */
-        $argv = $GLOBALS['argv'];
+    protected int $exitCode = 0;
 
-        $this->argv = array_values($argv);
+    /**
+     * @param ?list<string> $argv the command line; PHP's `$argv` when none is given (the bean factory gives none)
+     */
+    public function __construct(?array $argv = null)
+    {
+        if ($argv === null) {
+            $serverArgv = $_SERVER['argv'] ?? [];
+            $argv = [];
+
+            foreach (is_array($serverArgv) ? $serverArgv : [] as $argument) {
+                if (is_string($argument)) {
+                    $argv[] = $argument;
+                }
+            }
+        }
+
+        $this->argv = $argv;
     }
 
     public function getController(): string
     {
-        $arg = (isset($this->argv[1]) && trim($this->argv[1]) !== '')
-            ? $this->argv[1]
-            : '*';
+        $route = trim($this->argv[1] ?? '') === ''
+            ? '*'
+            : $this->argv[1];
 
-        $controller = $this->getRouteResolver()->getControllerByRoutePattern($arg);
-
-        if ($controller === null) {
-            throw new RuntimeException();
-        }
-
-        return $controller;
+        return $this->getRouteResolver()->getControllerByRoutePattern($route)
+            ?? throw new RuntimeException('No route matches the command line\'s route ' . $route . '.');
     }
 
     /**
@@ -54,16 +63,7 @@ class CliRequest implements BeanFactoryAccessInterface, CliRequestInterface
      */
     public function getRouteParams(): array
     {
-        $arg = $this->argv;
-
-        if ($arg === null || count($arg) < 2) {
-            $arg = [];
-        } else {
-            array_shift($arg);
-            array_shift($arg);
-        }
-
-        return $arg;
+        return array_slice($this->argv, 2);
     }
 
     /**
@@ -71,31 +71,36 @@ class CliRequest implements BeanFactoryAccessInterface, CliRequestInterface
      */
     public function getActionCmd(string $routeID, ?array $params = null): string
     {
-        if ($params === null) {
-            $params = [];
-        }
+        $route = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params ?? [])
+            ?? throw new RuntimeException('There is no route ' . $routeID . '.');
 
-        $routeID = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
-
-        if ($routeID === null) {
-            throw new RuntimeException();
-        }
-
-        return $this->getCmd($routeID);
+        return $this->getCmd($route);
     }
 
     public function getCmd(string $routeID): string
     {
-        if (!isset($this->argv[0])) {
-            throw new RuntimeException();
-        }
-
-        return $this->argv[0] . ' ' . $routeID;
+        return ($this->argv[0] ?? throw new RuntimeException('The command line names no script.')) . ' ' . $routeID;
     }
 
     public function setResponse(string $response): self
     {
         $this->responseBody = $response;
+
+        return $this;
+    }
+
+    public function getExitCode(): int
+    {
+        return $this->exitCode;
+    }
+
+    public function setExitCode(int $exitCode): self
+    {
+        if ($exitCode < 0 || $exitCode > 254) {
+            throw new InvalidArgumentException('An exit code is a number from 0 to 254, not ' . $exitCode . '.');
+        }
+
+        $this->exitCode = $exitCode;
 
         return $this;
     }

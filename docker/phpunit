@@ -1,0 +1,9 @@
+#!/bin/sh
+# PHPUnit (phpunit.xml.dist) in the development container; pcov measures the coverage.
+#
+#   sh docker/phpunit
+#   sh docker/phpunit --testsuite unit --filter BeanFactoryTest
+#   sh docker/phpunit --coverage-text
+set -eu
+
+exec sh "$(dirname -- "$0")/run" vendor/bin/phpunit "$@"

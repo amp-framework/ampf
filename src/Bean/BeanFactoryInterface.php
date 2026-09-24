@@ -22,6 +22,15 @@ interface BeanFactoryInterface
      */
     public function get(string $beanID, ?callable $creatorFunc = null): mixed;
 
+    /**
+     * The merged configuration: the bean 'Config'.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws RuntimeException when the bean 'Config' was replaced by something else than a configuration
+     */
+    public function getConfig(): array;
+
     /** Puts an object in place of the bean with this id (a double in a test, a request built by hand). */
     public function set(string $beanID, mixed $object): self;
 

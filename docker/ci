@@ -1,0 +1,51 @@
+#!/bin/sh
+# Every check a change must pass, in order, each in the development container. The exit status is the first
+# failing step's; only the dependency installation and the advisory lookup use the network.
+#
+#   sh docker/ci            # everything
+#   sh docker/ci static     # the dependencies' checks, lint, PHPCS, PHP-CS-Fixer, PHPStan
+#   sh docker/ci test       # the test suites, with the coverage
+set -eu
+
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$project_dir"
+what=${1:-all}
+
+case "$what" in
+    all|static|test) ;;
+    *)
+        echo 'Usage: sh docker/ci [all|static|test]' >&2
+        exit 1
+        ;;
+esac
+
+step() {
+    printf '\n==> %s\n' "$1"
+}
+
+step 'composer install (locked)'
+sh docker/composer install --no-interaction --no-progress
+
+if [ "$what" = all ] || [ "$what" = static ]; then
+    step 'composer validate'
+    sh docker/run composer validate --strict --no-check-publish
+    step 'composer check-platform-reqs'
+    sh docker/run composer check-platform-reqs
+    step 'composer audit'
+    sh docker/composer audit --locked
+    step 'php -l'
+    sh docker/run sh -c 'find src config tests -name "*.php" -print0 | xargs -0 -n 50 php -l >/dev/null'
+    step 'phpcs'
+    sh docker/phpcs
+    step 'php-cs-fixer'
+    sh docker/php-cs-fixer
+    step 'phpstan'
+    sh docker/phpstan --no-progress
+fi
+
+if [ "$what" = all ] || [ "$what" = test ]; then
+    step 'phpunit, with the coverage'
+    sh docker/phpunit --coverage-text --only-summary-for-coverage-text --colors=never
+fi
+
+step 'ok'

@@ -8,12 +8,63 @@ use ampf\Service\StringCache\FileStringCacheService;
 use ampf\Tests\Support\AlwaysSweepingFileCache;
 use ampf\Tests\Support\NeverSweepingFileCache;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 #[CoversClass(FileStringCacheService::class)]
 final class FileStringCacheServiceTest extends TestCase
 {
     private string $directory;
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideDamagedEntries(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'blank' => [" \n"];
+        yield 'no JSON' => ['<p>a page</p>'];
+        yield 'no object' => ['"<p>a page</p>"'];
+        yield 'no time' => ['{"string":"<p>a page</p>"}'];
+        yield 'no string' => ['{"until":9999999999}'];
+        yield 'a time that is no number' => ['{"until":"9999999999","string":"<p>a page</p>"}'];
+        yield 'a string that is no string' => ['{"until":9999999999,"string":42}'];
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function provideConfigsThatAreRefused(): iterable
+    {
+        $directory = sys_get_temp_dir();
+
+        yield 'no block' => [[], 'The configuration\'s stringfilecache must be an array, not null.'];
+        yield 'a block that is no array' => [
+            ['stringfilecache' => 'on'],
+            'The configuration\'s stringfilecache must be an array, not string.',
+        ];
+        yield 'no directory' => [
+            ['stringfilecache' => []],
+            'The configuration\'s stringfilecache.cachedir must name a directory, not null.',
+        ];
+        yield 'a directory that is no string' => [
+            ['stringfilecache' => ['cachedir' => ['cache']]],
+            'The configuration\'s stringfilecache.cachedir must name a directory, not array.',
+        ];
+        yield 'a directory that does not exist' => [
+            ['stringfilecache' => ['cachedir' => $directory . '/ampf-missing-cache']],
+            'The cache directory ' . $directory . '/ampf-missing-cache is no directory this process can write to.',
+        ];
+        yield 'a file' => [
+            ['stringfilecache' => ['cachedir' => __FILE__]],
+            'The cache directory ' . __FILE__ . ' is no directory this process can write to.',
+        ];
+        yield 'a time to live that is no number' => [
+            ['stringfilecache' => ['cachedir' => $directory, 'defaultttl' => 'an hour']],
+            'The configuration\'s stringfilecache.defaultttl must be a number of seconds, not string.',
+        ];
+    }
 
     public function testAnEntryIsReadUntilItsTimeIsUp(): void
     {
@@ -119,6 +170,155 @@ final class FileStringCacheServiceTest extends TestCase
         self::assertFalse($cache->set('blank', ' '), 'nothing is checked either');
         self::assertFalse($cache->get('page'), 'not even the page that is there');
         self::assertSame(['page.asc'], $this->listDirectory());
+    }
+
+    #[DataProvider('provideDamagedEntries')]
+    public function testADamagedEntryIsNoEntryAndGoes(string $content): void
+    {
+        $cache = $this->newCache();
+        file_put_contents($this->directory . '/page.asc', $content);
+
+        self::assertFalse($cache->get('page'));
+        self::assertFileDoesNotExist($this->directory . '/page.asc');
+    }
+
+    public function testABlankStringIsNoEntry(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A blank string is no cache entry: get() could not tell it from none.');
+
+        $this->newCache()->set('page', " \n");
+    }
+
+    public function testAKeyIsLettersDigitsAndUnderscoresDotsAndDashes(): void
+    {
+        $cache = $this->newCache();
+
+        self::assertTrue($cache->set('page-1_a.b', 'content'));
+        self::assertSame('content', $cache->get('page-1_a.b'));
+
+        foreach (['../page', 'a/b', 'a b', '', "page\n"] as $key) {
+            try {
+                $cache->get($key);
+                self::fail('took the key ' . $key);
+            } catch (RuntimeException $e) {
+                self::assertSame(
+                    'The cache key ' . $key . ' has a character other than letters, digits and _.-.',
+                    $e->getMessage(),
+                );
+            }
+        }
+    }
+
+    public function testAnEntryThatCannotBeWrittenIsReportedAndLeavesNothingBehind(): void
+    {
+        $cache = $this->newCache();
+        mkdir($this->directory . '/page.asc');
+
+        try {
+            $cache->set('page', 'content');
+            self::fail('wrote over a directory');
+        } catch (RuntimeException $e) {
+            self::assertSame('Could not write the cache entry page.', $e->getMessage());
+        }
+
+        self::assertSame(['page.asc'], $this->listDirectory(), 'the temporary file is gone');
+    }
+
+    public function testADirectoryThatCannotBeWrittenIsReported(): void
+    {
+        $cache = $this->newCache();
+        chmod($this->directory, 0o500);
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Could not write the cache entry page.');
+
+            $cache->set('page', 'content');
+        } finally {
+            chmod($this->directory, 0o700);
+        }
+    }
+
+    public function testTheTimeToLiveIsTheConfigurationsUnlessTheWriteNamesOne(): void
+    {
+        $cache = $this->newCache();
+
+        $cache->set('page', 'content');
+        self::assertStringStartsWith(
+            '{"until":' . (time() + 60) . ',',
+            (string)file_get_contents($this->directory . '/page.asc'),
+        );
+
+        $cache->set('page', 'content', 5);
+        self::assertStringStartsWith(
+            '{"until":' . (time() + 5) . ',',
+            (string)file_get_contents($this->directory . '/page.asc'),
+        );
+
+        $cache = new NeverSweepingFileCache();
+        $cache->setConfig(['stringfilecache' => ['cachedir' => $this->directory, 'defaultttl' => '120']]);
+        $cache->set('page', 'content');
+        self::assertStringStartsWith(
+            '{"until":' . (time() + 120) . ',',
+            (string)file_get_contents($this->directory . '/page.asc'),
+        );
+
+        $cache = new NeverSweepingFileCache();
+        $cache->setConfig(['stringfilecache' => ['cachedir' => $this->directory, 'defaultttl' => null]]);
+        $cache->set('page', 'content');
+        self::assertStringStartsWith(
+            '{"until":' . (time() + 3_600) . ',',
+            (string)file_get_contents($this->directory . '/page.asc'),
+            'an hour',
+        );
+    }
+
+    public function testAWriteMaySweep(): void
+    {
+        $cache = new FileStringCacheService();
+        $cache->setConfig(['stringfilecache' => ['cachedir' => $this->directory]]);
+
+        self::assertTrue($cache->set('page', 'content'), 'one in a hundred sweeps, whichever this is');
+        self::assertSame('content', $cache->get('page'));
+    }
+
+    public function testWithoutAConfigurationThereIsNoDirectory(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The string cache has no directory.');
+
+        new FileStringCacheService()->get('page');
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    #[DataProvider('provideConfigsThatAreRefused')]
+    public function testAConfigurationWithoutAWritableDirectoryOrWithAWrongTimeToLiveIsRefused(
+        array $config,
+        string $message,
+    ): void {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage($message);
+
+        new FileStringCacheService()->setConfig($config);
+    }
+
+    public function testADirectoryThisProcessCannotWriteToIsRefused(): void
+    {
+        chmod($this->directory, 0o500);
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage(
+                'The cache directory ' . $this->directory . ' is no directory this process can write to.',
+            );
+
+            new FileStringCacheService()->setConfig(['stringfilecache' => ['cachedir' => $this->directory]]);
+        } finally {
+            chmod($this->directory, 0o700);
+        }
     }
 
     protected function setUp(): void

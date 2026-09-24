@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ampf\View;
 
-use DateTime;
+use DateTimeInterface;
 
 /** A template with its variables, and the helpers its template uses (formats, translations, escaping). */
 interface ViewInterface
@@ -32,10 +32,11 @@ interface ViewInterface
     ): string;
 
     /**
-     * @param DateTime|numeric|null $time Either a \DateTime instance or a numeric representing an UNIX timestamp
-     * @param string|null $format A \DateTime::format compatible string
+     * The time in PHP's default time zone, in the format (DateTimeInterface::format(); default "d.m.Y H:i").
+     *
+     * @param DateTimeInterface|numeric $time a DateTimeInterface, or a Unix timestamp: a whole number of seconds
      */
-    public function formatTime(mixed $time = null, ?string $format = null): string;
+    public function formatTime(mixed $time, ?string $format = null): string;
 
     /**
      * The translation of the key with the arguments put in as they are (vsprintf()): for arguments that already are

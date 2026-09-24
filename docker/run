@@ -1,0 +1,36 @@
+#!/bin/sh
+# Runs a command in ampf's development container: a throwaway container of this directory's image (built on first
+# use), as the host user, with the checkout mounted at /ampf and no network — only Composer's downloads need one
+# (docker/composer). Tool caches, Composer's download cache included, stay in the checkout's ignored cache/.
+#
+#   sh docker/run php -v
+#   sh docker/run sh                    # a shell in the container
+set -eu
+
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+image=${AMPF_DOCKER_IMAGE:-ampf-dev}
+
+if [ "$#" -eq 0 ]; then
+    echo 'Usage: sh docker/run <command> [arguments...]' >&2
+    exit 1
+fi
+
+if ! docker image inspect "$image" >/dev/null 2>&1; then
+    docker build --tag "$image" "$project_dir/docker" >&2
+fi
+
+# An interactive terminal only when there is one (a shell, php -a); never in a pipeline or CI
+if [ -t 0 ] && [ -t 1 ]; then
+    set -- -it "$image" "$@"
+else
+    set -- "$image" "$@"
+fi
+
+exec docker run --rm --network "${AMPF_DOCKER_NETWORK:-none}" \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -e COMPOSER_HOME=/tmp/composer \
+    -e COMPOSER_CACHE_DIR=/ampf/cache/composer \
+    -e COMPOSER_ROOT_VERSION=dev-master \
+    -v "$project_dir:/ampf" -w /ampf \
+    "$@"

@@ -24,13 +24,7 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
 
     public function getControllerByRoutePattern(string $routePattern): ?string
     {
-        $array = $this->getControllerParamsByRoutePattern($routePattern);
-
-        if ($array === null) {
-            return null;
-        }
-
-        return $array[1];
+        return $this->getControllerParamsByRoutePattern($routePattern)[1] ?? null;
     }
 
     /**
@@ -46,10 +40,6 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
             return null;
         }
 
-        if ($params === null) {
-            $params = [];
-        }
-
         return $this->getAdjustedRouteParams($routePattern, $params)['notUsedParams'];
     }
 
@@ -58,24 +48,12 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
      */
     public function getParamsByRoutePattern(string $routePattern): ?array
     {
-        $array = $this->getControllerParamsByRoutePattern($routePattern);
-
-        if ($array === null) {
-            return null;
-        }
-
-        return $array[2];
+        return $this->getControllerParamsByRoutePattern($routePattern)[2] ?? null;
     }
 
     public function getRouteIDByRoutePattern(string $routePattern): ?string
     {
-        $array = $this->getControllerParamsByRoutePattern($routePattern);
-
-        if ($array === null) {
-            return null;
-        }
-
-        return $array[0];
+        return $this->getControllerParamsByRoutePattern($routePattern)[0] ?? null;
     }
 
     /**
@@ -89,29 +67,23 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
             return null;
         }
 
-        if ($params === null) {
-            $params = [];
-        }
-
         return $this->getAdjustedRouteParams($routePattern, $params)['route'];
     }
 
     /**
      * @param array<mixed> $config the configuration, whose `routes` are taken
+     *
+     * @throws RuntimeException for routes that are missing or malformed
      */
     public function setConfig(array $config): void
     {
-        if (!array_key_exists('routes', $config)) {
-            throw new RuntimeException('The configuration has no routes.');
-        }
-
-        $config = $this->validateRouteConfig($config['routes']);
-
-        $this->routes = $config;
+        $this->routes = $this->routesOf($config);
     }
 
     /**
-     * @param array<string, string> $matches
+     * The named captures among the matches, in their order.
+     *
+     * @param array<int|string, string> $matches
      * @param list<string> $allowedParams
      *
      * @return array<string, string>
@@ -131,90 +103,61 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
     }
 
     /**
+     * The route's text: every named capture of the pattern replaced by its parameter, percent-encoded; and the
+     * parameters the pattern does not name.
+     *
      * @param array<string, string> $params
      *
      * @return array{route: string, notUsedParams: array<string, string>}
+     *
+     * @throws RuntimeException when a parameter the pattern names is missing
      */
     protected function getAdjustedRouteParams(string $regex, ?array $params = null): array
     {
-        if ($params === null) {
-            $params = [];
-        }
-
+        $params ??= [];
+        $route = $regex;
         $matches = [];
-        $catch = '/\(\?P\<(.+)\>[^\)]+\)/U';
-        preg_match_all($catch, $regex, $matches, PREG_SET_ORDER);
+        preg_match_all('/\(\?P\<(.+)\>[^\)]+\)/U', $regex, $matches, PREG_SET_ORDER);
 
-        foreach ($matches as $match) {
-            $search = $match[0];
-
-            if (!isset($params[$match[1]])) {
-                throw new RuntimeException('Missing parameter ' . $match[1]);
+        foreach ($matches as [$capture, $name]) {
+            if (!isset($params[$name])) {
+                throw new RuntimeException('Missing parameter ' . $name . ' for the route pattern ' . $regex . '.');
             }
 
             // A parameter is one path segment's text in the link: "/", "?", "#", "%", spaces and control
             // characters are encoded, an id or a word stays as it is
-            $replace = rawurlencode($params[$match[1]]);
-            unset($params[$match[1]]);
-            $regex = str_replace($search, $replace, $regex);
+            $route = str_replace($capture, rawurlencode($params[$name]), $route);
+            unset($params[$name]);
         }
 
-        return ['route' => $regex, 'notUsedParams' => $params];
+        return ['route' => $route, 'notUsedParams' => $params];
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * The routes of the bean 'Config', read once.
+     *
+     * @return array<string, array{pattern: string, controller: string}>
      */
     protected function getConfig(): array
     {
-        if ($this->routes === null) {
-            $config = $this->getBeanFactory()->get('Config');
-
-            if (!is_array($config) || !isset($config['routes'])) {
-                throw new RuntimeException();
-            }
-
-            $this->setConfig($config);
-        }
-
-        if ($this->routes === null) {
-            throw new RuntimeException();
-        }
-
-        return $this->routes;
+        return $this->routes ??= $this->routesOf($this->getBeanFactory()->getConfig());
     }
 
     /**
+     * The first route whose pattern matches the whole text: its id, its controller bean, its named captures.
+     *
      * @return ?array{string, string, array<string, string>}
      */
     protected function getControllerParamsByRoutePattern(string $routePattern): ?array
     {
-        foreach ($this->getConfig() as $routeId => $routeOptions) {
-            if (!isset($routeOptions['pattern']) || !is_string($routeOptions['pattern'])) {
-                throw new RuntimeException();
-            }
-
+        foreach ($this->getConfig() as $routeId => $route) {
             // D: "$" ends the route, it does not match before a final line feed
-            $preg = ('/^' . str_replace('/', '\/', $routeOptions['pattern']) . '$/D');
-
-            /**
-             * $matches will contain string,string elements because of named parameters in the regex
-             *
-             * @var array<string, string> $matches
-             */
             $matches = [];
 
-            if (preg_match($preg, $routePattern, $matches)) {
-                /** @phpstan-ignore argument.type */
-                $matches = $this->cleanMatches($matches, $this->getRouteParams($routeOptions['pattern']));
+            if (preg_match('/^' . str_replace('/', '\/', $route['pattern']) . '$/D', $routePattern, $matches) === 1) {
+                $params = $this->cleanMatches($matches, $this->getRouteParams($route['pattern']));
 
-                $controller = $routeOptions['controller'];
-
-                if (!is_string($controller)) {
-                    throw new RuntimeException();
-                }
-
-                return [$routeId, (string)$controller, $matches];
+                return [$routeId, $route['controller'], $params];
             }
         }
 
@@ -222,66 +165,92 @@ class RouteResolver implements BeanFactoryAccessInterface, RouteResolverInterfac
     }
 
     /**
+     * The names of the pattern's captures, in their order.
+     *
      * @return list<string>
      */
     protected function getRouteParams(string $regex): array
     {
         $matches = [];
-        $catch = '/\(\?P\<([^\>]+)\>[^\)]+\)/U';
-        preg_match_all($catch, $regex, $matches, PREG_PATTERN_ORDER);
+        preg_match_all('/\(\?P\<([^\>]+)\>[^\)]+\)/U', $regex, $matches, PREG_PATTERN_ORDER);
 
         return $matches[1];
     }
 
+    /**
+     * @throws RuntimeException for a blank route id
+     */
     protected function getRoutePattern(string $routeID): ?string
     {
         if (trim($routeID) === '') {
-            throw new RuntimeException();
+            throw new RuntimeException('A route id must not be blank.');
         }
 
-        foreach ($this->getConfig() as $_routeID => $value) {
-            if ($_routeID === $routeID) {
-                if (!isset($value['pattern']) || !is_string($value['pattern'])) {
-                    throw new RuntimeException();
-                }
+        return $this->getConfig()[$routeID]['pattern'] ?? null;
+    }
 
-                return $value['pattern'];
-            }
+    /**
+     * The configuration's routes, checked.
+     *
+     * @param array<mixed> $config
+     *
+     * @return array<string, array{pattern: string, controller: string}>
+     *
+     * @throws RuntimeException for routes that are missing or malformed
+     */
+    protected function routesOf(array $config): array
+    {
+        if (!array_key_exists('routes', $config)) {
+            throw new RuntimeException('The configuration has no routes.');
         }
 
-        return null;
+        return $this->validateRouteConfig($config['routes']);
     }
 
     /**
      * @return array<string, array{pattern: string, controller: string}>
+     *
+     * @throws RuntimeException for routes that are no non-empty array, and for a route that is malformed
      */
     protected function validateRouteConfig(mixed $config): array
     {
-        if (!is_array($config) || count($config) < 1) {
-            throw new RuntimeException();
+        if (!is_array($config)) {
+            throw new RuntimeException(
+                'The configuration\'s routes must be an array, not ' . get_debug_type($config) . '.',
+            );
+        }
+
+        if ($config === []) {
+            throw new RuntimeException('The configuration has no routes.');
         }
 
         $result = [];
 
         foreach ($config as $key => $value) {
             if (!is_string($key) || trim($key) === '') {
-                throw new RuntimeException();
-            }
-
-            if (!is_array($value)) {
-                throw new RuntimeException();
+                throw new RuntimeException(
+                    'A route\'s id must be a non-blank string, not ' . var_export($key, true) . '.',
+                );
             }
 
             // A route names its pattern and its controller, and nothing else
+            if (!is_array($value)) {
+                throw new RuntimeException('The route ' . $key . ' must be defined by an array.');
+            }
+
             $keys = array_keys($value);
             sort($keys);
 
             if ($keys !== ['controller', 'pattern']) {
-                throw new RuntimeException();
+                throw new RuntimeException(
+                    'The route ' . $key . ' must name its pattern and its controller, and nothing else.',
+                );
             }
 
             if (!is_string($value['pattern']) || !is_string($value['controller'])) {
-                throw new RuntimeException();
+                throw new RuntimeException(
+                    'The route ' . $key . ' must name its pattern and its controller by strings.',
+                );
             }
 
             /** @var array{pattern: string, controller: string} $value the options as configured, in their order */

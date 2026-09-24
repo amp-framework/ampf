@@ -31,7 +31,7 @@ abstract class AbstractRepo extends EntityRepository
     public function bulkRemoveBy(array $criteria): int
     {
         if (count($criteria) < 1) {
-            throw new RuntimeException('You may not use this method to truncate a whole table.');
+            throw new RuntimeException('A removal without criteria would empty the whole table: use a query for that.');
         }
 
         $qb = $this->getEntityManager()->createQueryBuilder();
@@ -41,7 +41,7 @@ abstract class AbstractRepo extends EntityRepository
 
         foreach ($criteria as $key => $value) {
             if (trim($key) === '') {
-                throw new RuntimeException('criteria keys must always be strings');
+                throw new RuntimeException('A criterion needs the name of a field.');
             }
 
             if ($value === null) {
@@ -73,19 +73,10 @@ abstract class AbstractRepo extends EntityRepository
     public function create(): AbstractEntity
     {
         $class = $this->getClassName();
+        $entity = new $class();
+        $this->getEntityManager()->persist($entity);
 
-        // @phpcs:ignore SlevomatCodingStandard.PHP.RequireExplicitAssertion.RequiredExplicitAssertion
-        // @var T $obj
-        $obj = new $class();
-
-        // @phpstan-ignore-next-line
-        if (!($obj instanceof AbstractEntity)) {
-            throw new RuntimeException();
-        }
-
-        $this->getEntityManager()->persist($obj);
-
-        return $obj;
+        return $entity;
     }
 
     /** The number of this repository's entities. */
@@ -154,7 +145,9 @@ abstract class AbstractRepo extends EntityRepository
         $rows = $query->getResult();
 
         if (!is_array($rows)) {
-            throw new RuntimeException('Expected a list of entities');
+            throw new RuntimeException(
+                'The query\'s result is no list of entities, but ' . get_debug_type($rows) . '.',
+            );
         }
 
         $class = $this->getClassName();
@@ -162,7 +155,9 @@ abstract class AbstractRepo extends EntityRepository
 
         foreach ($rows as $row) {
             if (!($row instanceof $class)) {
-                throw new RuntimeException('Expected an instance of ' . $class);
+                throw new RuntimeException(
+                    'The query\'s result holds something other than a ' . $class . ': ' . get_debug_type($row) . '.',
+                );
             }
 
             $result[] = $row;
@@ -189,7 +184,7 @@ abstract class AbstractRepo extends EntityRepository
         $class = $this->getClassName();
 
         if (!($row instanceof $class)) {
-            throw new RuntimeException('Expected an instance of ' . $class);
+            throw new RuntimeException('The query\'s result is no ' . $class . ', but ' . get_debug_type($row) . '.');
         }
 
         return $row;
@@ -212,7 +207,9 @@ abstract class AbstractRepo extends EntityRepository
         ;
 
         if (!($repo instanceof self)) {
-            throw new RuntimeException();
+            throw new RuntimeException(
+                'The repository of ' . $entityName . ' is no ' . self::class . ', but ' . get_debug_type($repo) . '.',
+            );
         }
 
         return $repo;
@@ -228,7 +225,9 @@ abstract class AbstractRepo extends EntityRepository
         $result = $query->execute();
 
         if (!is_int($result)) {
-            throw new RuntimeException('Expected the number of rows changed');
+            throw new RuntimeException(
+                'The query\'s result is no number of rows, but ' . get_debug_type($result) . '.',
+            );
         }
 
         return $result;
@@ -244,7 +243,7 @@ abstract class AbstractRepo extends EntityRepository
         $result = $query->getSingleScalarResult();
 
         if (!is_numeric($result)) {
-            throw new RuntimeException('Expected a numeric result');
+            throw new RuntimeException('The query\'s result is no number, but ' . get_debug_type($result) . '.');
         }
 
         return (int)$result;

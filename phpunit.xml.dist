@@ -5,17 +5,22 @@
          failOnWarning="true" failOnRisky="true" failOnNotice="true"
          failOnDeprecation="true" failOnPhpunitDeprecation="true"
          failOnEmptyTestSuite="true">
+    <!--
+        unit: a class at a time. integration: the fixture application in tests/Fixtures/App, wired in the test's
+        process, run as a command and served by PHP's built-in server on the loopback; it covers nothing.
+    -->
     <testsuites>
         <testsuite name="unit"><directory>tests/Unit</directory></testsuite>
+        <testsuite name="integration"><directory>tests/Integration</directory></testsuite>
     </testsuites>
     <!--
-        The framework's code: what the coverage counts. Warnings, notices and deprecations fail a run wherever they
-        come from, the vendor tree included: it raises none on PHP 8.5, and a new one is a signal, not noise.
+        The framework's code: what the coverage counts (config/ holds data, which the tests load but do not cover).
+        Warnings, notices and deprecations fail a run wherever they come from, the vendor tree included: it raises
+        none on PHP 8.5, and a new one is a signal, not noise.
     -->
     <source>
         <include>
             <directory>src</directory>
-            <directory>config</directory>
         </include>
     </source>
 </phpunit>

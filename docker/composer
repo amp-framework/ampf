@@ -1,0 +1,7 @@
+#!/bin/sh
+# Composer in the development container, with network access: install, update, outdated, audit, require.
+#
+#   sh docker/composer install
+set -eu
+
+AMPF_DOCKER_NETWORK=bridge exec sh "$(dirname -- "$0")/run" composer "$@"

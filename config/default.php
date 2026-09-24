@@ -99,6 +99,15 @@ return [
     // The directory of the translation files (TranslatorService: <language>.php)
     'translation.dir' => null,
 
+    // PHP's error handling, which an entry point applies once the configuration is merged (ErrorSettings::apply()):
+    // errors shown in the output (a development machine only), written to the log, and the log's file — relative to
+    // the project root, or absolute; null leaves PHP's own
+    'errors' => [
+        'display' => false,
+        'log' => true,
+        'log-file' => null,
+    ],
+
     // The attributes HttpRequest::setCookieParam() gives a cookie unless the call names its own. secure: true,
     // false, or null for "exactly when the request came over https" (the web server's HTTPS variable).
     'cookies' => [
@@ -109,8 +118,8 @@ return [
         'samesite' => 'Lax',
     ],
 
-    // The session (SessionService), applied before the session starts: its cookie's attributes (secure as above),
-    // strict mode (an id the server never issued is replaced, not adopted) and cookies only.
+    // The session (SessionService), applied before the session starts: its cookie's attributes (secure as above) and
+    // strict mode (an id the server never issued is replaced, not adopted). The id travels in the cookie only.
     'session' => [
         'cookie' => [
             'lifetime' => 0,
@@ -121,7 +130,6 @@ return [
             'samesite' => 'Lax',
         ],
         'use_strict_mode' => true,
-        'use_only_cookies' => true,
     ],
 
     // The string cache (FileStringCacheService): its directory, the default time to live in seconds (an hour when

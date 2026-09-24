@@ -46,7 +46,7 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
             $sessionName = session_name();
 
             if ($sessionName === false) {
-                throw new RuntimeException();
+                throw new RuntimeException('PHP names no session cookie to delete.');
             }
 
             // The deletion carries the attributes the cookie was set with, or a browser may keep the cookie
@@ -116,7 +116,7 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
     public function setAttribute(string $key, mixed $value): void
     {
         if (trim($key) === '') {
-            throw new RuntimeException();
+            throw new RuntimeException('A session attribute needs a name.');
         }
 
         $this->start();
@@ -146,13 +146,11 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
         $strictMode = ($config['use_strict_mode'] ?? true) === false
             ? '0'
             : '1';
-        $onlyCookies = ($config['use_only_cookies'] ?? true) === false
-            ? '0'
-            : '1';
 
+        // Cookies only, always: PHP deprecated the other ways of passing the id
         if (
             ini_set('session.use_strict_mode', $strictMode) === false
-            || ini_set('session.use_only_cookies', $onlyCookies) === false
+            || ini_set('session.use_only_cookies', '1') === false
             || !session_set_cookie_params($cookie)
         ) {
             throw new RuntimeException('Failed to configure the session.');
@@ -181,7 +179,9 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
         $configured = $this->getSessionConfig()['cookie'] ?? [];
 
         if (!is_array($configured)) {
-            throw new InvalidArgumentException('session.cookie must be an array.');
+            throw new InvalidArgumentException(
+                'The configuration\'s session.cookie must be an array, not ' . get_debug_type($configured) . '.',
+            );
         }
 
         $lifetime = 0;
@@ -205,7 +205,9 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
             } elseif ($name === 'samesite' && ($value === 'Lax' || $value === 'Strict' || $value === 'None')) {
                 $sameSite = $value;
             } else {
-                throw new InvalidArgumentException('Unknown or malformed session cookie attribute ' . $name . '.');
+                throw new InvalidArgumentException(
+                    'The configuration\'s session.cookie has an unknown or malformed attribute ' . $name . '.',
+                );
             }
         }
 
@@ -229,6 +231,8 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
      * The configuration's `session` block; empty when the service runs without a bean factory.
      *
      * @return array<mixed>
+     *
+     * @throws InvalidArgumentException for a block that is no array
      */
     protected function getSessionConfig(): array
     {
@@ -236,14 +240,15 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
             return [];
         }
 
-        $config = $this->getBeanFactory()->get('Config');
-        $session = is_array($config)
-            ? ($config['session'] ?? [])
-            : [];
+        $session = $this->getBeanFactory()->getConfig()['session'] ?? [];
 
-        return is_array($session)
-            ? $session
-            : [];
+        if (!is_array($session)) {
+            throw new InvalidArgumentException(
+                'The configuration\'s session must be an array, not ' . get_debug_type($session) . '.',
+            );
+        }
+
+        return $session;
     }
 
     /** Whether the web server says the request came over TLS (its HTTPS variable, "off" meaning not). */

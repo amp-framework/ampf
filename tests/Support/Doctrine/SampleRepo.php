@@ -58,6 +58,46 @@ class SampleRepo extends AbstractRepo
         return $this->entityList($this->createQueryBuilder('s')->select('s.name')->getQuery());
     }
 
+    /**
+     * The name of one entity, handed to the reader of one entity.
+     */
+    public function findOneNameAsEntity(): ?SampleEntity
+    {
+        return $this->entityOrNull($this->createQueryBuilder('s')->select('s.name')->setMaxResults(1)->getQuery());
+    }
+
+    /** The names, handed to the reader of a number. */
+    public function countNames(): int
+    {
+        return $this->intResult($this->createQueryBuilder('s')->select('s.name')->setMaxResults(1)->getQuery());
+    }
+
+    /** A query that selects rows, handed to the reader of the rows an UPDATE changed. */
+    public function renameBySelecting(): int
+    {
+        return $this->intExecute($this->createQueryBuilder('s')->getQuery());
+    }
+
+    /** Removes what a query that selects no entities selects. */
+    public function removeNames(): int
+    {
+        return $this->bulkRemoveQuery($this->createQueryBuilder('s')->select('s.name')->getQuery());
+    }
+
+    /**
+     * Another entity's repository, typed.
+     *
+     * @template R of \ampf\Doctrine\Entity\AbstractEntity
+     *
+     * @param class-string<R> $entityName
+     *
+     * @return \ampf\Doctrine\Repository\AbstractRepo<R>
+     */
+    public function repositoryOf(string $entityName): AbstractRepo
+    {
+        return $this->getRepository($entityName);
+    }
+
     public function rename(string $from, string $to): int
     {
         return $this->intExecute(

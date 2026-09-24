@@ -1,0 +1,8 @@
+#!/bin/sh
+# PHPStan (phpstan.neon.dist) in the development container.
+#
+#   sh docker/phpstan
+#   sh docker/phpstan --no-progress
+set -eu
+
+exec sh "$(dirname -- "$0")/run" php -d memory_limit=2G vendor/bin/phpstan analyse "$@"

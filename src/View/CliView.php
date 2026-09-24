@@ -20,56 +20,57 @@ class CliView extends AbstractView implements CliViewInterface
     }
 
     /**
-     * @param array<string, string> $params
+     * What the controller bean prints for the arguments, run on a request of its own (the bean 'RequestStub').
+     *
+     * @param ?array<int|string, string> $params
+     *
+     * @throws RuntimeException when the bean 'RequestStub' is no command line request, or the controller bean no
+     *     controller
      */
     public function subRoute(string $controllerBean, ?array $params = null): string
     {
-        if ($params === null) {
-            $params = [];
+        $request = $this->getBeanFactory()->get('RequestStub');
+
+        if (!$request instanceof CliRequestInterface) {
+            throw new RuntimeException(
+                'The bean RequestStub is no command line request, but ' . get_debug_type($request) . '.',
+            );
         }
 
-        // get a stub request
-        $request = $this->getBeanFactory()->get('RequestStub');
-        assert($request instanceof CliRequestInterface);
-        // get the controller bean and inject the request
         $controller = $this->getBeanFactory()->get($controllerBean);
-        assert($controller instanceof ControllerInterface);
-        $controller->setRequest($request);
 
-        // route it
+        if (!$controller instanceof ControllerInterface) {
+            throw new RuntimeException(
+                'The controller bean ' . $controllerBean . ' is no ' . ControllerInterface::class . ', but '
+                . get_debug_type($controller) . '.',
+            );
+        }
+
+        $controller->setRequest($request);
         $this->getRouter()->routeBean($controller, $params);
 
-        // get the response
-        ob_start();
-        $request->flush();
-        $result = ob_get_clean();
-
-        // and, finally, return it
-        if ($result === false) {
-            throw new RuntimeException();
-        }
-
-        return $result;
+        return $this->capture($request->flush(...));
     }
 
-    // Bean getters
-
+    /**
+     * @throws RuntimeException when the bean 'Router' is no command line router
+     */
     public function getRouter(): CliRouterInterface
     {
         if ($this->router === null) {
             $router = $this->getBeanFactory()->get('Router');
-            assert($router instanceof CliRouterInterface);
-            $this->setRouter($router);
-        }
 
-        if ($this->router === null) {
-            throw new RuntimeException();
+            if (!$router instanceof CliRouterInterface) {
+                throw new RuntimeException(
+                    'The bean Router is no command line router, but ' . get_debug_type($router) . '.',
+                );
+            }
+
+            $this->router = $router;
         }
 
         return $this->router;
     }
-
-    // Bean setters
 
     public function setRouter(CliRouterInterface $router): void
     {

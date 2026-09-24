@@ -8,14 +8,15 @@ use ampf\Bean\BeanFactoryAccessInterface;
 use ampf\BeanAccess\BeanFactoryAccess;
 use ampf\BeanAccess\Service\TranslatorServiceAccess;
 use ampf\BeanAccess\ViewResolverAccess;
-use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
 use DateTimeZone;
 use RuntimeException;
 
 /**
- * A view's variables and their template: render() resolves the template file (the ViewResolverInterface bean), puts
- * the variables into the template's scope and returns what the template printed — inside the template, `$this` is the
- * view.
+ * A view's variables and their template: render() resolves the template file (the ViewResolverInterface bean) and
+ * returns what the template printed. The template runs in a scope of its own: its local variables are the view's
+ * variables — every one whose name is a variable name —, and `$this` is the view.
  */
 abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
 {
@@ -28,17 +29,37 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
      */
     protected array $memory = [];
 
-    protected ?DateTimeZone $timezoneUtc = null;
-
     protected ?DateTimeZone $timezoneLocal = null;
+
+    /**
+     * The time as a DateTimeImmutable: a DateTimeInterface as it is, a Unix timestamp in UTC. A template may hand in
+     * anything, so anything is checked.
+     *
+     * @throws RuntimeException for a time that is neither a DateTimeInterface nor a Unix timestamp
+     */
+    protected static function toDateTime(mixed $time): DateTimeImmutable
+    {
+        if ($time instanceof DateTimeInterface) {
+            return DateTimeImmutable::createFromInterface($time);
+        }
+
+        $dateTime = is_numeric($time)
+            ? DateTimeImmutable::createFromFormat('U', (string)$time)
+            : false;
+
+        if ($dateTime === false) {
+            throw new RuntimeException(
+                'A time is a DateTimeInterface or a Unix timestamp, not '
+                . (is_scalar($time) ? var_export($time, true) : get_debug_type($time)) . '.',
+            );
+        }
+
+        return $dateTime;
+    }
 
     public function get(string $key, mixed $default = null): mixed
     {
-        if (!$this->has($key)) {
-            return $default;
-        }
-
-        return $this->memory[$key];
+        return $this->memory[$key] ?? $default;
     }
 
     public function has(string $key): bool
@@ -51,28 +72,23 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
         $this->memory[$key] = $value;
     }
 
+    /**
+     * @throws RuntimeException when there is no such template
+     */
     public function render(string $view): string
     {
-        $path = $this->getViewResolver()->getViewFilename($view);
+        return $this->capture(
+            // No parameter and nothing inherited: the template's scope holds its variables and $this, and nothing else
+            // phpcs:ignore SlevomatCodingStandard.Functions.StaticClosure.ClosureNotStatic -- the template's $this
+            function (): void {
+                // @phpstan-ignore argument.type (render() hands in the view's array, without a name of its own)
+                extract(func_get_arg(1), EXTR_SKIP);
 
-        foreach ($this->memory as $key => $value) {
-            if ($key === 'path' || $key === 'this') {
-                continue;
-            }
-
-            // @phpcs:ignore SlevomatCodingStandard.Variables.DisallowVariableVariable.DisallowedVariableVariable
-            ${$key} = $value;
-        }
-
-        ob_start();
-        require $path;
-        $result = ob_get_clean();
-
-        if ($result === false) {
-            throw new RuntimeException();
-        }
-
-        return $result;
+                require func_get_arg(0);
+            },
+            $this->getViewResolver()->getViewFilename($view),
+            $this->memory,
+        );
     }
 
     public function reset(): void
@@ -80,22 +96,25 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
         $this->memory = [];
     }
 
+    /**
+     * The template rendered by a new view (the bean 'View', a prototype) that holds the parameters only.
+     *
+     * @param ?array<string, mixed> $params
+     *
+     * @throws RuntimeException when the bean 'View' is no view
+     */
     public function subRender(string $viewID, ?array $params = null): string
     {
-        if (is_null($params)) {
-            $params = [];
+        $view = $this->getBeanFactory()->get('View');
+
+        if (!$view instanceof ViewInterface) {
+            throw new RuntimeException('The bean View is no view, but ' . get_debug_type($view) . '.');
         }
 
-        // get a new view
-        $view = $this->getBeanFactory()->get('View');
-        assert($view instanceof ViewInterface);
-
-        // set the params
-        foreach ($params as $key => $value) {
+        foreach ($params ?? [] as $key => $value) {
             $view->set($key, $value);
         }
 
-        // render the output and return it
         return $view->render($viewID);
     }
 
@@ -105,41 +124,17 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
         ?string $decPoint = null,
         ?string $thousandsSep = null,
     ): string {
-        if ($decimals === null) {
-            $decimals = 0;
-        }
-
-        if ($decPoint === null) {
-            $decPoint = '.';
-        }
-
-        if ($thousandsSep === null) {
-            $thousandsSep = ' ';
-        }
-
-        return number_format((float)$number, $decimals, $decPoint, $thousandsSep);
+        return number_format((float)$number, $decimals ?? 0, $decPoint ?? '.', $thousandsSep ?? ' ');
     }
 
-    public function formatTime(mixed $time = null, ?string $format = null): string
+    /**
+     * @param DateTimeInterface|numeric $time
+     *
+     * @throws RuntimeException for a time that is neither a DateTimeInterface nor a Unix timestamp
+     */
+    public function formatTime(mixed $time, ?string $format = null): string
     {
-        // If not instanceof DateTime, try to create from unix timestamp
-        if (!($time instanceof DateTime)) {
-            $time = DateTime::createFromFormat('U', (string)$time, $this->getTimeZoneUTC());
-
-            if (!($time instanceof DateTime)) {
-                throw new RuntimeException();
-            }
-        }
-
-        if ($format === null) {
-            $format = 'd.m.Y H:i';
-        }
-
-        // Convert to local timezone
-        $datetime = clone $time;
-        $datetime->setTimezone($this->getTimeZoneLocal());
-
-        return $datetime->format($format);
+        return static::toDateTime($time)->setTimezone($this->getTimeZoneLocal())->format($format ?? 'd.m.Y H:i');
     }
 
     /**
@@ -155,34 +150,39 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
      */
     public function te(string $key, ?array $args = null): string
     {
-        if ($args === null) {
-            return $this->t($key);
-        }
-
-        $escaped = [];
-
-        foreach ($args as $arg) {
-            $escaped[] = $this->escape($arg);
-        }
-
-        return $this->t($key, $escaped);
+        return $this->t($key, $args === null ? null : array_map($this->escape(...), $args));
     }
 
-    protected function getTimeZoneUTC(): DateTimeZone
+    /**
+     * What the callable prints, taken out of the output — all of it, and whatever buffer the callable left open,
+     * when it fails.
+     *
+     * @throws RuntimeException when the callable closed the buffer it printed into
+     */
+    protected function capture(callable $print, mixed ...$arguments): string
     {
-        if ($this->timezoneUtc === null) {
-            $this->timezoneUtc = new DateTimeZone('UTC');
+        $level = ob_get_level();
+        ob_start();
+
+        try {
+            $print(...$arguments);
+            $output = ob_get_contents();
+        } finally {
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
         }
 
-        return $this->timezoneUtc;
+        if ($output === false) {
+            throw new RuntimeException('The output was printed into no buffer: its buffer was closed while printing.');
+        }
+
+        return $output;
     }
 
+    /** The time zone formatTime() shows a time in: PHP's default time zone. */
     protected function getTimeZoneLocal(): DateTimeZone
     {
-        if ($this->timezoneLocal === null) {
-            $this->timezoneLocal = new DateTimeZone(date_default_timezone_get());
-        }
-
-        return $this->timezoneLocal;
+        return $this->timezoneLocal ??= new DateTimeZone(date_default_timezone_get());
     }
 }

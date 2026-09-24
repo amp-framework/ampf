@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ampf\Service\StringCache;
 
 use RuntimeException;
-use stdClass;
 
 /**
  * A string cache of one file per key (`<key>.asc` in the configured directory). A write replaces the file at once
@@ -54,19 +53,14 @@ class FileStringCacheService implements StringCacheServiceInterface
 
         $json = json_decode($content);
 
-        if ($json === null || !is_object($json)) {
-            $this->remove($path);
-
-            return false;
-        }
-
-        if (!isset($json->until) || !isset($json->string)) {
-            $this->remove($path);
-
-            return false;
-        }
-
-        if ($json->until < time()) {
+        // A damaged entry, or one whose time is up
+        if (
+            !is_object($json)
+            || !isset($json->until, $json->string)
+            || !is_int($json->until)
+            || !is_string($json->string)
+            || $json->until < time()
+        ) {
             $this->remove($path);
 
             return false;
@@ -82,18 +76,10 @@ class FileStringCacheService implements StringCacheServiceInterface
         }
 
         if (trim($string) === '') {
-            throw new RuntimeException();
+            throw new RuntimeException('A blank string is no cache entry: get() could not tell it from none.');
         }
 
-        if ($ttl === null) {
-            $ttl = $this->defaultTTL;
-        }
-
-        $json = new stdClass();
-        $json->until = (time() + $ttl);
-        $json->string = $string;
-
-        $content = json_encode($json);
+        $content = json_encode(['until' => time() + ($ttl ?? $this->defaultTTL), 'string' => $string]);
 
         // A string JSON cannot carry (not UTF-8) is not cached
         if ($content === false) {
@@ -105,7 +91,8 @@ class FileStringCacheService implements StringCacheServiceInterface
         // The whole entry under a name of its own first, then renamed over the old one in one step
         $temporary = $path . '.' . bin2hex(random_bytes(8)) . '.tmp';
 
-        if (file_put_contents($temporary, $content) !== strlen($content) || !rename($temporary, $path)) {
+        // @: a failure is this method's exception, not a warning besides it
+        if (@file_put_contents($temporary, $content) !== strlen($content) || !@rename($temporary, $path)) {
             $this->remove($temporary);
 
             throw new RuntimeException('Could not write the cache entry ' . $key . '.');
@@ -153,53 +140,50 @@ class FileStringCacheService implements StringCacheServiceInterface
 
     /**
      * @param array<string, mixed> $config
+     *
+     * @throws RuntimeException for a block without a writable directory, or with a time to live that is no number
      */
     public function setConfig(array $config): void
     {
-        if (count($config) < 1) {
-            throw new RuntimeException();
+        $block = $config['stringfilecache'] ?? null;
+
+        if (!is_array($block)) {
+            throw new RuntimeException(
+                'The configuration\'s stringfilecache must be an array, not ' . get_debug_type($block) . '.',
+            );
         }
 
-        if (!isset($config['stringfilecache']) || !is_array($config['stringfilecache'])) {
-            throw new RuntimeException();
+        $cacheDir = $block['cachedir'] ?? null;
+
+        if (!is_string($cacheDir)) {
+            throw new RuntimeException(
+                'The configuration\'s stringfilecache.cachedir must name a directory, not ' . get_debug_type(
+                    $cacheDir,
+                ) . '.',
+            );
         }
 
-        if (!isset($config['stringfilecache']['cachedir'])) {
-            throw new RuntimeException();
+        $realPath = realpath($cacheDir);
+
+        if ($realPath === false || !is_dir($realPath) || !is_writable($realPath)) {
+            throw new RuntimeException(
+                'The cache directory ' . $cacheDir . ' is no directory this process can write to.',
+            );
         }
 
-        $cachedir = $config['stringfilecache']['cachedir'];
+        $defaultTTL = $block['defaultttl'] ?? 3_600;
 
-        if (!is_string($cachedir)) {
-            throw new RuntimeException();
+        if (!is_numeric($defaultTTL)) {
+            throw new RuntimeException(
+                'The configuration\'s stringfilecache.defaultttl must be a number of seconds, not '
+                . get_debug_type($defaultTTL) . '.',
+            );
         }
 
-        $cachedir = realpath($cachedir);
-
-        if (
-            $cachedir === false
-            || !is_dir($cachedir)
-            || !is_writable($cachedir)
-        ) {
-            throw new RuntimeException();
-        }
-
-        $this->cacheDir = $cachedir;
-
-        $this->defaultTTL = 3_600;
-
-        if (isset($config['stringfilecache']['defaultttl'])) {
-            $defaultttl = $config['stringfilecache']['defaultttl'];
-
-            if (!is_scalar($defaultttl)) {
-                throw new RuntimeException();
-            }
-
-            $this->defaultTTL = ((int)$defaultttl);
-        }
-
+        $this->cacheDir = $realPath;
+        $this->defaultTTL = (int)$defaultTTL;
         // On unless the configuration says false
-        $this->enabled = ($config['stringfilecache']['enabled'] ?? true) !== false;
+        $this->enabled = ($block['enabled'] ?? true) !== false;
     }
 
     protected function getCacheDir(): string
@@ -214,7 +198,9 @@ class FileStringCacheService implements StringCacheServiceInterface
     protected function getPath(string $key): string
     {
         if (!$this->isCorrectKey($key)) {
-            throw new RuntimeException();
+            throw new RuntimeException(
+                'The cache key ' . $key . ' has a character other than letters, digits and _.-.',
+            );
         }
 
         return $this->getCacheDir() . '/' . $key . '.asc';

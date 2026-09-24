@@ -4,15 +4,58 @@ declare(strict_types=1);
 
 namespace ampf\Tests\Unit\Router;
 
+use ampf\Bean\BeanFactory;
 use ampf\Router\RouteResolver;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
 
 #[CoversClass(RouteResolver::class)]
-class RouteResolverTest extends TestCase
+final class RouteResolverTest extends TestCase
 {
+    /**
+     * @return iterable<string, array{array<mixed>, string}>
+     */
+    public static function provideMalformedConfigs(): iterable
+    {
+        yield 'no routes' => [['abc' => 'def'], 'The configuration has no routes.'];
+        yield 'routes that are no array' => [['routes' => 'abc'], 'The configuration\'s routes must be an array, not string.'];
+        yield 'empty routes' => [['routes' => []], 'The configuration has no routes.'];
+        yield 'a route id that is a number' => [['routes' => [0 => []]], 'A route\'s id must be a non-blank string, not 0.'];
+        yield 'an empty route id' => [['routes' => ['' => []]], 'A route\'s id must be a non-blank string, not \'\'.'];
+        yield 'a blank route id' => [['routes' => [' ' => []]], 'A route\'s id must be a non-blank string, not \' \'.'];
+        yield 'a route that is no array' => [
+            ['routes' => ['defaultRoute' => 'fail']],
+            'The route defaultRoute must be defined by an array.',
+        ];
+        yield 'a route with a list' => [
+            ['routes' => ['defaultRoute' => ['abc']]],
+            'The route defaultRoute must name its pattern and its controller, and nothing else.',
+        ];
+        yield 'a route without a controller' => [
+            ['routes' => ['defaultRoute' => ['pattern' => 'abc']]],
+            'The route defaultRoute must name its pattern and its controller, and nothing else.',
+        ];
+        yield 'a route without a pattern' => [
+            ['routes' => ['defaultRoute' => ['controller' => 'abc']]],
+            'The route defaultRoute must name its pattern and its controller, and nothing else.',
+        ];
+        yield 'a route with another option' => [
+            ['routes' => ['defaultRoute' => ['controller' => 'abc', 'pattern' => 'def', 'foobar']]],
+            'The route defaultRoute must name its pattern and its controller, and nothing else.',
+        ];
+        yield 'a pattern that is no string' => [
+            ['routes' => ['defaultRoute' => ['controller' => 'abc', 'pattern' => 1]]],
+            'The route defaultRoute must name its pattern and its controller by strings.',
+        ];
+        yield 'a controller that is no string' => [
+            ['routes' => ['defaultRoute' => ['controller' => null, 'pattern' => 'def']]],
+            'The route defaultRoute must name its pattern and its controller by strings.',
+        ];
+    }
+
     public function testCleanMatches(): void
     {
         $method = new ReflectionMethod(RouteResolver::class, 'cleanMatches');
@@ -35,7 +78,7 @@ class RouteResolverTest extends TestCase
         foreach ($matchPairs as $matchPair) {
             [$matches, $allowedParams, $cleanedMatches] = $matchPair;
 
-            static::assertSame($cleanedMatches, $method->invoke($routeResolver, $matches, $allowedParams));
+            self::assertSame($cleanedMatches, $method->invoke($routeResolver, $matches, $allowedParams));
         }
     }
 
@@ -98,7 +141,7 @@ class RouteResolverTest extends TestCase
 
             $routeResolver->setConfig($config);
 
-            static::assertSame($expectedReturn, $method->invoke($routeResolver, $routePattern));
+            self::assertSame($expectedReturn, $method->invoke($routeResolver, $routePattern));
         }
     }
 
@@ -122,7 +165,7 @@ class RouteResolverTest extends TestCase
         ];
 
         foreach ($regexPairs as $routePattern => $routeParams) {
-            static::assertSame($routeParams, $method->invoke($routeResolver, $routePattern));
+            self::assertSame($routeParams, $method->invoke($routeResolver, $routePattern));
         }
     }
 
@@ -157,7 +200,7 @@ class RouteResolverTest extends TestCase
         ];
 
         foreach ($links as [$routeId, $params, $expected]) {
-            static::assertSame($expected, $routeResolver->getRoutePatternByRouteID($routeId, $params), $expected);
+            self::assertSame($expected, $routeResolver->getRoutePatternByRouteID($routeId, $params), $expected);
         }
     }
 
@@ -169,7 +212,7 @@ class RouteResolverTest extends TestCase
             'show' => ['controller' => 'ShowController', 'pattern' => 'show/(?P<pathInfo>.*)'],
         ]]);
 
-        static::assertSame(
+        self::assertSame(
             ['re' => 'a b/c'],
             $routeResolver->getNotDefinedParams('show', ['pathInfo' => '1', 're' => 'a b/c']),
         );
@@ -184,94 +227,108 @@ class RouteResolverTest extends TestCase
             'step' => ['controller' => 'StepController', 'pattern' => 'password-reset/(?P<step>\d+)'],
         ]]);
 
-        static::assertSame('admin', $routeResolver->getRouteIDByRoutePattern('admin'));
-        static::assertNull($routeResolver->getRouteIDByRoutePattern("admin\n"));
-        static::assertSame(['step' => '2'], $routeResolver->getParamsByRoutePattern('password-reset/2'));
-        static::assertNull($routeResolver->getRouteIDByRoutePattern("password-reset/2\n"));
+        self::assertSame('admin', $routeResolver->getRouteIDByRoutePattern('admin'));
+        self::assertNull($routeResolver->getRouteIDByRoutePattern("admin\n"));
+        self::assertSame(['step' => '2'], $routeResolver->getParamsByRoutePattern('password-reset/2'));
+        self::assertNull($routeResolver->getRouteIDByRoutePattern("password-reset/2\n"));
     }
 
-    public function testSetConfigThrowsExceptionIfConfigDoesntContainRoutes(): void
+    /**
+     * @param array<mixed> $config
+     */
+    #[DataProvider('provideMalformedConfigs')]
+    public function testAMalformedConfigurationIsRefused(array $config, string $message): void
     {
-        $routeResolver = new RouteResolver();
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage($message);
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['abc' => 'def']);
+        new RouteResolver()->setConfig($config);
     }
 
-    public function testSetConfigThrowsExceptionIfRoutesAreNoArray(): void
+    public function testWithoutAConfigurationTheRoutesAreTheBeanConfigsReadOnce(): void
     {
+        $beanFactory = new BeanFactory(['routes' => [
+            'home' => ['pattern' => '', 'controller' => 'HomeController'],
+            'show' => ['pattern' => 'show/(?P<id>[0-9]+)', 'controller' => 'ShowController'],
+        ]]);
         $routeResolver = new RouteResolver();
+        $routeResolver->setBeanFactory($beanFactory);
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => 'abc']);
+        self::assertSame('ShowController', $routeResolver->getControllerByRoutePattern('show/7'));
+        self::assertSame('HomeController', $routeResolver->getControllerByRoutePattern(''));
+
+        $beanFactory->set('Config', ['routes' => ['other' => ['pattern' => '', 'controller' => 'OtherController']]]);
+        self::assertSame('HomeController', $routeResolver->getControllerByRoutePattern(''), 'the routes are read once');
     }
 
-    public function testSetConfigThrowsExceptionIfRoutesAreEmpty(): void
+    public function testABeanConfigWithoutRoutesIsRefused(): void
     {
         $routeResolver = new RouteResolver();
+        $routeResolver->setBeanFactory(new BeanFactory(['beans' => []]));
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => []]);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The configuration has no routes.');
+
+        $routeResolver->getControllerByRoutePattern('');
     }
 
-    public function testSetConfigThrowsExceptionIfRoutesContainNonStringKey(): void
+    public function testATextNoPatternMatchesHasNoRoute(): void
     {
-        $routeResolver = new RouteResolver();
+        $routeResolver = $this->routeResolver();
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => [0 => []]]);
+        self::assertNull($routeResolver->getControllerByRoutePattern('unknown'));
+        self::assertNull($routeResolver->getRouteIDByRoutePattern('unknown'));
+        self::assertNull($routeResolver->getParamsByRoutePattern('unknown'));
     }
 
-    public function testSetConfigThrowsExceptionIfRoutesContainNonEmptyStringKey(): void
+    public function testTheFirstMatchingPatternWins(): void
     {
         $routeResolver = new RouteResolver();
+        $routeResolver->setConfig(['routes' => [
+            'new' => ['pattern' => 'user/new', 'controller' => 'NewController'],
+            'show' => ['pattern' => 'user/(?P<name>[a-z]+)', 'controller' => 'ShowController'],
+        ]]);
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['' => []]]);
+        self::assertSame('NewController', $routeResolver->getControllerByRoutePattern('user/new'));
+        self::assertSame('ShowController', $routeResolver->getControllerByRoutePattern('user/newton'));
+        self::assertSame(['name' => 'newton'], $routeResolver->getParamsByRoutePattern('user/newton'));
     }
 
-    public function testSetConfigThrowsExceptionIfRoutesContainNoRouteOptions(): void
+    public function testAnUnknownRouteIdHasNoRoute(): void
     {
-        $routeResolver = new RouteResolver();
+        $routeResolver = $this->routeResolver();
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['defaultRoute' => 'fail']]);
+        self::assertNull($routeResolver->getRoutePatternByRouteID('unknown'));
+        self::assertNull($routeResolver->getNotDefinedParams('unknown', ['id' => '1']));
     }
 
-    public function testSetConfigThrowsExceptionIfRouteOptionsInvalidKeys(): void
+    public function testABlankRouteIdIsRefused(): void
     {
-        $routeResolver = new RouteResolver();
-
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['defaultRoute' => ['abc']]]);
+        foreach (['getRoutePatternByRouteID', 'getNotDefinedParams'] as $method) {
+            try {
+                $this->routeResolver()->{$method}(' ');
+                self::fail($method . ' took a blank route id');
+            } catch (RuntimeException $e) {
+                self::assertSame('A route id must not be blank.', $e->getMessage());
+            }
+        }
     }
 
-    public function testSetConfigThrowsExceptionIfRouteOptionsMissingController(): void
+    public function testARouteWithoutItsParameterHasNoText(): void
     {
-        $routeResolver = new RouteResolver();
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Missing parameter id for the route pattern show/(?P<id>[0-9]+).');
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['defaultRoute' => ['pattern' => 'abc']]]);
+        $this->routeResolver()->getRoutePatternByRouteID('show', ['other' => '1']);
     }
 
-    public function testSetConfigThrowsExceptionIfRouteOptionsMissingPattern(): void
+    public function testARouteWithoutCapturesIsItsPattern(): void
     {
-        $routeResolver = new RouteResolver();
+        $routeResolver = $this->routeResolver();
 
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig(['routes' => ['defaultRoute' => ['controller' => 'abc']]]);
-    }
-
-    public function testSetConfigThrowsExceptionIfRouteOptionsSuperflousArg(): void
-    {
-        $routeResolver = new RouteResolver();
-
-        static::expectException(RuntimeException::class);
-        $routeResolver->setConfig([
-            'routes' => [
-                'defaultRoute' => ['controller' => 'abc', 'pattern' => 'def', 'foobar'],
-            ],
-        ]);
+        self::assertSame('about', $routeResolver->getRoutePatternByRouteID('about'));
+        self::assertSame(['page' => '2'], $routeResolver->getNotDefinedParams('about', ['page' => '2']));
+        self::assertSame([], $routeResolver->getNotDefinedParams('about'));
     }
 
     public function testSetConfigTakesConfigCorrectly(): void
@@ -284,12 +341,23 @@ class RouteResolverTest extends TestCase
             'altRoute' => ['controller' => 'foo', 'pattern' => 'bar'],
         ]]);
 
-        static::assertSame(
+        self::assertSame(
             [
                 'defaultRoute' => ['controller' => 'abc', 'pattern' => 'def'],
                 'altRoute' => ['controller' => 'foo', 'pattern' => 'bar'],
             ],
             $method->invoke($routeResolver),
         );
+    }
+
+    private function routeResolver(): RouteResolver
+    {
+        $routeResolver = new RouteResolver();
+        $routeResolver->setConfig(['routes' => [
+            'about' => ['pattern' => 'about', 'controller' => 'AboutController'],
+            'show' => ['pattern' => 'show/(?P<id>[0-9]+)', 'controller' => 'ShowController'],
+        ]]);
+
+        return $routeResolver;
     }
 }

@@ -2,7 +2,67 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
-## The 2026 restructuring
+## Checked configuration, route parameters by name, isolated scopes
+
+The framework checks what it is given and says what is wrong: bean definitions, configuration blocks, route and template names, time values. Every exception it throws now carries a message. Besides, the web router hands a route's captures to `execute()` by their names, configuration files and templates run in scopes of their own, and a command can end with an exit code. The development container (`docker/`) runs every check; applications are not affected by it.
+
+### 1. Route parameters go by name (web)
+
+`HttpRouter::routeBean()` — and so `route()` and `HttpView::subRoute()` — passes a route's named captures to `execute()` as **named arguments**: the capture `(?P<reportId>…)` is the parameter `$reportId`, in any order. Before, they went in the order of the pattern, whatever the parameters' names.
+
+- **Check every web controller's `execute()` against its route's pattern:** a parameter named differently from its capture is renamed (or the capture is). A capture `execute()` has no parameter for is refused: `RuntimeException('The route's parameter <name> names no parameter of <Controller>::execute().')`.
+- A variadic `execute(string ...$parameters)` takes every capture, keyed by its name.
+- `HttpView::subRoute($bean, $params)` passes `$params` by their keys too: key them by the names of `execute()`'s parameters (a list is refused).
+- The command line is unchanged: `CliRouter` passes the arguments in their order.
+
+### 2. Configuration files and templates run in scopes of their own
+
+- **Configuration files** (`ApplicationContext::boot()`): each file runs in a function of its own. It no longer sees the variables of `boot()` — a file that read `$config` (the merge so far) or the variables of an earlier file gets nothing; one that assigned `$config` no longer overwrites the merge. A file that returns no array keyed by strings is refused with its path in the message.
+- **Templates** (`AbstractView::render()`): the template's local variables are the view's variables and nothing else, `$this` is the view. `$key` and `$value` are ordinary template variables now (they arrived with the last variable's name and value before), and so are `$path` and `$view`, which held the template's file and name (a view variable `path` was left out for that). A variable whose name is no variable name (`my-title`, `1st`, `this`) is not extracted — read it with `$this->get('my-title')`. A template that throws prints nothing: its output and every output buffer it opened are discarded.
+
+### 3. Bean definitions are checked
+
+A definition is checked when its bean is first created. What was ignored or failed later with a PHP error is now a `RuntimeException` that names the bean: an unknown option (`initmethod`, `propertys`), a `class` that does not exist or is abstract, a `scope` other than `singleton` and `prototype`, `properties` that are no `bean id => setter suffix` map, a setter or an `initMethod` the class does not have (as a public method), a `parent` without a definition, a cycle of parents, and `beans` that are no array.
+
+`BeanFactoryInterface` gained `getConfig(): array` (the bean `Config`, checked to be the configuration): an application's own implementation of the interface adds it.
+
+### 4. The command line's exit code
+
+`CliRequestInterface` gained `getExitCode(): int` and `setExitCode(int): self` (0 to 254); `CliRequest` implements them. End the command line entry point with `exit($request->getExitCode());` after `flush()`, and let a failing controller call `setExitCode(1)` instead of `exit(1)` — the response is printed first. `CliRequest`'s constructor takes the command line as an optional list (`$_SERVER['argv']` when null).
+
+### 5. Stricter where it was loose
+
+- **Redirects:** `setRedirect()` takes a status from 300 to 399 (default 301); another is an `InvalidArgumentException`.
+- **The base path** is compared segment by segment: under `/app`, the route of `/application/x` is no longer `lication/x`, and a Referer of `/application` is no local one.
+- **`Accept-Language`** follows the RFC's grammar of quality values: `q=1.0`, `q=0.50` and `Q=0.5` count (they were skipped), a weight of more than three decimals does not; `q=0` stays a refusal.
+- **`ViewInterface::formatTime(mixed $time, ?string $format = null)`:** the default `null` of `$time` is gone (a call without a time always threw); a `DateTimeImmutable` is taken like a `DateTime`; anything but a `DateTimeInterface` or a Unix timestamp is a `RuntimeException`. `AbstractView::getTimeZoneUTC()` and `$timezoneUtc` are gone (a timestamp is UTC anyway). An application's override of `formatTime()` keeps compatible by removing its own default, or keeping it.
+- **`HttpView::getAssetLink()`** resolves `..` as a whole segment only (`img/..logo.png` is a file name now; it dropped `img/` before), and refuses a `..` above the web root with a `RuntimeException` (a plain `Exception` before).
+- **`ViewResolver`** refuses a name with a line feed at its end, and a directory as a template; `viewDirectory` must be a directory that exists. Its exceptions are `RuntimeException`s (plain `Exception`s before) — a `catch (Exception)` still catches them.
+- **`TranslatorService::setLanguage()`** takes a language code — letters, then parts of letters and digits after `_` or `-` (`de`, `en_GB`, `zh-Hant-TW`) — and refuses anything else (a path above all) with an `InvalidArgumentException`. Setting another language loads its texts (the first language's texts stayed before). `getKey($translation, false)` compares with the case now. The protected `setConfig()` is gone; `loadTexts($directory)` loads a language's texts.
+- **`SessionService`:** the session id travels in the cookie only — `session.use_only_cookies` is gone from the configuration (PHP deprecated switching it off). A `session` block that is no array is refused (it was ignored).
+- **`FileStringCacheService`:** `defaultttl` must be a number of seconds (text such as `'an hour'` was 0); an entry whose time or text has the wrong type counts as damaged and goes.
+- **`ConfigurationService::setConfig()`** refuses a domain whose values are no array.
+- **`DoctrineConfig`:** the `doctrine` block must be a non-empty array keyed by names, and `configuration`, `connectionParams`, `typeOverrides` and `mappingOverrides` must be of their types. `getConnectionParams()` is typed as DBAL's connection parameters (it claimed `pdo_mysql` only).
+- **`UTCDateTimeType`** writes a `DateTimeImmutable` as its UTC time (it was written as its local wall time); a `DateTime` is switched to UTC in place, as before.
+
+### 6. Removed
+
+- `Functions::mb_str_split()` and `Functions::mb_ucfirst()`: PHP's own `mb_str_split()` and `mb_ucfirst()` (PHP 8.4) do the same.
+- `AbstractView::getTimeZoneUTC()`, `$timezoneUtc` and `TranslatorService::setConfig()` (section 5).
+
+### 7. New
+
+- `ampf\Bootstrap\ErrorSettings`: `applyDefaults()` before the configuration is loaded, `apply($config, $projectRoot)` after it, from the new `errors` block of `config/default.php` (`display` false, `log` true, `log-file` null). An application's own copy of it can go.
+- `ampf\Controller\Http\AbstractController` and `ampf\Controller\Cli\AbstractController`: a controller's base, with `getRequest()`, `getView()` and empty lifecycle hooks. An application's base controller may extend it.
+- `ampf\BeanAccess\Generator\BeanAccessGenerator` and `ampf\Controller\Cli\BeanAccessGeneratorController` (the bean `BeanAccessGeneratorController` of `config/cli.php`): the access traits of an application's interface beans and repositories, generated; `check` fails when one is stale (README, section 4). An application with a generator of its own may replace it — the output is the same shape.
+- `ampf\BeanAccess\Doctrine\EntityManagerFactoryAccess`.
+- `HttpRequest`'s protected seams `sendHeader()`, `sendStatusCode()` and `removeHeader()`, beside `sendCookie()`: a test request overrides them to record the response's head. `flush()` is marked `@phpstan-impure` (PHPStan forgets what it knew of the request across it); a test double whose `flush()` does nothing marks its override `@phpstan-pure`, or PHPStan reports it.
+- `ErrorSettings` and `DoctrineConfiguration` are not final.
+
+### 8. The tools
+
+- `docker/` runs every check in a container (README, section 13); the Composer scripts stay.
+- `phpunit.xml.dist` has an `integration` suite besides `unit`, and the coverage counts `src/` only.
 
 ampf's source tree now follows one set of conventions: PascalCase, singular namespaces directly under `src/`, interfaces with the `Interface` suffix and their implementation next to them, access traits under `ampf\BeanAccess`, and the framework's services keyed by their interface. Every class keeps what it did; the names changed, and a few features that applications had to write themselves moved into the framework.
 

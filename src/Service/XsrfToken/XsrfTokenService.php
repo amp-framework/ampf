@@ -7,7 +7,6 @@ namespace ampf\Service\XsrfToken;
 use ampf\Bean\BeanFactoryAccessInterface;
 use ampf\BeanAccess\BeanFactoryAccess;
 use ampf\BeanAccess\Service\SessionServiceAccess;
-use RuntimeException;
 use SplQueue;
 
 /**
@@ -36,33 +35,10 @@ class XsrfTokenService implements BeanFactoryAccessInterface, XsrfTokenServiceIn
 
     protected ?string $currentToken = null;
 
+    /** The request's token: a new one at the first call, the same one for every form of the page after it. */
     public function getNewToken(): string
     {
-        if ($this->currentToken === null) {
-            // Get the tokenQueue from the session
-            $tokenQueue = $this->getTokenQueue();
-
-            // Generate a new token: every hex character of it is random
-            // @phpstan-ignore argument.type
-            $this->currentToken = bin2hex(random_bytes(static::TOKEN_BYTES));
-
-            // Store it into the queue
-            $tokenQueue->enqueue($this->currentToken);
-
-            // If our queue is full, remove the last one
-            if ($tokenQueue->count() > static::TOKEN_QUEUE_COUNT) {
-                $tokenQueue->dequeue();
-            }
-
-            // And save back our tokenQueue into the session
-            $this->setTokenQueue();
-        }
-
-        if ($this->currentToken === null) {
-            throw new RuntimeException();
-        }
-
-        return $this->currentToken;
+        return $this->currentToken ??= $this->issueToken();
     }
 
     public function getTokenIDForRequest(): string
@@ -95,6 +71,24 @@ class XsrfTokenService implements BeanFactoryAccessInterface, XsrfTokenServiceIn
         }
 
         return false;
+    }
+
+    /** A new token, queued in the session: a full queue lets its oldest token go. */
+    protected function issueToken(): string
+    {
+        // Every hex character of it is random
+        // @phpstan-ignore argument.type
+        $token = bin2hex(random_bytes(static::TOKEN_BYTES));
+        $tokenQueue = $this->getTokenQueue();
+        $tokenQueue->enqueue($token);
+
+        if ($tokenQueue->count() > static::TOKEN_QUEUE_COUNT) {
+            $tokenQueue->dequeue();
+        }
+
+        $this->setTokenQueue();
+
+        return $token;
     }
 
     /**

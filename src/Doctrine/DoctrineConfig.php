@@ -12,6 +12,8 @@ use RuntimeException;
 /**
  * The merged configuration's `doctrine` block: the ORM configuration object, the connection parameters, the DBAL
  * type overrides and the platform's type mappings.
+ *
+ * @phpstan-import-type Params from \Doctrine\DBAL\DriverManager
  */
 class DoctrineConfig implements BeanFactoryAccessInterface, DoctrineConfigInterface
 {
@@ -23,97 +25,125 @@ class DoctrineConfig implements BeanFactoryAccessInterface, DoctrineConfigInterf
     protected ?array $config = null;
 
     /**
+     * The `doctrine` block of the bean 'Config', unless one was set.
+     *
      * @return array<string, mixed>
+     *
+     * @throws RuntimeException when the configuration has no `doctrine` block
      */
     public function getConfig(): array
     {
-        if ($this->config === null) {
-            $config = $this->getBeanFactory()->get('Config');
-
-            if (!is_array($config) || !isset($config['doctrine']) || !is_array($config['doctrine'])) {
-                throw new RuntimeException();
-            }
-
-            $this->setConfig($config);
-        }
-        assert($this->config !== null);
-
-        return $this->config;
-    }
-
-    public function getConfiguration(): Configuration
-    {
-        $config = $this->getConfigValue('configuration');
-        assert($config instanceof Configuration);
-
-        return $config;
+        return $this->config ??= $this->blockOf($this->getBeanFactory()->getConfig());
     }
 
     /**
-     * @return array{
-     *     'driver': 'pdo_mysql',
-     *     'host': string,
-     *     'user': string,
-     *     'password': string,
-     *     'dbname': string,
-     *     'charset': string,
-     *     'driverOptions': array<string, string>,
-     * }
+     * @throws RuntimeException when the block holds no ORM configuration
+     */
+    public function getConfiguration(): Configuration
+    {
+        $configuration = $this->getConfigValue('configuration');
+
+        if (!$configuration instanceof Configuration) {
+            throw new RuntimeException(
+                'The configuration\'s doctrine.configuration must be a ' . Configuration::class
+                . ' (DoctrineConfiguration::create()), not ' . get_debug_type($configuration) . '.',
+            );
+        }
+
+        return $configuration;
+    }
+
+    /**
+     * @return Params
+     *
+     * @throws RuntimeException when the block's connectionParams are no array
      */
     public function getConnectionParams(): array
     {
-        /** @phpstan-ignore-next-line */
-        return $this->getConfigValue('connectionParams');
+        // @phpstan-ignore return.type (the configuration's parameters: DBAL checks them when it connects)
+        return $this->getArrayValue('connectionParams');
     }
 
     /**
      * @return array<string, mixed>
+     *
+     * @throws RuntimeException when the block's mappingOverrides are no array
      */
     public function getMappingOverrides(): array
     {
-        /** @phpstan-ignore-next-line */
-        return $this->getConfigValue('mappingOverrides');
+        return $this->getArrayValue('mappingOverrides');
     }
 
     /**
      * @return array<string, mixed>
+     *
+     * @throws RuntimeException when the block's typeOverrides are no array
      */
     public function getTypeOverrides(): array
     {
-        /** @phpstan-ignore-next-line */
-        return $this->getConfigValue('typeOverrides');
+        return $this->getArrayValue('typeOverrides');
     }
 
     /**
      * @param array{doctrine: array<mixed, mixed>} $config
+     *
+     * @throws RuntimeException for a block that is empty, or not keyed by strings
      */
     public function setConfig(array $config): void
     {
-        if (count($config['doctrine']) < 1) {
-            throw new RuntimeException();
+        $this->config = $this->blockOf($config);
+    }
+
+    /**
+     * The configuration's `doctrine` block, checked.
+     *
+     * @param array<mixed> $config
+     *
+     * @return array<string, mixed>
+     *
+     * @throws RuntimeException for a block that is missing, empty, or not keyed by strings
+     */
+    protected function blockOf(array $config): array
+    {
+        $block = $config['doctrine'] ?? null;
+
+        if (!is_array($block) || $block === []) {
+            throw new RuntimeException('The configuration has no doctrine block.');
         }
 
-        $doctrineConfig = [];
-
-        foreach ($config['doctrine'] as $key => $value) {
+        foreach (array_keys($block) as $key) {
             if (!is_string($key)) {
-                throw new RuntimeException();
+                throw new RuntimeException(
+                    'The configuration\'s doctrine block must be keyed by names, not ' . $key . '.',
+                );
             }
-
-            $doctrineConfig[$key] = $value;
         }
 
-        $this->config = $doctrineConfig;
+        /** @var array<string, mixed> $block */
+        return $block;
+    }
+
+    /**
+     * @return array<string, mixed>
+     *
+     * @throws RuntimeException for a value that is no array keyed by strings
+     */
+    protected function getArrayValue(string $key): array
+    {
+        $value = $this->getConfigValue($key);
+
+        if (!is_array($value)) {
+            throw new RuntimeException(
+                'The configuration\'s doctrine.' . $key . ' must be an array, not ' . get_debug_type($value) . '.',
+            );
+        }
+
+        /** @var array<string, mixed> $value */
+        return $value;
     }
 
     protected function getConfigValue(string $value): mixed
     {
-        $config = $this->getConfig();
-
-        if (!isset($config[$value])) {
-            return null;
-        }
-
-        return $config[$value];
+        return $this->getConfig()[$value] ?? null;
     }
 }

@@ -1,0 +1,16 @@
+#!/bin/sh
+# PHP_CodeSniffer's fixer in the development container: src, config and tests unless paths are given. Review its
+# changes before keeping them, and run docker/php-cs-fixer after it: both formatters must agree.
+set -eu
+
+# Without a path among the arguments (none, or options only), the default paths are checked
+for argument in "$@"; do
+    case $argument in
+        -*) ;;
+        *) exec sh "$(dirname -- "$0")/run" vendor/bin/phpcbf "$@" ;;
+    esac
+done
+
+set -- "$@" src config tests
+
+exec sh "$(dirname -- "$0")/run" vendor/bin/phpcbf "$@"

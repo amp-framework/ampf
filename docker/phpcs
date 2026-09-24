@@ -1,0 +1,19 @@
+#!/bin/sh
+# PHP_CodeSniffer (phpcs.xml.dist) in the development container: src, config and tests unless paths are given.
+#
+#   sh docker/phpcs
+#   sh docker/phpcs src/Bean
+#   sh docker/phpcs --report=summary
+set -eu
+
+# Without a path among the arguments (none, or options only), the default paths are checked
+for argument in "$@"; do
+    case $argument in
+        -*) ;;
+        *) exec sh "$(dirname -- "$0")/run" vendor/bin/phpcs "$@" ;;
+    esac
+done
+
+set -- "$@" src config tests
+
+exec sh "$(dirname -- "$0")/run" vendor/bin/phpcs "$@"

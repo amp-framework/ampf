@@ -15,7 +15,7 @@ use Symfony\Component\Cache\Adapter\PhpFilesAdapter;
  * results are kept there as PHP files: created on first use, never expiring — empty the directory on every deploy.
  * Without one (development) nothing outlives the process, so an entity change shows at once.
  */
-final class DoctrineConfiguration
+class DoctrineConfiguration
 {
     /**
      * @param list<string> $entityPaths the directories of the attribute-mapped entities

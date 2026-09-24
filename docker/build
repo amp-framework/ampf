@@ -1,0 +1,8 @@
+#!/bin/sh
+# Builds the development container's image again from the newest base images (PHP, Composer, the extension
+# installer); docker/run builds it once by itself when it is missing.
+set -eu
+
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+exec docker build --pull --tag "${AMPF_DOCKER_IMAGE:-ampf-dev}" "$project_dir/docker"

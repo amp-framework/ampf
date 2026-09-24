@@ -1,0 +1,13 @@
+#!/bin/sh
+# PHP-CS-Fixer (.php-cs-fixer.dist.php) in the development container: a dry run with the diff unless arguments are
+# given.
+#
+#   sh docker/php-cs-fixer              # what it would change
+#   sh docker/php-cs-fixer fix          # change it
+set -eu
+
+if [ "$#" -eq 0 ]; then
+    set -- fix --dry-run --diff
+fi
+
+exec sh "$(dirname -- "$0")/run" vendor/bin/php-cs-fixer "$@"

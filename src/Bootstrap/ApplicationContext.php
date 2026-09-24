@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ampf\Bootstrap;
 
 use ampf\Helper\Functions;
+use RuntimeException;
 
 /**
  * Loads the configuration: every file returns an array, and the arrays are merged in the order given, one level
@@ -14,27 +15,41 @@ use ampf\Helper\Functions;
 class ApplicationContext
 {
     /**
-     * The merged configuration of the files. They are executable PHP, `require`d in this method's scope: a file must
-     * not assign a variable named `$config`.
+     * The merged configuration of the files. Each file is executable PHP, `require`d in a scope of its own: its
+     * variables are its own, and it cannot see the configuration merged so far.
      *
      * @param ?list<string> $configFiles
      *
      * @return array<string, mixed>
+     *
+     * @throws RuntimeException when a file returns no array keyed by strings, or sets a key to a value that cannot
+     *     be merged with an earlier file's array
      */
     public static function boot(?array $configFiles = null): array
     {
         $config = [];
 
-        if ($configFiles !== null) {
-            foreach ($configFiles as $configFile) {
-                $config2 = require $configFile;
-                Functions::assertStringMixedArray($config2);
+        foreach ($configFiles ?? [] as $configFile) {
+            $fileConfig = static::load($configFile);
 
-                $config = self::mergeConfig($config, $config2);
+            try {
+                Functions::assertStringMixedArray($fileConfig);
+            } catch (RuntimeException $e) {
+                throw new RuntimeException('The configuration file ' . $configFile . ': ' . $e->getMessage(), 0, $e);
             }
+
+            $config = static::mergeConfig($config, $fileConfig);
         }
 
         return $config;
+    }
+
+    /**
+     * What a configuration file returns, the file run in a scope that holds nothing but its own name.
+     */
+    protected static function load(string $configFile): mixed
+    {
+        return (static fn (string $__file): mixed => require $__file)($configFile);
     }
 
     /**
@@ -48,25 +63,18 @@ class ApplicationContext
         $result = [];
 
         foreach ($config1 as $key => $value) {
-            // If config2 has no such entry, just take entry from config1
             if (!array_key_exists($key, $config2)) {
+                // Only config1 has the key: its value stays
                 $result[$key] = $value;
-            } else {
-                // If the value is an array, recurse one level deep
-                if (is_array($value) && $depth === 0) {
-                    Functions::assertStringMixedArray($value);
 
-                    // The value from config2 also needs to be an array
-                    $config2Value = $config2[$key];
-                    Functions::assertStringMixedArray($config2Value);
-
-                    $result[$key] = static::mergeConfig($value, $config2Value, ($depth + 1));
-                } else { // Else just take over the value from config2
-                    $result[$key] = $config2[$key];
-                }
-
-                unset($config2[$key]);
+                continue;
             }
+
+            // Both have the key: a top-level array is merged one level deep, anything else is config2's value
+            $result[$key] = is_array($value) && $depth === 0
+                ? static::mergeConfig(static::block($key, $value), static::block($key, $config2[$key]), $depth + 1)
+                : $config2[$key];
+            unset($config2[$key]);
         }
 
         // Copy all remaining entries from config2 to config1
@@ -75,5 +83,25 @@ class ApplicationContext
         }
 
         return $result;
+    }
+
+    /**
+     * A top-level block that two files define, which must be an array keyed by strings in both.
+     *
+     * @return array<string, mixed>
+     */
+    protected static function block(string $key, mixed $value): array
+    {
+        try {
+            Functions::assertStringMixedArray($value);
+        } catch (RuntimeException $e) {
+            throw new RuntimeException(
+                'The configuration\'s ' . $key . ' cannot be merged: ' . $e->getMessage(),
+                0,
+                $e,
+            );
+        }
+
+        return $value;
     }
 }

@@ -90,12 +90,23 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         $strings = [];
 
         foreach ($params as $key => $value) {
-            $strings[$key] = $value === null
-                ? ''
-                : (string)$value;
+            $strings[$key] = (string)$value;
         }
 
         return $strings;
+    }
+
+    /**
+     * The path without the base path: the base path's segments at its start are cut off, a longer segment that only
+     * starts like the base path (`application` under `app`) is not.
+     */
+    protected static function withoutBasePath(string $path, string $basePath): string
+    {
+        if ($basePath !== '' && ($path === $basePath || str_starts_with($path, $basePath . '/'))) {
+            return substr($path, strlen($basePath));
+        }
+
+        return $path;
     }
 
     public function __construct()
@@ -115,7 +126,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function addHeader(string $key, string $value): self
     {
         if (trim($key) === '' || trim($value) === '') {
-            throw new RuntimeException();
+            throw new RuntimeException('A header needs a name and a value.');
         }
 
         // A header's name is a token, and its value one line: nothing a client sent reaches header() otherwise
@@ -162,10 +173,13 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         return !is_string($site) || in_array(strtolower(trim($site)), ['', 'same-origin', 'none'], true);
     }
 
+    /**
+     * @phpstan-impure
+     */
     public function flush(): self
     {
         // PHP's own header, which a development php.ini's expose_php adds: nothing a client needs to know
-        header_remove('X-Powered-By');
+        $this->removeHeader('X-Powered-By');
 
         // Everything is checked before the first byte goes out: a refused header ends the request as an error
         foreach ($this->headers as $header) {
@@ -178,15 +192,15 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             throw new RuntimeException('A redirect target must not contain a control character.');
         }
 
-        http_response_code($this->responseStatusCode);
+        $this->sendStatusCode($this->responseStatusCode);
 
         foreach ($this->headers as $header) {
-            header($header, true);
+            $this->sendHeader($header);
         }
         $this->headers = [];
 
         if ($this->responseRedirect !== null) {
-            header('Location: ' . $this->responseRedirect['target'], true, $this->responseRedirect['code']);
+            $this->sendHeader('Location: ' . $this->responseRedirect['target'], $this->responseRedirect['code']);
             $this->responseRedirect = null;
         }
 
@@ -199,54 +213,43 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     }
 
     /**
+     * The languages of the Accept-Language header in their order, each with its quality (1.0 unless the header
+     * names one); a range whose quality is malformed or 0 (not acceptable) is left out.
+     *
      * @return list<stdClass>
      */
     public function getAcceptedLanguages(): array
     {
-        if (!$this->hasServerParam('HTTP_ACCEPT_LANGUAGE')) {
-            return [];
-        }
-
-        $httpAcceptLanguage = $this->getServerParam('HTTP_ACCEPT_LANGUAGE');
-
-        if (!is_string($httpAcceptLanguage)) {
-            $httpAcceptLanguage = '';
-        }
-        $serverParam = explode(',', $httpAcceptLanguage);
-
+        $header = $this->getServerParam('HTTP_ACCEPT_LANGUAGE');
         $results = [];
 
-        foreach ($serverParam as $language) {
-            $language = trim($language);
-            $quality = ((float)1);
+        foreach (explode(',', is_string($header) ? $header : '') as $range) {
+            $parts = explode(';', $range);
+            $language = trim($parts[0]);
+            $quality = 1.0;
 
             if ($language === '') {
                 continue;
             }
 
-            if (str_contains($language, ';')) {
-                [$language, $quality] = explode(';', $language);
-                $language = trim($language);
-                $quality = trim($quality);
-
-                if ($language === '' || $quality === '' || !str_starts_with($quality, 'q=')) {
+            // The first parameter is the weight, q=0 to q=1 with up to three decimals (RFC 9110, section 12.4.2)
+            if (isset($parts[1])) {
+                if (preg_match('/^\s*q=(0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\s*$/iD', $parts[1], $match) !== 1) {
                     continue;
                 }
 
-                $quality = trim(substr($quality, strlen('q=')));
+                $quality = (float)$match[1];
 
-                if (((string)(float)$quality) !== $quality || $quality > 1 || $quality <= 0) {
+                if ($quality === 0.0) {
                     continue;
                 }
-
-                $quality = ((float)$quality);
             }
 
-            $cresult = new stdClass();
-            $cresult->language = $language;
-            $cresult->quality = $quality;
+            $result = new stdClass();
+            $result->language = $language;
+            $result->quality = $quality;
 
-            $results[] = $cresult;
+            $results[] = $result;
         }
 
         return $results;
@@ -259,41 +262,23 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     public function getServerParam(string $key): mixed
     {
-        if (!$this->hasServerParam($key)) {
-            return null;
-        }
-        assert(isset($this->server[$key]));
-
-        return $this->server[$key];
+        return $this->server[$key] ?? null;
     }
 
     public function getController(): ?string
     {
-        return $this->getRouteResolver()->getControllerByRoutePattern(
-            $this->getRoute(),
-        );
+        return $this->getRouteResolver()->getControllerByRoutePattern($this->getRoute());
     }
 
     public function getCookieParam(string $key): mixed
     {
-        if (!$this->hasCookieParam($key)) {
-            return null;
-        }
-        assert(isset($this->cookie[$key]));
-
-        return $this->cookie[$key];
+        return $this->cookie[$key] ?? null;
     }
 
     public function getBody(): string
     {
-        if ($this->body === null) {
-            $body = file_get_contents('php://input');
-            $this->body = is_string($body)
-                ? $body
-                : '';
-        }
-
-        return $this->body;
+        // PHP's input stream is read once: a second read would find it empty
+        return $this->body ??= (string)file_get_contents('php://input');
     }
 
     public function getGetString(string $key): string
@@ -326,13 +311,9 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             return [$value];
         }
 
-        if (!is_array($value)) {
-            return [];
-        }
-
         $strings = [];
 
-        foreach ($value as $entry) {
+        foreach (is_array($value) ? $value : [] as $entry) {
             if (is_string($entry)) {
                 $strings[] = $entry;
             }
@@ -347,14 +328,9 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function getPostStringMap(string $key): array
     {
         $value = $this->getPostParam($key);
-
-        if (!is_array($value)) {
-            return [];
-        }
-
         $strings = [];
 
-        foreach ($value as $index => $entry) {
+        foreach (is_array($value) ? $value : [] as $index => $entry) {
             if (is_string($entry)) {
                 $strings[$index] = $entry;
             }
@@ -365,12 +341,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     public function getPostParam(string $key): mixed
     {
-        if (!$this->hasPostParam($key)) {
-            return null;
-        }
-        assert(isset($this->post[$key]));
-
-        return $this->post[$key];
+        return $this->post[$key] ?? null;
     }
 
     public function hasPostParam(string $key): bool
@@ -380,7 +351,6 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     public function getRefererLocalized(): ?string
     {
-        // Get the raw referer
         $referer = $this->getRefererRaw();
 
         if ($referer === null) {
@@ -394,34 +364,12 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             return null;
         }
 
-        // Trim beginning slashes of the resulting referer...
-        $referer = ltrim($path, '/');
+        // The route: the path without the application's base path
+        $referer = ltrim(static::withoutBasePath(ltrim($path, '/'), $this->getBasePath()), '/');
 
-        // Get our app prefix, aka the webserver document root prefix of our app
-        $scriptName = $this->getServerParam('SCRIPT_NAME');
-
-        if (!is_string($scriptName)) {
-            throw new RuntimeException();
-        }
-        $prefix = ltrim($this->getDirname($scriptName), '/');
-
-        // Is $prefix non-empty, and do we have $prefix as a real prefix of our referer?
-        $i = mb_strpos($referer, $prefix);
-
-        if ($prefix !== '' && $i === 0) {
-            // Yes, so remove it from the referer
-            $referer = mb_substr($referer, ($i + mb_strlen($prefix)));
-        }
-
-        // Trim beginning slashes of the resulting referer...
-        $referer = ltrim($referer, '/');
-
-        // And return with the resulting referer, null if we are empty
-        if (trim($referer) === '') {
-            return null;
-        }
-
-        return $referer;
+        return trim($referer) === ''
+            ? null
+            : $referer;
     }
 
     public function getRefererRaw(): ?string
@@ -437,18 +385,12 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     public function getResponse(): string
     {
-        if ($this->responseBody === null) {
-            return '';
-        }
-
-        return $this->responseBody;
+        return $this->responseBody ?? '';
     }
 
     public function getRouteID(): ?string
     {
-        return $this->getRouteResolver()->getRouteIDByRoutePattern(
-            $this->getRoute(),
-        );
+        return $this->getRouteResolver()->getRouteIDByRoutePattern($this->getRoute());
     }
 
     /**
@@ -456,29 +398,14 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
      */
     public function getRouteParams(): ?array
     {
-        return $this->getRouteResolver()->getParamsByRoutePattern(
-            $this->getRoute(),
-        );
+        return $this->getRouteResolver()->getParamsByRoutePattern($this->getRoute());
     }
 
     public function hasCorrectToken(): bool
     {
-        $tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
+        $tokenService = $this->getXsrfTokenService();
 
-        // no token in request - cannot have correct token
-        if (!$this->hasGetParam($tokenKey)) {
-            return false;
-        }
-
-        // take the token
-        $tokenValue = $this->getGetParam($tokenKey);
-
-        if (!is_string($tokenValue)) {
-            $tokenValue = '';
-        }
-
-        // and return whether it is correct
-        return $this->getXsrfTokenService()->isCorrectToken($tokenValue);
+        return $tokenService->isCorrectToken($this->getGetString($tokenService->getTokenIDForRequest()));
     }
 
     public function hasGetParam(string $key): bool
@@ -488,19 +415,12 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     public function getGetParam(string $key): mixed
     {
-        if (!$this->hasGetParam($key)) {
-            return null;
-        }
-        assert(isset($this->get[$key]));
-
-        return $this->get[$key];
+        return $this->get[$key] ?? null;
     }
 
     public function isPostRequest(): bool
     {
-        return
-            $this->hasServerParam('REQUEST_METHOD')
-            && $this->getServerParam('REQUEST_METHOD') === 'POST';
+        return $this->getServerParam('REQUEST_METHOD') === 'POST';
     }
 
     public function isRedirect(): bool
@@ -519,26 +439,16 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         ?string $hashParam = null,
     ): self {
         if ($this->responseBody !== null) {
-            throw new RuntimeException();
+            throw new RuntimeException('A redirect cannot follow a response body.');
         }
 
-        if ($params === null) {
-            $params = [];
+        $code ??= 301;
+
+        if ($code < 300 || $code > 399) {
+            throw new InvalidArgumentException('A redirect\'s status is a code from 300 to 399, not ' . $code . '.');
         }
 
-        if ($code === null) {
-            $code = 301;
-        }
-
-        if ($addToken === null) {
-            $addToken = false;
-        }
-
-        if ($hashParam === null) {
-            $hashParam = '';
-        }
-
-        $target = $this->getActionLink($routeID, $params, $addToken, $hashParam);
+        $target = $this->getActionLink($routeID, $params, $addToken ?? false, $hashParam);
 
         if (static::hasControlCharacter($target)) {
             throw new RuntimeException('A redirect target must not contain a control character.');
@@ -563,58 +473,35 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     ): string {
         $params = static::stringifyParams($params ?? []);
 
-        if ($hashParam === null) {
-            $hashParam = '';
-        }
-
         if ($addToken === true) {
-            $tokenKey = $this->getXsrfTokenService()->getTokenIDForRequest();
-            $tokenValue = $this->getXsrfTokenService()->getNewToken();
-            $params[$tokenKey] = $tokenValue;
+            $params[$this->getXsrfTokenService()->getTokenIDForRequest()] = $this->getXsrfTokenService()->getNewToken();
         }
 
-        $routePattern = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params);
+        $link = $this->getRouteResolver()->getRoutePatternByRouteID($routeID, $params)
+            ?? throw new RuntimeException('There is no route ' . $routeID . '.');
 
-        if ($routePattern === null) {
-            throw new RuntimeException("Route pattern not found for routeID {$routeID}");
+        $query = [];
+
+        foreach ($this->getRouteResolver()->getNotDefinedParams($routeID, $params) ?? [] as $key => $value) {
+            $query[] = rawurlencode($key) . '=' . rawurlencode($value);
         }
 
-        $notDefinedParams = $this->getRouteResolver()->getNotDefinedParams($routeID, $params);
-
-        if (is_array($notDefinedParams) && count($notDefinedParams) > 0) {
-            $additionalParams = [];
-
-            foreach ($notDefinedParams as $paramKey => $paramValue) {
-                $additionalParams[] = (rawurlencode($paramKey) . '=' . rawurlencode($paramValue));
-            }
-            $routePattern .= ('?' . implode('&', $additionalParams));
+        if ($query !== []) {
+            $link .= '?' . implode('&', $query);
         }
 
-        if (trim($hashParam) !== '') {
-            $routePattern .= ('#' . rawurlencode($hashParam));
+        if (trim($hashParam ?? '') !== '') {
+            $link .= '#' . rawurlencode((string)$hashParam);
         }
 
-        return $this->getLink($routePattern);
+        return $this->getLink($link);
     }
 
     public function getLink(string $relative): string
     {
-        $scriptName = $this->getServerParam('SCRIPT_NAME');
+        $basePath = $this->getBasePath();
 
-        if (!is_string($scriptName)) {
-            throw new RuntimeException();
-        }
-
-        $path = $this->getDirname($scriptName);
-
-        $route = '';
-
-        if (trim($path) !== '') {
-            $route .= ('/' . $path);
-        }
-        $route .= ('/' . $relative);
-
-        return $route;
+        return ($basePath === '' ? '' : '/' . $basePath) . '/' . $relative;
     }
 
     /**
@@ -633,7 +520,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function setResponse(string $response): self
     {
         if ($this->responseRedirect !== null) {
-            throw new RuntimeException();
+            throw new RuntimeException('A response body cannot follow a redirect.');
         }
 
         $this->responseBody = $response;
@@ -644,12 +531,29 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function setStatusCode(int $statusCode): self
     {
         if ($statusCode < 100 || $statusCode > 599) {
-            throw new RuntimeException();
+            throw new RuntimeException('An HTTP status is a code from 100 to 599, not ' . $statusCode . '.');
         }
 
         $this->responseStatusCode = $statusCode;
 
         return $this;
+    }
+
+    /**
+     * The application's base path: the directory of the script (SCRIPT_NAME) without its slashes, "" at the
+     * site's root.
+     *
+     * @throws RuntimeException when the request has no SCRIPT_NAME
+     */
+    protected function getBasePath(): string
+    {
+        $scriptName = $this->getServerParam('SCRIPT_NAME');
+
+        if (!is_string($scriptName)) {
+            throw new RuntimeException('The request has no SCRIPT_NAME: its base path is unknown.');
+        }
+
+        return $this->getDirname($scriptName);
     }
 
     /**
@@ -714,13 +618,12 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             return [];
         }
 
-        $config = $this->getBeanFactory()->get('Config');
-        $cookies = is_array($config)
-            ? ($config['cookies'] ?? [])
-            : [];
+        $cookies = $this->getBeanFactory()->getConfig()['cookies'] ?? [];
 
         if (!is_array($cookies)) {
-            throw new InvalidArgumentException('The configuration\'s cookies block must be an array.');
+            throw new InvalidArgumentException(
+                'The configuration\'s cookies must be an array, not ' . get_debug_type($cookies) . '.',
+            );
         }
 
         $defaults = [];
@@ -779,42 +682,22 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             . (isset($parts['query']) ? '?' . $parts['query'] : '');
     }
 
+    /**
+     * The route: REQUEST_URI's path without the query string and without the application's base path.
+     *
+     * @throws RuntimeException when the request has no REQUEST_URI
+     */
     protected function getRoute(): string
     {
-        $route = $this->getServerParam('REQUEST_URI');
+        $uri = $this->getServerParam('REQUEST_URI');
 
-        if (!is_string($route)) {
-            throw new RuntimeException();
+        if (!is_string($uri)) {
+            throw new RuntimeException('The request has no REQUEST_URI: its route is unknown.');
         }
 
-        // Remove beginning slashes, just to be sure
-        $route = ltrim($route, '/');
+        $path = ltrim(explode('?', $uri, 2)[0], '/');
 
-        // Get the base path
-        $scriptName = $this->getServerParam('SCRIPT_NAME');
-
-        if (!is_string($scriptName)) {
-            throw new RuntimeException();
-        }
-
-        $base = $this->getDirname($scriptName);
-
-        // If it is set, remove it from the route
-        if ($base !== '' && str_starts_with($route, $base)) {
-            $route = substr($route, mb_strlen($base));
-        }
-
-        // search for a questionmark and only take the string before it
-        // this is done because we don't want to have GET-params into the route
-        $questionMarkPosition = strpos($route, '?');
-
-        if ($questionMarkPosition !== false) {
-            $route = substr($route, 0, $questionMarkPosition);
-        }
-
-        // Remove beginning slashes again, just to be sure...
-        // There still might be some when running directly on a domain and not in a subdirectory
-        return ltrim($route, '/');
+        return ltrim(static::withoutBasePath($path, $this->getBasePath()), '/');
     }
 
     /** Whether the web server says the request came over TLS (its HTTPS variable, "off" meaning not). */
@@ -835,35 +718,54 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         setcookie($key, $value, $options);
     }
 
+    /**
+     * Hands a header line to PHP, replacing an earlier one of the name; $statusCode is the status that goes with it
+     * (a redirect's), 0 for none. With sendStatusCode() and removeHeader() the place a response's head leaves the
+     * request, so that a test can record it instead.
+     */
+    protected function sendHeader(string $header, int $statusCode = 0): void
+    {
+        header($header, true, $statusCode);
+    }
+
+    /** Hands the response's status code to PHP (see sendHeader()). */
+    protected function sendStatusCode(int $statusCode): void
+    {
+        http_response_code($statusCode);
+    }
+
+    /** Takes a header PHP added by itself out of the response (see sendHeader()). */
+    protected function removeHeader(string $name): void
+    {
+        header_remove($name);
+    }
+
+    /**
+     * The directory of a script's path, without its slashes: every segment of the path letters, digits and `_.%-`.
+     *
+     * @throws RuntimeException for a segment of other characters
+     */
     protected function getDirname(string $path): string
     {
         // replace backslashes with slashes (windows)
         $path = str_replace('\\', '/', $path);
-        // remove trailing slashes
-        $path = trim($path, '/');
-        // explode for slashes
-        $path = explode('/', $path);
 
-        foreach ($path as $pathKey => $value) {
-            // Remove empty paths information (this changes 'blub//didub' to 'blub/didub')
-            if ($value === '') {
-                unset($path[$pathKey]);
+        // the segments, without the empty ones ('blub//didub' is 'blub/didub')
+        $segments = array_values(
+            array_filter(explode('/', $path), static fn (string $segment): bool => $segment !== ''),
+        );
 
-                continue;
-            }
-
-            // A-Z a-z _ . % -
-            if (!preg_match('/^[A-Za-z0-9_\.%\-]+$/', $value)) {
-                throw new RuntimeException();
+        foreach ($segments as $segment) {
+            if (preg_match('/^[A-Za-z0-9_\.%\-]+$/D', $segment) !== 1) {
+                throw new RuntimeException(
+                    'The script\'s path ' . $path . ' has a segment other than letters, digits and _.%-.',
+                );
             }
         }
 
-        array_pop($path);
+        // the directory: without the script's own name
+        array_pop($segments);
 
-        if (count($path) === 0) {
-            return '';
-        }
-
-        return implode('/', $path);
+        return implode('/', $segments);
     }
 }

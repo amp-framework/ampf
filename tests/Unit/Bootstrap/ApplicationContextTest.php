@@ -12,9 +12,12 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 #[CoversClass(ApplicationContext::class)]
-class ApplicationContextTest extends TestCase
+final class ApplicationContextTest extends TestCase
 {
-    protected ApplicationContext $out;
+    /**
+     * @var list<string>
+     */
+    private array $files = [];
 
     public static function provideTestMergeConfig(): Generator
     {
@@ -81,12 +84,12 @@ class ApplicationContextTest extends TestCase
             ],
             [
                 'config1value' => 'foobarbaz1',
-                'config2value' => 'foobarbaz2',
                 'nestedconfig' => [
                     'nested1value' => 'nested1barbaz',
                     'nested2value' => 'nested2barbaz',
                     'nested3value' => 123,
                 ],
+                'config2value' => 'foobarbaz2',
             ],
         ];
 
@@ -135,47 +138,42 @@ class ApplicationContextTest extends TestCase
                 ],
             ],
         ];
-    }
 
-    public function setUp(): void
-    {
-        parent::setUp();
-
-        $this->out = new class extends ApplicationContext {
-            /**
-             * @param array<string, mixed> $config1
-             * @param array<string, mixed> $config2
-             *
-             * @return array<string, mixed>
-             */
-            public static function mergeConfig(array $config1, array $config2, int $depth = 0): array
-            {
-                return parent::mergeConfig($config1, $config2, $depth);
-            }
-        };
-    }
-
-    public function testDoctrineConfigIsMerged(): void
-    {
-        $this->assertDoctrineConfig(
+        yield $i++ . ' inside a block, a scalar replaces an array' => [
             [
-                'connectionParams' => [
-                    'user' => 'user',
-                ],
+                'doctrine' => ['mappingOverrides' => ['enum' => 'string']],
             ],
             [
-                'connectionParams' => [
-                    'unix_socket' => '/run/123',
-                    'user' => 'user2',
-                ],
+                'doctrine' => ['mappingOverrides' => null],
             ],
             [
-                'connectionParams' => [
-                    'unix_socket' => '/run/123',
-                    'user' => 'user2',
-                ],
+                'doctrine' => ['mappingOverrides' => null],
             ],
-        );
+        ];
+
+        yield $i++ . ' an array replaces a scalar' => [
+            [
+                'translation.dir' => null,
+            ],
+            [
+                'translation.dir' => ['de' => '/translations'],
+            ],
+            [
+                'translation.dir' => ['de' => '/translations'],
+            ],
+        ];
+
+        yield $i++ . ' existing keys keep their place, new ones follow' => [
+            [
+                'routes' => ['catch-all' => 'first', 'home' => 'second'],
+            ],
+            [
+                'routes' => ['added' => 'third', 'home' => 'replaced'],
+            ],
+            [
+                'routes' => ['catch-all' => 'first', 'home' => 'replaced', 'added' => 'third'],
+            ],
+        ];
     }
 
     /**
@@ -186,50 +184,117 @@ class ApplicationContextTest extends TestCase
     #[DataProvider('provideTestMergeConfig')]
     public function testMergeConfig(array $config1, array $config2, array $expectedResult): void
     {
-        /** @phpstan-ignore-next-line */
-        $result = $this->out->mergeConfig($config1, $config2);
+        self::assertSame($expectedResult, ApplicationContext::boot([$this->file($config1), $this->file($config2)]));
+    }
 
-        static::assertArraysAreIdenticalIgnoringOrder($expectedResult, $result);
+    public function testNoFilesAreNoConfiguration(): void
+    {
+        self::assertSame([], ApplicationContext::boot());
+        self::assertSame([], ApplicationContext::boot([]));
+    }
+
+    public function testTheFilesAreMergedInTheirOrder(): void
+    {
+        $config = ApplicationContext::boot([
+            $this->file(['doctrine' => ['connectionParams' => ['user' => 'user']], 'viewDirectory' => '/first']),
+            $this->file(['doctrine' => ['connectionParams' => ['unix_socket' => '/run/123', 'user' => 'user2']]]),
+            $this->file(['viewDirectory' => '/third']),
+        ]);
+
+        self::assertSame(
+            [
+                'doctrine' => ['connectionParams' => ['unix_socket' => '/run/123', 'user' => 'user2']],
+                'viewDirectory' => '/third',
+            ],
+            $config,
+        );
+    }
+
+    public function testAFileRunsInAScopeOfItsOwn(): void
+    {
+        $config = ApplicationContext::boot([
+            $this->file(['first' => 1]),
+            $this->source(
+                "\$config = ['clobbered' => true];\n\$configFile = 'x';\n\nreturn ['second' => 2, 'saw' => isset(\$fileConfig) || isset(\$configFiles)];",
+            ),
+        ]);
+
+        self::assertSame(['first' => 1, 'second' => 2, 'saw' => false], $config);
+    }
+
+    public function testAFileThatReturnsNoArrayIsRefused(): void
+    {
+        $file = $this->source('return 42;');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The configuration file ' . $file . ': Expected an array keyed by strings, got int.',
+        );
+
+        ApplicationContext::boot([$file]);
+    }
+
+    public function testAFileThatReturnsAListIsRefused(): void
+    {
+        $file = $this->file(['beans', 'routes']);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The configuration file ' . $file . ': Expected an array keyed by strings, found the key 0.',
+        );
+
+        ApplicationContext::boot([$file]);
+    }
+
+    public function testABlockCannotBeReplacedByAScalar(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The configuration\'s doctrine cannot be merged: Expected an array keyed by strings, got string.',
+        );
+
+        ApplicationContext::boot(
+            [$this->file(['doctrine' => ['configuration' => null]]), $this->file(['doctrine' => 'none'])],
+        );
+    }
+
+    public function testAListCannotBeMerged(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The configuration\'s paths cannot be merged: Expected an array keyed by strings, found the key 0.',
+        );
+
+        ApplicationContext::boot([$this->file(['paths' => ['/a']]), $this->file(['paths' => ['/b']])]);
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->files as $file) {
+            unlink($file);
+        }
     }
 
     /**
-     * @param array{connectionParams: array<string, string>} $doctrineConfig1
-     * @param array{connectionParams: array<string, string>} $doctrineConfig2
-     * @param array{connectionParams: array<string, string>} $expectedConfig
+     * A configuration file returning the array.
+     *
+     * @param array<mixed> $config
      */
-    protected function assertDoctrineConfig(array $doctrineConfig1, array $doctrineConfig2, array $expectedConfig): void
+    private function file(array $config): string
     {
-        $tmpfile1 = null;
-        $tmpfile2 = null;
+        return $this->source('return ' . var_export($config, true) . ';');
+    }
 
-        try {
-            $tmpfile1 = tempnam(sys_get_temp_dir(), (string)mt_rand());
-            $tmpfile2 = tempnam(sys_get_temp_dir(), (string)mt_rand());
+    /**
+     * A configuration file of this code.
+     */
+    private function source(string $code): string
+    {
+        $file = tempnam(sys_get_temp_dir(), 'ampf-config-');
+        self::assertIsString($file);
+        file_put_contents($file, "<?php\n\ndeclare(strict_types=1);\n\n" . $code . "\n");
+        $this->files[] = $file;
 
-            if ($tmpfile1 === false || $tmpfile2 === false) {
-                throw new RuntimeException();
-            }
-
-            $arr1 = ['doctrine' => $doctrineConfig1];
-            $arr2 = ['doctrine' => $doctrineConfig2];
-
-            file_put_contents($tmpfile1, '<?php return ' . var_export($arr1, true) . ';');
-            file_put_contents($tmpfile2, '<?php return ' . var_export($arr2, true) . ';');
-
-            $config = ApplicationContext::boot([$tmpfile1, $tmpfile2]);
-
-            static::assertSame(
-                ['doctrine' => $expectedConfig],
-                $config,
-            );
-        } finally {
-            if ($tmpfile1 !== null && $tmpfile1 !== false) {
-                unlink($tmpfile1);
-            }
-
-            if ($tmpfile2 !== null && $tmpfile2 !== false) {
-                unlink($tmpfile2);
-            }
-        }
+        return $file;
     }
 }

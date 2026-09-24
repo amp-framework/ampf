@@ -8,6 +8,7 @@ use ampf\Bean\BeanFactoryAccessInterface;
 use ampf\BeanAccess\BeanFactoryAccess;
 use ampf\BeanAccess\Doctrine\DoctrineConfigAccess;
 use ampf\BeanAccess\Doctrine\DoctrineEntityManagerAccess;
+use ampf\BeanAccess\Doctrine\EntityManagerFactoryAccess;
 use ampf\BeanAccess\Doctrine\Repository\AbstractRepoAccess;
 use ampf\BeanAccess\RouteResolverAccess;
 use ampf\BeanAccess\Service\ConfigurationServiceAccess;
@@ -30,6 +31,7 @@ final class AccessTraitHost implements BeanFactoryAccessInterface
     use ConfigurationServiceAccess;
     use DoctrineConfigAccess;
     use DoctrineEntityManagerAccess;
+    use EntityManagerFactoryAccess;
     use HasherServiceAccess;
     use RouteResolverAccess;
     use SessionServiceAccess;

@@ -8,6 +8,7 @@ use ampf\Bean\BeanFactory;
 use ampf\BeanAccess\BeanFactoryAccess;
 use ampf\BeanAccess\Doctrine\DoctrineConfigAccess;
 use ampf\BeanAccess\Doctrine\DoctrineEntityManagerAccess;
+use ampf\BeanAccess\Doctrine\EntityManagerFactoryAccess;
 use ampf\BeanAccess\Doctrine\Repository\AbstractRepoAccess;
 use ampf\BeanAccess\RouteResolverAccess;
 use ampf\BeanAccess\Service\ConfigurationServiceAccess;
@@ -47,6 +48,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversTrait(ConfigurationServiceAccess::class)]
 #[CoversTrait(DoctrineConfigAccess::class)]
 #[CoversTrait(DoctrineEntityManagerAccess::class)]
+#[CoversTrait(EntityManagerFactoryAccess::class)]
 #[CoversTrait(HasherServiceAccess::class)]
 #[CoversTrait(RouteResolverAccess::class)]
 #[CoversTrait(SessionServiceAccess::class)]
@@ -68,6 +70,11 @@ final class AccessTraitsTest extends TestCase
             ConfigurationServiceInterface::class,
         ];
         yield 'DoctrineConfigAccess' => ['getDoctrineConfig', 'setDoctrineConfig', DoctrineConfigInterface::class];
+        yield 'EntityManagerFactoryAccess' => [
+            'getEntityManagerFactory',
+            'setEntityManagerFactory',
+            EntityManagerFactoryInterface::class,
+        ];
         yield 'HasherServiceAccess' => ['getHasherService', 'setHasherService', HasherServiceInterface::class];
         yield 'RouteResolverAccess' => ['getRouteResolver', 'setRouteResolver', RouteResolverInterface::class];
         yield 'SessionServiceAccess' => ['getSessionService', 'setSessionService', SessionServiceInterface::class];

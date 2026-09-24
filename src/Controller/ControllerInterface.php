@@ -8,8 +8,10 @@ use ampf\Request\CliRequestInterface;
 use ampf\Request\HttpRequestInterface;
 
 /**
- * A controller bean: the router runs beforeAction(), execute() with the route's parameters in their order, then
- * afterAction(). The controller prepares the response on its request; the entry point flushes it.
+ * A controller bean: the router runs beforeAction(), execute() with the route's parameters, then afterAction(). On the
+ * web, execute() takes a route's named captures by their names (an optional parameter each); on the command line, the
+ * arguments after the route in their order. The controller prepares the response on its request; the entry point
+ * flushes it.
  */
 interface ControllerInterface
 {

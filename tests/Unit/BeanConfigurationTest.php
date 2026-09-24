@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ampf\Tests\Unit;
 
+use ampf\Controller\Cli\BeanAccessGeneratorController;
 use ampf\Request\CliRequestInterface;
 use ampf\Request\HttpRequestInterface;
 use ampf\Router\CliRouterInterface;
@@ -17,7 +18,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * The framework's bean configuration: every service in config/default.php is keyed by an interface its class
  * implements (an application replaces it under the same key), and each transport file fills the four roles —
- * 'Router', 'Request', 'RequestStub', 'View' — with classes of that transport. A typo on either side would only show
+ * 'Router', 'Request', 'RequestStub', 'View' — with classes of that transport (the command line has the generator's
+ * controller besides). A typo on either side would only show
  * as a "No configuration for bean" or a TypeError at the first use.
  */
 #[CoversNothing]
@@ -39,6 +41,7 @@ final class BeanConfigurationTest extends TestCase
             'Request' => CliRequestInterface::class,
             'RequestStub' => CliRequestInterface::class,
             'View' => CliViewInterface::class,
+            'BeanAccessGeneratorController' => BeanAccessGeneratorController::class,
         ]];
     }
 

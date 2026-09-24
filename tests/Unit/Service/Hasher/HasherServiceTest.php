@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 #[CoversClass(HasherService::class)]
 final class HasherServiceTest extends TestCase
@@ -87,8 +88,17 @@ final class HasherServiceTest extends TestCase
     public function testAStringWithANulByteIsNotHashed(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('bcrypt cannot hash a string with a NUL byte.');
 
         new HasherService()->hash("secret\0tail");
+    }
+
+    public function testABlankStringIsNotHashed(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A blank string is no secret to hash.');
+
+        new HasherService()->hash(" \n");
     }
 
     public function testAvoidingATimingAttackSpendsOneCheck(): void

@@ -6,21 +6,19 @@ namespace ampf\Doctrine;
 
 use Doctrine\ORM\Configuration;
 
-/** What the entity manager factory needs to create the entity manager. */
+/**
+ * What the entity manager factory needs to create the entity manager.
+ *
+ * @phpstan-import-type Params from \Doctrine\DBAL\DriverManager
+ */
 interface DoctrineConfigInterface
 {
     public function getConfiguration(): Configuration;
 
     /**
-     * @return array{
-     *     'driver': 'pdo_mysql',
-     *     'host': string,
-     *     'user': string,
-     *     'password': string,
-     *     'dbname': string,
-     *     'charset': string,
-     *     'driverOptions': array<string, string>,
-     * }
+     * The parameters of the connection (DriverManager::getConnection()).
+     *
+     * @return Params
      */
     public function getConnectionParams(): array;
 

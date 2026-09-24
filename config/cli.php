@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ampf\Controller\Cli\BeanAccessGeneratorController;
 use ampf\Request\CliRequest;
 use ampf\Router\CliRouter;
 use ampf\View\CliView;
@@ -21,6 +22,10 @@ return [
         'RequestStub' => ['class' => CliRequest::class, 'parent' => 'Request', 'scope' => 'prototype'],
         // A new view for each use, so one template's variables never reach the next (subRender())
         'View' => ['class' => CliView::class, 'scope' => 'prototype'],
+
+        // Writes the application's bean access traits (its `beanAccessGenerator` block names the application); the
+        // application routes a command to it, e.g. 'beanAccess/generate'
+        'BeanAccessGeneratorController' => ['class' => BeanAccessGeneratorController::class],
     ],
 
     // The directory of the templates (ViewResolver); the application names its own
