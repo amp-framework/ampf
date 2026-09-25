@@ -46,7 +46,7 @@ ampf has consumers: applications install it (often as `dev-master`), subclass it
 
 Infection (`infection.json5.dist`) mutates `src/` with every mutator of its default profile and of `@identical` and `@nullify`, on covered and uncovered code (`docker/infection` passes `--with-uncovered`), and the unit suite must kill every mutant; PHPStan kills those that could not pass `sh docker/ci` either. The integration suite covers nothing, so it kills nothing. Left out, each with its reason in the configuration: `@equal` (`!==` made `!=` is the same comparison between values of one type), and the removal of the three calls that hand a cookie or a header's removal to PHP (`HttpRequest::sendCookie()`, `removeHeader()`, `SessionService::sendCookie()`), whose effect no command line process can see.
 
-- **A surviving mutant is a missing test or needless code.** Write the test that tells the mutant from the code — the input at the boundary, the message asserted, the order checked with input out of order —, or remove what no input can reach. An ignore is for what no test process can observe, with its reason.
+- **A surviving mutant is a missing test or needless code.** Write the test that tells the mutant from the code — the input at the boundary, the message asserted, the order checked with input out of order, the identity of what a cache keeps, the calls a check saves —, or remove what no input can reach. A cache, a check that saves work or a diagnostic is not needless because only time or a message tells it from its mutant; and Infection takes a PHPUnit run that only warns for a pass, so a mutant whose only effect is a warning needs a test that sees it. An ignore is for what no test process can observe, with its reason.
 - **A protected method is an extension point, and a test proves it:** a subclass overrides it, and the class calls the override (`private` in its place fails the test). The `Seam*` doubles (`SeamBeanFactory`, `SeamHttpRequest`, `SeamSessionService`, `SeamFileStringCache`, `SeamRouteResolver`, `SeamBeanAccessGenerator`, …) note each protected method's call before they do its work; a single method gets an anonymous subclass in its test.
 - **What a test cannot fix** — the clock, a random draw, PHP's session start — goes through a protected method a test can: `FileStringCacheService::now()`, `randomizer()`, `SessionService::openSession()`.
 - **A mutant writes where its code tells it:** a test that writes files runs inside its temporary directory, so that a path that lost its directory lands there too.
@@ -61,7 +61,7 @@ sh docker/php-cs-fixer        # PHP-CS-Fixer, dry run; sh docker/php-cs-fixer fi
 sh docker/phpstan             # PHPStan at level max with checkExplicitMixed, the Doctrine and PHPUnit extensions
 sh docker/phpunit             # PHPUnit: fails on any warning, notice or deprecation, wherever it comes from
 sh docker/phpunit --testsuite unit --coverage-text   # one suite, with the coverage (PCOV)
-sh docker/infection           # the mutation testing, a minute and a half; --filter=src/Bean/BeanFactory.php for one file
+sh docker/infection           # the mutation testing, a minute and a half; src/Bean/BeanFactory.php for one file
 sh docker/ci mutation         # the mutation testing as the pipeline runs it
 ```
 

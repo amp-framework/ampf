@@ -27,9 +27,11 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function close(): void
     {
-        // The service's session, or one started elsewhere (session.auto_start): its lock goes either way
+        // The service's session, or one started elsewhere (session.auto_start): its lock goes either way, and what it
+        // read stays in $_SESSION for the rest of the request — it is not started again
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
+            $this->started = true;
         }
 
         $this->closed = true;
@@ -116,8 +118,11 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
      */
     protected function start(): void
     {
-        // Started once already, or elsewhere (session.auto_start): its cookie went out, nothing is left to configure
+        // Started once already, or elsewhere (session.auto_start): its cookie went out, nothing is left to configure —
+        // and once closed, it is not started again
         if ($this->started || session_status() === PHP_SESSION_ACTIVE) {
+            $this->started = true;
+
             return;
         }
 

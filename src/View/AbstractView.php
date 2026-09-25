@@ -30,6 +30,11 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
     protected array $memory = [];
 
     /**
+     * The zone of formatTime(), taken at the view's first format.
+     */
+    protected ?DateTimeZone $timezoneLocal = null;
+
+    /**
      * The time as a DateTimeImmutable: a DateTimeInterface as it is, a Unix timestamp in UTC. A template may hand in
      * anything, so anything is checked.
      *
@@ -71,7 +76,7 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
     }
 
     /**
-     * @throws RuntimeException when there is no such template
+     * @throws RuntimeException when there is no such template, or when it closed the view's buffer
      */
     public function render(string $view): string
     {
@@ -154,6 +159,8 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
     /**
      * What the callable prints, taken out of the output — all of it, and whatever buffer the callable left open,
      * when it fails.
+     *
+     * @throws RuntimeException when the callable closed the buffer it printed into
      */
     protected function capture(callable $print, mixed ...$arguments): string
     {
@@ -162,6 +169,14 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
 
         try {
             $print(...$arguments);
+
+            // Closed, the buffer's output is lost, and what surrounds it — another view's, PHP's own — is no output of
+            // this callable's
+            if (ob_get_level() <= $level) {
+                throw new RuntimeException(
+                    'The output was printed into no buffer of its own: its buffer was closed while printing.',
+                );
+            }
 
             // The buffer started here is there: ob_get_contents() is false without any
             return (string)ob_get_contents();
@@ -173,11 +188,11 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
     }
 
     /**
-     * The time zone formatTime() shows a time in: PHP's default time zone at the time — a view for a user of another
-     * zone returns that one.
+     * The time zone formatTime() shows a time in: PHP's default time zone at the view's first format, kept for the
+     * view's every other — a view for a user of another zone returns that one.
      */
     protected function getTimeZoneLocal(): DateTimeZone
     {
-        return new DateTimeZone(date_default_timezone_get());
+        return $this->timezoneLocal ??= new DateTimeZone(date_default_timezone_get());
     }
 }

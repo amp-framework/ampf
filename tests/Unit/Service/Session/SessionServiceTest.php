@@ -113,6 +113,17 @@ final class SessionServiceTest extends TestCase
         self::assertSame(PHP_SESSION_NONE, session_status());
     }
 
+    public function testASessionClosedBeforeItsFirstUseIsReadOnce(): void
+    {
+        $session = $this->seamSession([]);
+        $session->close();
+
+        $session->getAttribute('user');
+        $session->hasAttribute('user');
+
+        self::assertSame(1, $session->getStarts());
+    }
+
     public function testANewIdKeepsTheDataAndEndsTheOldSession(): void
     {
         $session = $this->newSession([]);
@@ -388,6 +399,30 @@ final class SessionServiceTest extends TestCase
         $session->close();
 
         self::assertSame(PHP_SESSION_NONE, session_status());
+    }
+
+    public function testASessionStartedElsewhereIsNotStartedAgainAfterItsClose(): void
+    {
+        session_start();
+        $_SESSION['user'] = 42;
+        $session = $this->seamSession([]);
+
+        $session->close();
+
+        self::assertSame(42, $session->getAttribute('user'), 'what it read');
+        self::assertSame(0, $session->getStarts());
+    }
+
+    public function testASessionClosedElsewhereIsNotStartedAgain(): void
+    {
+        session_start();
+        $session = $this->seamSession([]);
+        $session->setAttribute('user', 42);
+
+        session_write_close();
+
+        self::assertSame(42, $session->getAttribute('user'), 'what it read');
+        self::assertSame(0, $session->getStarts());
     }
 
     public function testANewIdAsTheFirstThingStartsTheSession(): void

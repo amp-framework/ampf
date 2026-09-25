@@ -134,6 +134,23 @@ final class AbstractViewTest extends TestCase
         $this->expectOutputString('');
     }
 
+    public function testATemplateThatClosesTheViewsBufferIsAnError(): void
+    {
+        $view = $this->view();
+
+        try {
+            $view->render('closing.txt.php');
+            self::fail('the closed buffer went unnoticed');
+        } catch (RuntimeException $e) {
+            self::assertSame(
+                'The output was printed into no buffer of its own: its buffer was closed while printing.',
+                $e->getMessage(),
+            );
+        }
+
+        $this->expectOutputString('printed around the view');
+    }
+
     public function testATemplateThatDoesNotExistIsRefused(): void
     {
         $this->expectException(RuntimeException::class);
@@ -205,7 +222,7 @@ final class AbstractViewTest extends TestCase
         self::assertSame('01.01.1970 00:59', $view->formatTime(-60));
     }
 
-    public function testTheTimeZoneIsPhpsDefaultAtTheTime(): void
+    public function testAViewKeepsTheTimeZoneOfItsFirstFormat(): void
     {
         $view = new CliView();
         $time = new DateTimeImmutable('2025-07-01 00:00:00+00:00');
@@ -214,7 +231,8 @@ final class AbstractViewTest extends TestCase
         self::assertSame('01.07.2025 02:00', $view->formatTime($time));
 
         date_default_timezone_set('Asia/Tokyo');
-        self::assertSame('01.07.2025 09:00', $view->formatTime($time));
+        self::assertSame('01.07.2025 02:00', $view->formatTime($time), 'the zone of its first format');
+        self::assertSame('01.07.2025 09:00', new CliView()->formatTime($time), 'a new view: the default of the time');
     }
 
     public function testAViewForAnotherTimeZoneShowsItsTimes(): void

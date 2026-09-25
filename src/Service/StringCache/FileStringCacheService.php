@@ -49,10 +49,16 @@ class FileStringCacheService implements StringCacheServiceInterface
         }
 
         $path = $this->getPath($key);
-        // @: an entry that is not there is none, not a warning
-        $json = json_decode((string)@file_get_contents($path));
+        // @: an entry that is not there — none yet, or removed by another request meanwhile — is none, not a warning
+        $content = @file_get_contents($path);
 
-        // No entry, a damaged one, or one whose time is up
+        if ($content === false) {
+            return false;
+        }
+
+        $json = json_decode($content);
+
+        // A damaged entry, or one whose time is up
         if (
             !is_object($json)
             || !isset($json->until, $json->string)

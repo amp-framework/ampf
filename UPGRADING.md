@@ -14,12 +14,10 @@ Infection now changes the framework's code in some two thousand ways, and a test
   - When PHP does not start the session, one `RuntimeException` says so: `PHP did not start the session: output before it keeps its cookie from going out.` The messages `Failed to configure the session.` and `Failed to start session.` are gone.
 - **`FileStringCacheService`:** the clock, the names of the temporary files and the draw of the sweeps are the new protected `now()`, `temporaryPath()` and `randomizer()` (a `Random\Randomizer`, the property `$randomizer`); `remove()` is one `@unlink()`.
 - **`HasherService`:** the bounds of its random wait are the constants `DELAY_MIN` and `DELAY_MAX` (1,000 and 5,000 microseconds), drawn by `random_int()` (`mt_rand()` before).
-- **`AbstractView`:** `getTimeZoneLocal()` is PHP's default time zone at every call — it kept the first call's — and the property `$timezoneLocal` is gone; a view for another zone overrides the method. `capture()` returns what was printed even when the callable closed its buffer (an exception before).
-- **`UTCDateTimeType`:** the property `$utc` is gone.
+- **`AbstractView::capture()`** refuses a callable that closed its buffer also when another buffer surrounds the view — a parent view's, PHP's `output_buffering` —, whose content it returned before. The message is `The output was printed into no buffer of its own: its buffer was closed while printing.` (`…into no buffer: …` before).
 - **`ApplicationContext::mergeConfig(array $config1, array $config2, bool $blocks = true)`:** the third parameter says whether an array under these keys is a block; it was `int $depth = 0`.
 - **`BeanAccessGenerator::typesUnder()`** returns the types in the order the directory lists them; `repositories()` sorts.
 - **`BeanAccessGeneratorController`** quotes the argument it refuses: `…; not "force".`
-- **`DoctrineConfiguration::create()`** without a cache directory keeps the mapping in an `ArrayAdapter` on every machine; Doctrine's development mode chose it before, which a machine with APCu, Memcached or Redis could change.
 - **`AbstractRepo::entityList()`** takes a result that is no array as a row, and refuses it as it refuses any row that is no entity.
 - **`HttpRequest::getRefererLocalized()`** returns a route of blanks as it is (null before).
 

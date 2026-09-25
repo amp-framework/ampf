@@ -58,6 +58,19 @@ final class UTCDateTimeTypeTest extends TestCase
         ]);
     }
 
+    public function testOneUtcZoneServesEveryConversion(): void
+    {
+        $type = new class extends UTCDateTimeType {
+            public static function utc(): DateTimeZone
+            {
+                return self::getUtc();
+            }
+        };
+
+        self::assertSame('UTC', $type::utc()->getName());
+        self::assertSame($type::utc(), $type::utc());
+    }
+
     public function testAValueOfAnotherTypeIsRefused(): void
     {
         $this->expectException(RuntimeException::class);

@@ -300,7 +300,7 @@ sh docker/phpcs              # PHP_CodeSniffer (phpcs.xml.dist, the standard app
 sh docker/php-cs-fixer       # PHP-CS-Fixer, dry run (sh docker/php-cs-fixer fix applies it)
 sh docker/phpstan            # PHPStan at the maximum level
 sh docker/phpunit            # PHPUnit; arguments go through (--testsuite unit, --filter …)
-sh docker/infection          # Infection, the mutation testing (--filter=src/View/HttpView.php for one file)
+sh docker/infection          # Infection, the mutation testing (src/View/HttpView.php for one file)
 sh docker/composer update    # Composer, with the network
 sh docker/run php -v         # anything else in the container
 ```

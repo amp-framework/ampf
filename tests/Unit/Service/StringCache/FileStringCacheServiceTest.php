@@ -83,6 +83,14 @@ final class FileStringCacheServiceTest extends TestCase
         self::assertFalse($cache->get('page_three'));
     }
 
+    public function testAMissRemovesNothing(): void
+    {
+        $cache = $this->clockedCache(1_700_000_000);
+
+        self::assertFalse($cache->get('page'));
+        self::assertNotContains('remove', $cache->getCalledMethods(), 'no entry, no file to remove');
+    }
+
     public function testTheSweepRemovesTheExpiredEntriesAndNothingElse(): void
     {
         $cache = $this->newCache();

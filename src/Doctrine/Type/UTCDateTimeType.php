@@ -20,9 +20,15 @@ use RuntimeException;
  */
 class UTCDateTimeType extends DateTimeType
 {
+    /**
+     * The UTC zone of every conversion, created once: a zone does not change, and an entity's every datetime is
+     * converted — a new zone each time would cost a tenth of a microsecond each.
+     */
+    protected static ?DateTimeZone $utc = null;
+
     protected static function getUtc(): DateTimeZone
     {
-        return new DateTimeZone('UTC');
+        return static::$utc ??= new DateTimeZone('UTC');
     }
 
     public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string
