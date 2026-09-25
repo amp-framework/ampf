@@ -5,6 +5,7 @@
 #   sh docker/ci            # everything
 #   sh docker/ci static     # the dependencies' checks, lint, PHPCS, PHP-CS-Fixer, PHPStan
 #   sh docker/ci test       # the test suites, with the coverage
+#   sh docker/ci mutation   # the mutation testing: every mutant killed
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -12,9 +13,9 @@ cd "$project_dir"
 what=${1:-all}
 
 case "$what" in
-    all|static|test) ;;
+    all|static|test|mutation) ;;
     *)
-        echo 'Usage: sh docker/ci [all|static|test]' >&2
+        echo 'Usage: sh docker/ci [all|static|test|mutation]' >&2
         exit 1
         ;;
 esac
@@ -46,6 +47,11 @@ fi
 if [ "$what" = all ] || [ "$what" = test ]; then
     step 'phpunit, with the coverage'
     sh docker/phpunit --coverage-text --only-summary-for-coverage-text --colors=never
+fi
+
+if [ "$what" = all ] || [ "$what" = mutation ]; then
+    step 'infection'
+    sh docker/infection --no-progress --show-mutations=max
 fi
 
 step 'ok'

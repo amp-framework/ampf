@@ -106,7 +106,7 @@ class BeanFactory implements BeanFactoryInterface
         try {
             Functions::assertStringMixedArray($config);
         } catch (RuntimeException $e) {
-            throw new RuntimeException('The bean Config is no configuration: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('The bean Config is no configuration: ' . $e->getMessage(), previous: $e);
         }
 
         return $config;

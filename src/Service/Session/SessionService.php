@@ -27,7 +27,8 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function close(): void
     {
-        if ($this->started && !$this->closed && session_status() === PHP_SESSION_ACTIVE) {
+        // The service's session, or one started elsewhere (session.auto_start): its lock goes either way
+        if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
 
@@ -41,27 +42,17 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
         $_SESSION = [];
 
         if (ini_get('session.use_cookies')) {
+            // The deletion carries the attributes the cookie was set with, or a browser may keep the cookie; it
+            // expires at the first second of 1970, as PHP's own deletions do
             $params = session_get_cookie_params();
-
-            $sessionName = session_name();
-
-            if ($sessionName === false) {
-                throw new RuntimeException('PHP names no session cookie to delete.');
-            }
-
-            // The deletion carries the attributes the cookie was set with, or a browser may keep the cookie
-            setcookie(
-                $sessionName,
-                '',
-                [
-                    'expires' => (time() - 42_000),
-                    'path' => $params['path'],
-                    'domain' => $params['domain'],
-                    'secure' => $params['secure'],
-                    'httponly' => $params['httponly'],
-                    'samesite' => $params['samesite'],
-                ],
-            );
+            $this->sendCookie((string)session_name(), '', [
+                'expires' => 1,
+                'path' => $params['path'],
+                'domain' => $params['domain'],
+                'secure' => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'],
+            ]);
         }
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -71,11 +62,9 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function getAttribute(string $key): mixed
     {
-        if (!$this->hasAttribute($key)) {
-            return null;
-        }
+        $this->start();
 
-        return $_SESSION[$key];
+        return $_SESSION[$key] ?? null;
     }
 
     public function hasAttribute(string $key): bool
@@ -103,13 +92,8 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function removeAttribute(string $key): void
     {
-        if (!$this->hasAttribute($key)) {
-            return;
-        }
+        $this->start();
 
-        // dereference possible objects
-        $_SESSION[$key] = null;
-        // and unset it completely
         unset($_SESSION[$key]);
     }
 
@@ -127,44 +111,55 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
     /**
      * Starts the session once, with the cookie's attributes and the ini settings in place first. A session closed
      * before it was ever started is read and closed at once.
+     *
+     * @throws RuntimeException when PHP does not start the session
      */
     protected function start(): void
     {
-        if ($this->started) {
+        // Started once already, or elsewhere (session.auto_start): its cookie went out, nothing is left to configure
+        if ($this->started || session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
 
-        // Started elsewhere (session.auto_start): its cookie went out already, nothing is left to configure
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $this->started = true;
-
-            return;
-        }
-
-        $config = $this->getSessionConfig();
         $cookie = $this->getCookieParameters();
-        $strictMode = ($config['use_strict_mode'] ?? true) === false
+        $strictMode = ($this->getSessionConfig()['use_strict_mode'] ?? true) === false
             ? '0'
             : '1';
 
+        // What keeps a setting from taking — output before it — keeps the session from starting, so the start says it
+        ini_set('session.use_strict_mode', $strictMode);
         // Cookies only, always: PHP deprecated the other ways of passing the id
-        if (
-            ini_set('session.use_strict_mode', $strictMode) === false
-            || ini_set('session.use_only_cookies', '1') === false
-            || !session_set_cookie_params($cookie)
-        ) {
-            throw new RuntimeException('Failed to configure the session.');
-        }
+        ini_set('session.use_only_cookies', '1');
+        session_set_cookie_params($cookie);
 
-        $options = $this->closed
-            ? ['read_and_close' => true]
-            : [];
-
-        if (session_start($options) === false) {
-            throw new RuntimeException('Failed to start session.');
+        if (!$this->openSession($this->closed ? ['read_and_close' => true] : [])) {
+            throw new RuntimeException(
+                'PHP did not start the session: output before it keeps its cookie from going out.',
+            );
         }
 
         $this->started = true;
+    }
+
+    /**
+     * Starts PHP's session with the options: the one place it starts.
+     *
+     * @param array<string, bool> $options
+     */
+    protected function openSession(array $options): bool
+    {
+        return session_start($options);
+    }
+
+    /**
+     * Hands a cookie to PHP: the one place a cookie leaves the session, so that a test can record it instead.
+     *
+     * @param array{expires: int, path: string, domain: string, secure: bool, httponly: bool, samesite: string} $options
+     */
+    protected function sendCookie(string $name, string $value, array $options): void
+    {
+        // @phpstan-ignore argument.type (the session cookie's own SameSite, which PHP took when the session started)
+        setcookie($name, $value, $options);
     }
 
     /**

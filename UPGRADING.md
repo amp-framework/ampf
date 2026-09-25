@@ -2,6 +2,29 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## Mutation testing
+
+Infection now changes the framework's code in some two thousand ways, and a test fails for every one of them. What that took is mostly tests; the code changed where it had a branch no input reaches, a number no test can tell from its neighbour, or state a test could not reach. A subclass notices these:
+
+- **`HttpRequest::sendHeader(string $header, int $statusCode)`:** the status has no default any more; a subclass that calls it passes `0` for a header without one. An override keeps working.
+- **`SessionService`:**
+  - `close()` also releases a session started elsewhere (`session.auto_start`); it released only the service's own before.
+  - PHP's session starts in the new protected `openSession(array $options): bool`, and the cookie of `destroy()` leaves through the new protected `sendCookie()`.
+  - The deleting cookie expires at the first second of 1970, as PHP's own deletions do; it expired 42,000 seconds ago before.
+  - When PHP does not start the session, one `RuntimeException` says so: `PHP did not start the session: output before it keeps its cookie from going out.` The messages `Failed to configure the session.` and `Failed to start session.` are gone.
+- **`FileStringCacheService`:** the clock, the names of the temporary files and the draw of the sweeps are the new protected `now()`, `temporaryPath()` and `randomizer()` (a `Random\Randomizer`, the property `$randomizer`); `remove()` is one `@unlink()`.
+- **`HasherService`:** the bounds of its random wait are the constants `DELAY_MIN` and `DELAY_MAX` (1,000 and 5,000 microseconds), drawn by `random_int()` (`mt_rand()` before).
+- **`AbstractView`:** `getTimeZoneLocal()` is PHP's default time zone at every call — it kept the first call's — and the property `$timezoneLocal` is gone; a view for another zone overrides the method. `capture()` returns what was printed even when the callable closed its buffer (an exception before).
+- **`UTCDateTimeType`:** the property `$utc` is gone.
+- **`ApplicationContext::mergeConfig(array $config1, array $config2, bool $blocks = true)`:** the third parameter says whether an array under these keys is a block; it was `int $depth = 0`.
+- **`BeanAccessGenerator::typesUnder()`** returns the types in the order the directory lists them; `repositories()` sorts.
+- **`BeanAccessGeneratorController`** quotes the argument it refuses: `…; not "force".`
+- **`DoctrineConfiguration::create()`** without a cache directory keeps the mapping in an `ArrayAdapter` on every machine; Doctrine's development mode chose it before, which a machine with APCu, Memcached or Redis could change.
+- **`AbstractRepo::entityList()`** takes a result that is no array as a row, and refuses it as it refuses any row that is no entity.
+- **`HttpRequest::getRefererLocalized()`** returns a route of blanks as it is (null before).
+
+For working on ampf: `infection/infection` is a development dependency (its Composer plugin allowed), `sh docker/infection` runs it, and `sh docker/ci` runs it after the tests (`sh docker/ci mutation` alone).
+
 ## Checked configuration, route parameters by name, isolated scopes
 
 The framework checks what it is given and says what is wrong: bean definitions, configuration blocks, route and template names, time values. Every exception it throws now carries a message. Besides, the web router hands a route's captures to `execute()` by their names, configuration files and templates run in scopes of their own, and a command can end with an exit code. The development container (`docker/`) runs every check; applications are not affected by it.

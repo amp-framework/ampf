@@ -30,6 +30,7 @@ use ampf\Service\TimeL10n\TimeL10nServiceInterface;
 use ampf\Service\Translator\TranslatorServiceInterface;
 use ampf\Service\XsrfToken\XsrfTokenServiceInterface;
 use ampf\Tests\Support\AccessTraitHost;
+use ampf\Tests\Support\Doctrine\RepositoryAccessHost;
 use ampf\Tests\Support\Doctrine\SampleEntity;
 use ampf\Tests\Support\Doctrine\SampleRepo;
 use ampf\View\ViewResolverInterface;
@@ -161,6 +162,24 @@ final class AccessTraitsTest extends TestCase
         self::assertSame($repository, $host->repository(SampleEntity::class, SampleRepo::class));
         self::assertSame($repository, $host->repository(SampleEntity::class, SampleRepo::class), 'asked once');
         self::assertSame($repository, $factory->get('Doctrine.Repository.' . SampleEntity::class));
+    }
+
+    public function testASubclassOfTheHostReachesAnyEntitysRepository(): void
+    {
+        $entityManager = self::createStub(EntityManagerInterface::class);
+        $repository = new SampleRepo($entityManager, new ClassMetadata(SampleEntity::class));
+        $entityManager->method('getRepository')->willReturn($repository);
+        $factory = new BeanFactory([]);
+        $factory->set(EntityManagerFactoryInterface::class, $this->entityManagerFactory($entityManager));
+        $service = new class extends RepositoryAccessHost {
+            public function samples(): SampleRepo
+            {
+                return $this->getDoctrineEntityRepository(SampleEntity::class, SampleRepo::class);
+            }
+        };
+        $service->setBeanFactory($factory);
+
+        self::assertSame($repository, $service->samples());
     }
 
     private function entityManagerFactory(EntityManagerInterface $entityManager): EntityManagerFactoryInterface

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ampf\Tests\Unit\Router;
 
 use ampf\Bean\BeanFactory;
+use ampf\Controller\ControllerInterface;
 use ampf\Router\HttpRouter;
 use ampf\Router\RouteResolver;
 use ampf\Tests\Support\Bean\PlainBean;
@@ -94,6 +95,28 @@ final class HttpRouterTest extends TestCase
         $controller = new RecordingController()->interruptIn('afterAction');
         $this->router->routeBean($controller);
         self::assertSame(['beforeAction', 'execute(NULL, NULL)', 'afterAction'], $controller->getCalls());
+    }
+
+    public function testARouterMayCheckTheParametersItsOwnWay(): void
+    {
+        $router = new class extends HttpRouter {
+            /**
+             * @param array<string, string> $params
+             */
+            protected function checkParameters(ControllerInterface $controller, array $params): void
+            {
+                if (isset($params['slug'])) {
+                    throw new RuntimeException('This application takes no slugs.');
+                }
+
+                parent::checkParameters($controller, $params);
+            }
+        };
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('This application takes no slugs.');
+
+        $router->routeBean(new RecordingController(), ['slug' => 'intro']);
     }
 
     public function testARequestWithoutARouteIsRefused(): void

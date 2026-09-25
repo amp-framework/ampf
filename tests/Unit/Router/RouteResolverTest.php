@@ -6,6 +6,7 @@ namespace ampf\Tests\Unit\Router;
 
 use ampf\Bean\BeanFactory;
 use ampf\Router\RouteResolver;
+use ampf\Tests\Support\Router\SeamRouteResolver;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -270,6 +271,30 @@ final class RouteResolverTest extends TestCase
         $this->expectExceptionMessage('The configuration has no routes.');
 
         $routeResolver->getControllerByRoutePattern('');
+    }
+
+    public function testASubclassChangesTheStepsOfTheResolution(): void
+    {
+        $resolver = new SeamRouteResolver();
+        $resolver->setBeanFactory(new BeanFactory(['routes' => [
+            'show' => ['pattern' => 'show/(?P<id>[0-9]+)', 'controller' => 'ShowController'],
+        ]]));
+
+        self::assertSame('ShowController', $resolver->getControllerByRoutePattern('show/7'));
+        self::assertSame('show/8', $resolver->getRoutePatternByRouteID('show', ['id' => '8']));
+        self::assertSame(
+            [
+                'cleanMatches',
+                'getAdjustedRouteParams',
+                'getConfig',
+                'getControllerParamsByRoutePattern',
+                'getRouteParams',
+                'getRoutePattern',
+                'routesOf',
+                'validateRouteConfig',
+            ],
+            $resolver->getCalledMethods(),
+        );
     }
 
     public function testATextNoPatternMatchesHasNoRoute(): void

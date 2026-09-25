@@ -195,7 +195,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         $this->sendStatusCode($this->responseStatusCode);
 
         foreach ($this->headers as $header) {
-            $this->sendHeader($header);
+            $this->sendHeader($header, 0);
         }
         $this->headers = [];
 
@@ -234,7 +234,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
             // The first parameter is the weight, q=0 to q=1 with up to three decimals (RFC 9110, section 12.4.2)
             if (isset($parts[1])) {
-                if (preg_match('/^\s*q=(0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\s*$/iD', $parts[1], $match) !== 1) {
+                if (preg_match('/^\s*q=(0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\s*$/i', $parts[1], $match) !== 1) {
                     continue;
                 }
 
@@ -367,7 +367,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         // The route: the path without the application's base path
         $referer = ltrim(static::withoutBasePath(ltrim($path, '/'), $this->getBasePath()), '/');
 
-        return trim($referer) === ''
+        return $referer === ''
             ? null
             : $referer;
     }
@@ -643,7 +643,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     {
         $httpHost = $this->getServerParam('HTTP_HOST');
 
-        if (!is_string($httpHost) || trim($httpHost) === '') {
+        if (!is_string($httpHost)) {
             return null;
         }
 
@@ -669,9 +669,10 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         }
 
         $host = strtolower(trim($httpHost));
+        $defaultPortSuffix = ':' . $defaultPort;
 
-        if (str_ends_with($host, ':' . $defaultPort)) {
-            $host = substr($host, 0, -strlen(':' . $defaultPort));
+        if (str_ends_with($host, $defaultPortSuffix)) {
+            $host = substr($host, 0, -strlen($defaultPortSuffix));
         }
 
         if (!hash_equals($host, $origin)) {
@@ -695,7 +696,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             throw new RuntimeException('The request has no REQUEST_URI: its route is unknown.');
         }
 
-        $path = ltrim(explode('?', $uri, 2)[0], '/');
+        $path = ltrim(explode('?', $uri)[0], '/');
 
         return ltrim(static::withoutBasePath($path, $this->getBasePath()), '/');
     }
@@ -723,7 +724,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
      * (a redirect's), 0 for none. With sendStatusCode() and removeHeader() the place a response's head leaves the
      * request, so that a test can record it instead.
      */
-    protected function sendHeader(string $header, int $statusCode = 0): void
+    protected function sendHeader(string $header, int $statusCode): void
     {
         header($header, true, $statusCode);
     }
@@ -751,9 +752,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         $path = str_replace('\\', '/', $path);
 
         // the segments, without the empty ones ('blub//didub' is 'blub/didub')
-        $segments = array_values(
-            array_filter(explode('/', $path), static fn (string $segment): bool => $segment !== ''),
-        );
+        $segments = array_filter(explode('/', $path), static fn (string $segment): bool => $segment !== '');
 
         foreach ($segments as $segment) {
             if (preg_match('/^[A-Za-z0-9_\.%\-]+$/D', $segment) !== 1) {

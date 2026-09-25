@@ -11,7 +11,7 @@ use ampf\Request\HttpRequest;
  * cookies, the query, the form and the raw body — and what leaves it (cookies, the status, the headers) recorded
  * instead of handed to PHP: a test process has long sent its output.
  */
-final class RecordingHttpRequest extends HttpRequest
+class RecordingHttpRequest extends HttpRequest
 {
     /**
      * @var list<array{name: string, value: string, options: array<string, mixed>}>
@@ -128,7 +128,7 @@ final class RecordingHttpRequest extends HttpRequest
         $this->sentCookies[] = ['name' => $key, 'value' => $value, 'options' => $options];
     }
 
-    protected function sendHeader(string $header, int $statusCode = 0): void
+    protected function sendHeader(string $header, int $statusCode): void
     {
         $this->sent[] = 'header ' . $header . ' ' . $statusCode;
     }

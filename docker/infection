@@ -1,0 +1,10 @@
+#!/bin/sh
+# Infection (infection.json5.dist), the mutation testing, in the development container: every mutant of src/ must be
+# killed. Arguments go through: a file (sh docker/infection --filter=src/Bean/BeanFactory.php), the escaped mutants
+# on the console (--show-mutations=max). The reports land in cache/infection/.
+#
+#   sh docker/infection
+#   sh docker/infection --filter=src/View/HttpView.php --show-mutations=max
+set -eu
+
+exec sh "$(dirname -- "$0")/run" php -d memory_limit=2G vendor/bin/infection --no-interaction --with-uncovered "$@"

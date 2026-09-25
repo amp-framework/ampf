@@ -12,6 +12,7 @@ use ampf\Doctrine\EntityManagerFactory;
 use ampf\Doctrine\Type\UTCDateTimeType;
 use ampf\Tests\Support\Doctrine\SampleEntity;
 use Doctrine\DBAL\Types\Type;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -52,6 +53,27 @@ final class EntityManagerFactoryTest extends TestCase
             $entityManager->getConnection()->getDatabasePlatform()->getDoctrineTypeMapping('enum'),
         );
         self::assertSame('sample', $entityManager->getClassMetadata(SampleEntity::class)->getTableName());
+    }
+
+    public function testAFactoryMayCreateTheEntityManagerItsOwnWay(): void
+    {
+        $entityManager = self::createStub(EntityManagerInterface::class);
+        $factory = new class extends EntityManagerFactory {
+            private ?EntityManagerInterface $prepared = null;
+
+            public function prepare(EntityManagerInterface $entityManager): void
+            {
+                $this->prepared = $entityManager;
+            }
+
+            protected function createEntityManager(): EntityManagerInterface
+            {
+                return $this->prepared ?? parent::createEntityManager();
+            }
+        };
+        $factory->prepare($entityManager);
+
+        self::assertSame($entityManager, $factory->get());
     }
 
     /**

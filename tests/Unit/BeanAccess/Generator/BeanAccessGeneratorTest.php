@@ -15,6 +15,10 @@ use ampf\Tests\Fixtures\GeneratorApp\Service\ClockInterface;
 use ampf\Tests\Fixtures\GeneratorApp\Service\Mail\MailQueueInterface;
 use ampf\Tests\Fixtures\GeneratorApp\Service\Mail\MailService;
 use ampf\Tests\Fixtures\GeneratorApp\Service\Mail\MailServiceInterface;
+use ampf\Tests\Fixtures\GeneratorApp\Service\Width\TheAssertionIsOneCharacterTooLongHereInterface;
+use ampf\Tests\Fixtures\GeneratorApp\Service\Width\TheSetterSignatureFillsTheLineWhollyInterface;
+use ampf\Tests\Fixtures\GeneratorAppendix\SiblingInterface;
+use ampf\Tests\Support\SeamBeanAccessGenerator;
 use ampf\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -121,6 +125,7 @@ final class BeanAccessGeneratorTest extends TestCase
                 self::NAMESPACE . '\Missing\MissingInterface' => ['class' => 'a class'],
                 ClockInterface::class => ['class' => 'a class'],
                 self::NAMESPACE . 'Other\OtherInterface' => ['class' => 'a class'],
+                SiblingInterface::class => ['class' => 'a class'],
                 0 => ['class' => 'a class'],
                 'ampf\Tests\Fixtures\GeneratorApp\Service\ClockInterface ' => 'no definition',
             ]),
@@ -341,6 +346,80 @@ final class BeanAccessGeneratorTest extends TestCase
         self::assertSame([], $this->generator($this->copy())->staleFiles([]));
     }
 
+    public function testTheChangedFilesAreSortedByTheirPaths(): void
+    {
+        self::assertSame(
+            ['src/a.php' => 'new', 'src/b.php' => 'new'],
+            $this->generator()->changedFiles(['src/b.php' => '<?php', 'src/a.php' => '<?php']),
+        );
+    }
+
+    public function testAWrittenDirectoryIsReadableForEveryoneAndWritableForItsOwner(): void
+    {
+        $root = $this->copy();
+        $umask = umask(0o022);
+
+        try {
+            $this->generator($root)->write(['src/BeanAccess/New/GreeterAccess.php' => '<?php']);
+        } finally {
+            umask($umask);
+        }
+
+        self::assertSame(0o755, fileperms($root . '/src/BeanAccess/New') & 0o777);
+    }
+
+    public function testTheDefaultLineLengthIsPhpcss(): void
+    {
+        $files = $this->generator(lineLength: null)->generate([
+            TheSetterSignatureFillsTheLineWhollyInterface::class => [],
+            TheAssertionIsOneCharacterTooLongHereInterface::class => [],
+        ]);
+
+        self::assertStringContainsString(
+            "    public function setTheSetterSignatureFillsTheLineWholly(TheSetterSignatureFillsTheLineWhollyInterface \$object): void\n",
+            $files['src/BeanAccess/Service/TheSetterSignatureFillsTheLineWhollyAccess.php'],
+            '120 characters fit',
+        );
+        self::assertStringContainsString(
+            "        assert(\n            \$this->__theAssertionIsOneCharacterTooLongHere instanceof TheAssertionIsOneCharacterTooLongHereInterface,\n",
+            $files['src/BeanAccess/Service/TheAssertionIsOneCharacterTooLongHereAccess.php'],
+            '121 characters do not',
+        );
+    }
+
+    public function testASubclassChangesTheStepsOfTheGeneration(): void
+    {
+        $generator = new SeamBeanAccessGenerator($this->copy(), self::NAMESPACE);
+
+        $files = $generator->generate([MailServiceInterface::class => []]);
+        $generator->write($files);
+        $generator->staleFiles($files);
+
+        self::assertSame(
+            [NoteEntity::class => NoteRepo::class, UserEntity::class => UserRepo::class],
+            $generator->repositories(),
+            'the entities of any order come out sorted',
+        );
+        self::assertSame(
+            [
+                'accessDirectory',
+                'assertLine',
+                'baseName',
+                'isHandWritten',
+                'namespaceOf',
+                'renderRepositoryTrait',
+                'renderServiceTrait',
+                'setterSignature',
+                'shortName',
+                'traitNamespace',
+                'traitNamespaceSuffix',
+                'typesUnder',
+                'useBlock',
+            ],
+            $generator->getCalledMethods(),
+        );
+    }
+
     public function testWhatIsWrittenIsNotChangedAnyMore(): void
     {
         $root = $this->copy();
@@ -415,15 +494,22 @@ final class BeanAccessGeneratorTest extends TestCase
         ?string $root = null,
         ?string $entityNamespace = 'Doctrine\Entity',
         array $handWritten = [],
-        int $lineLength = 120,
+        ?int $lineLength = 120,
     ): BeanAccessGenerator {
-        return new BeanAccessGenerator(
-            $root ?? $this->copy(),
-            self::NAMESPACE,
-            entityNamespace: $entityNamespace,
-            handWritten: $handWritten,
-            lineLength: $lineLength,
-        );
+        return $lineLength === null
+            ? new BeanAccessGenerator(
+                $root ?? $this->copy(),
+                self::NAMESPACE,
+                entityNamespace: $entityNamespace,
+                handWritten: $handWritten,
+            )
+            : new BeanAccessGenerator(
+                $root ?? $this->copy(),
+                self::NAMESPACE,
+                entityNamespace: $entityNamespace,
+                handWritten: $handWritten,
+                lineLength: $lineLength,
+            );
     }
 
     private function userRepoAccess(int $lineLength): string

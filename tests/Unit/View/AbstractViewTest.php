@@ -205,6 +205,31 @@ final class AbstractViewTest extends TestCase
         self::assertSame('01.01.1970 00:59', $view->formatTime(-60));
     }
 
+    public function testTheTimeZoneIsPhpsDefaultAtTheTime(): void
+    {
+        $view = new CliView();
+        $time = new DateTimeImmutable('2025-07-01 00:00:00+00:00');
+
+        date_default_timezone_set('Europe/Berlin');
+        self::assertSame('01.07.2025 02:00', $view->formatTime($time));
+
+        date_default_timezone_set('Asia/Tokyo');
+        self::assertSame('01.07.2025 09:00', $view->formatTime($time));
+    }
+
+    public function testAViewForAnotherTimeZoneShowsItsTimes(): void
+    {
+        date_default_timezone_set('Europe/Berlin');
+        $view = new class extends CliView {
+            protected function getTimeZoneLocal(): DateTimeZone
+            {
+                return new DateTimeZone('America/New_York');
+            }
+        };
+
+        self::assertSame('30.06.2025 20:00', $view->formatTime(new DateTimeImmutable('2025-07-01 00:00:00+00:00')));
+    }
+
     public function testTheTimeGivenIsNotChanged(): void
     {
         date_default_timezone_set('Europe/Berlin');

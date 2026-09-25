@@ -31,7 +31,7 @@ class BeanAccessGeneratorController extends AbstractController
     public function execute(?string $mode = null): void
     {
         if ($mode !== null && $mode !== 'check') {
-            throw new InvalidArgumentException('The generator takes the argument check, or none; not ' . $mode . '.');
+            throw new InvalidArgumentException('The generator takes the argument check, or none; not "' . $mode . '".');
         }
 
         $config = $this->getBeanFactory()->getConfig();

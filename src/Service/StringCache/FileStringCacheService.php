@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ampf\Service\StringCache;
 
+use Random\Randomizer;
 use RuntimeException;
 
 /**
@@ -25,11 +26,21 @@ class FileStringCacheService implements StringCacheServiceInterface
      */
     protected const int TEMPORARY_FILE_AGE = 3_600;
 
+    /**
+     * The bytes of an entry's head sweep() reads: enough for `{"until":`, the time of any entry and its comma.
+     */
+    protected const int HEAD_LENGTH = 64;
+
     protected ?string $cacheDir = null;
 
     protected ?int $defaultTTL = null;
 
     protected bool $enabled = true;
+
+    /**
+     * The draw of the sweeps; PHP's secure one unless a subclass (a test's) sets another.
+     */
+    protected ?Randomizer $randomizer = null;
 
     public function get(string $key): mixed
     {
@@ -38,28 +49,16 @@ class FileStringCacheService implements StringCacheServiceInterface
         }
 
         $path = $this->getPath($key);
+        // @: an entry that is not there is none, not a warning
+        $json = json_decode((string)@file_get_contents($path));
 
-        if (!file_exists($path)) {
-            return false;
-        }
-
-        $content = file_get_contents($path);
-
-        if ($content === false || trim($content) === '') {
-            $this->remove($path);
-
-            return false;
-        }
-
-        $json = json_decode($content);
-
-        // A damaged entry, or one whose time is up
+        // No entry, a damaged one, or one whose time is up
         if (
             !is_object($json)
             || !isset($json->until, $json->string)
             || !is_int($json->until)
             || !is_string($json->string)
-            || $json->until < time()
+            || $json->until < $this->now()
         ) {
             $this->remove($path);
 
@@ -79,7 +78,7 @@ class FileStringCacheService implements StringCacheServiceInterface
             throw new RuntimeException('A blank string is no cache entry: get() could not tell it from none.');
         }
 
-        $content = json_encode(['until' => time() + ($ttl ?? $this->defaultTTL), 'string' => $string]);
+        $content = json_encode(['until' => $this->now() + ($ttl ?? $this->defaultTTL), 'string' => $string]);
 
         // A string JSON cannot carry (not UTF-8) is not cached
         if ($content === false) {
@@ -89,7 +88,7 @@ class FileStringCacheService implements StringCacheServiceInterface
         $path = $this->getPath($key);
 
         // The whole entry under a name of its own first, then renamed over the old one in one step
-        $temporary = $path . '.' . bin2hex(random_bytes(8)) . '.tmp';
+        $temporary = $this->temporaryPath($path);
 
         // @: a failure is this method's exception, not a warning besides it
         if (@file_put_contents($temporary, $content) !== strlen($content) || !@rename($temporary, $path)) {
@@ -115,7 +114,7 @@ class FileStringCacheService implements StringCacheServiceInterface
         $directory = $this->getCacheDir();
         $names = scandir($directory);
         $removed = 0;
-        $now = time();
+        $now = $this->now();
 
         foreach ($names === false ? [] : $names as $name) {
             $path = $directory . '/' . $name;
@@ -216,7 +215,7 @@ class FileStringCacheService implements StringCacheServiceInterface
      */
     protected function readUntil(string $path): ?int
     {
-        $head = file_get_contents($path, false, null, 0, 64);
+        $head = file_get_contents($path, length: self::HEAD_LENGTH);
 
         if (!is_string($head) || preg_match('/^\{"until":(\d{1,19}),/', $head, $matches) !== 1) {
             return null;
@@ -228,14 +227,30 @@ class FileStringCacheService implements StringCacheServiceInterface
     /** Removes the file; false when it was gone already (another request swept it) or could not be removed. */
     protected function remove(string $path): bool
     {
-        clearstatcache(true, $path);
-
-        return is_file($path) && unlink($path);
+        // @: a file another request removed first is no error
+        return @unlink($path);
     }
 
     /** Whether this write sweeps: one in SWEEP_EVERY, at random. */
     protected function shouldSweep(): bool
     {
-        return random_int(1, static::SWEEP_EVERY) === 1;
+        return $this->randomizer()->getInt(1, static::SWEEP_EVERY) === 1;
+    }
+
+    /** The entry's temporary file while it is written: its path, a dot, 16 random hex characters and `.tmp`. */
+    protected function temporaryPath(string $path): string
+    {
+        return $path . '.' . bin2hex($this->randomizer()->getBytes(8)) . '.tmp';
+    }
+
+    /** The time an entry's expiry is measured against: now, in Unix seconds. */
+    protected function now(): int
+    {
+        return time();
+    }
+
+    protected function randomizer(): Randomizer
+    {
+        return $this->randomizer ??= new Randomizer();
     }
 }

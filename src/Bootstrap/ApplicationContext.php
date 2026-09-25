@@ -35,7 +35,10 @@ class ApplicationContext
             try {
                 Functions::assertStringMixedArray($fileConfig);
             } catch (RuntimeException $e) {
-                throw new RuntimeException('The configuration file ' . $configFile . ': ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException(
+                    'The configuration file ' . $configFile . ': ' . $e->getMessage(),
+                    previous: $e,
+                );
             }
 
             $config = static::mergeConfig($config, $fileConfig);
@@ -53,12 +56,16 @@ class ApplicationContext
     }
 
     /**
+     * Merges config2 over config1: a key only one of them has keeps its value, a key both have takes config2's —
+     * except a block, an array under a top-level key, whose own keys are merged the same way.
+     *
      * @param array<string, mixed> $config1
      * @param array<string, mixed> $config2
+     * @param bool $blocks whether an array under these keys is a block (at the top level) or a value (inside one)
      *
      * @return array<string, mixed>
      */
-    protected static function mergeConfig(array $config1, array $config2, int $depth = 0): array
+    protected static function mergeConfig(array $config1, array $config2, bool $blocks = true): array
     {
         $result = [];
 
@@ -70,9 +77,9 @@ class ApplicationContext
                 continue;
             }
 
-            // Both have the key: a top-level array is merged one level deep, anything else is config2's value
-            $result[$key] = is_array($value) && $depth === 0
-                ? static::mergeConfig(static::block($key, $value), static::block($key, $config2[$key]), $depth + 1)
+            // Both have the key: a block is merged, anything else is config2's value
+            $result[$key] = $blocks && is_array($value)
+                ? static::mergeConfig(static::block($key, $value), static::block($key, $config2[$key]), false)
                 : $config2[$key];
             unset($config2[$key]);
         }
@@ -97,8 +104,7 @@ class ApplicationContext
         } catch (RuntimeException $e) {
             throw new RuntimeException(
                 'The configuration\'s ' . $key . ' cannot be merged: ' . $e->getMessage(),
-                0,
-                $e,
+                previous: $e,
             );
         }
 

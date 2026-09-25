@@ -8,6 +8,7 @@ use ampf\Bean\BeanFactory;
 use ampf\Controller\Cli\BeanAccessGeneratorController;
 use ampf\Request\CliRequest;
 use ampf\Tests\Fixtures\GeneratorApp\Service\Mail\MailServiceInterface;
+use ampf\Tests\Support\Controller\SeamBeanAccessGeneratorController;
 use ampf\Tests\Support\TemporaryDirectory;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -85,6 +86,8 @@ final class BeanAccessGeneratorControllerTest extends TestCase
     public function testATraitThatIsUpToDateIsLeftAlone(): void
     {
         $this->generate(null);
+        $upToDate = $this->directory->getPath() . '/src/BeanAccess/Service/MailServiceAccess.php';
+        touch($upToDate, 1_000_000_000);
         file_put_contents(
             $this->directory->getPath() . '/src/BeanAccess/Doctrine/Repository/UserRepoAccess.php',
             'edited',
@@ -96,6 +99,8 @@ final class BeanAccessGeneratorControllerTest extends TestCase
             'changed src/BeanAccess/Doctrine/Repository/UserRepoAccess.php' . PHP_EOL . '3 traits, 1 written' . PHP_EOL,
             $this->printed($request),
         );
+        clearstatcache();
+        self::assertSame(1_000_000_000, filemtime($upToDate), 'not written again');
         self::assertSame('3 traits, 0 written' . PHP_EOL, $this->printed($this->generate(null)));
     }
 
@@ -122,6 +127,32 @@ final class BeanAccessGeneratorControllerTest extends TestCase
 
         self::assertSame('3 traits, 0 would change' . PHP_EOL, $this->printed($request));
         self::assertSame(0, $request->getExitCode());
+    }
+
+    public function testEveryStaleTraitIsListed(): void
+    {
+        $this->generate(null);
+        file_put_contents($this->directory->getPath() . '/src/BeanAccess/OldAccess.php', '<?php' . PHP_EOL);
+        file_put_contents($this->directory->getPath() . '/src/BeanAccess/OlderAccess.php', '<?php' . PHP_EOL);
+
+        self::assertSame(
+            'stale   src/BeanAccess/OldAccess.php (not generated any more; delete it by hand)' . PHP_EOL
+            . 'stale   src/BeanAccess/OlderAccess.php (not generated any more; delete it by hand)' . PHP_EOL
+            . '3 traits, 0 written' . PHP_EOL,
+            $this->printed($this->generate(null)),
+        );
+    }
+
+    public function testASubclassCreatesTheGenerator(): void
+    {
+        $controller = new SeamBeanAccessGeneratorController();
+
+        $this->generate(null, controller: $controller);
+
+        self::assertSame(
+            [['projectRoot' => $this->directory->getPath(), 'namespace' => self::NAMESPACE]],
+            $controller->getArguments(),
+        );
     }
 
     public function testAStaleTraitIsListedAndFailsTheCheck(): void
@@ -159,10 +190,19 @@ final class BeanAccessGeneratorControllerTest extends TestCase
 
     public function testAnArgumentOtherThanCheckIsRefused(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('The generator takes the argument check, or none; not force.');
+        foreach (['force', '', 'Check'] as $mode) {
+            try {
+                $this->generate($mode);
+                self::fail('took ' . $mode);
+            } catch (InvalidArgumentException $e) {
+                self::assertSame(
+                    'The generator takes the argument check, or none; not "' . $mode . '".',
+                    $e->getMessage(),
+                );
+            }
+        }
 
-        $this->generate('force');
+        self::assertDirectoryDoesNotExist($this->directory->getPath() . '/src/BeanAccess');
     }
 
     /**
@@ -201,10 +241,14 @@ final class BeanAccessGeneratorControllerTest extends TestCase
      *
      * @param array<mixed>|string|null $arguments the `beanAccessGenerator` block; by default the application's
      */
-    private function generate(?string $mode, null|array|string $arguments = [], mixed $beans = null): CliRequest
-    {
+    private function generate(
+        ?string $mode,
+        null|array|string $arguments = [],
+        mixed $beans = null,
+        ?BeanAccessGeneratorController $controller = null,
+    ): CliRequest {
         $request = new CliRequest(['bin/index.php', 'beanAccess/generate']);
-        $controller = new BeanAccessGeneratorController();
+        $controller ??= new BeanAccessGeneratorController();
         $controller->setBeanFactory(new BeanFactory([
             'beans' => $beans ?? [MailServiceInterface::class => ['class' => 'a class']],
             'beanAccessGenerator' => $arguments === []

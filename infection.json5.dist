@@ -1,0 +1,46 @@
+// Infection, the mutation testing of src/: the mutators of the default profile and of the ones it leaves out, but
+// @equal (below), on covered and uncovered code — every mutant killed. The unit suite kills them (the integration
+// suite covers nothing, so it cannot); PHPStan kills the mutants that could not pass `sh docker/ci` either. Run it
+// with `sh docker/infection`.
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"],
+    },
+    "threads": "max",
+    "timeout": 20,
+    "tmpDir": "cache/infection",
+    "logs": {
+        "text": "cache/infection/infection.log",
+        "summary": "cache/infection/summary.log",
+        "html": "cache/infection/infection.html",
+    },
+    "mutators": {
+        "@default": true,
+        // Off: `!==` turned into `!=` is the same comparison wherever both sides have the same type, which declared
+        // types make the rule here. Of its 50 mutants, 39 compare a string with a string, an array with an array,
+        // preg_match()'s result with 1 — no test can tell them apart; the other 11 are killed (tests of an empty
+        // string or false beside null, of a modification time of 0).
+        "@equal": false,
+        "@identical": true,
+        // The profile @nullify, which the schema does not name yet
+        "ArrayFind": true,
+        "ArrayFindKey": true,
+        "ArrayFirst": true,
+        "ArrayLast": true,
+        // The seams that hand a cookie or a header's removal to PHP and do nothing else: the command line keeps no
+        // header, so no test process can see what they did. The integration suite does, through PHP's web server.
+        "FunctionCallRemoval": {
+            "ignore": [
+                "ampf\\Request\\HttpRequest::sendCookie",
+                "ampf\\Request\\HttpRequest::removeHeader",
+                "ampf\\Service\\Session\\SessionService::sendCookie",
+            ],
+        },
+    },
+    "testFramework": "phpunit",
+    "testFrameworkExtraArgs": "--testsuite=unit",
+    "staticAnalysisTool": "phpstan",
+    "minMsi": 100,
+    "minCoveredMsi": 100,
+}

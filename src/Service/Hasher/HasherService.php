@@ -30,6 +30,12 @@ class HasherService implements HasherServiceInterface
      */
     protected const int COST = 12;
 
+    /**
+     * The shortest and the longest random wait of every call, in microseconds.
+     */
+    protected const int DELAY_MIN = 1_000;
+    protected const int DELAY_MAX = 5_000;
+
     public function avoidTimingAttack(string $input): void
     {
         // Burn some CPU time by doing an useless check
@@ -82,17 +88,12 @@ class HasherService implements HasherServiceInterface
     }
 
     /**
-     * Sleeps randomly between 1 and 5 milliseconds to avoid timing attacks
-     * and to mask the real runtime of the HasherService.
+     * Sleeps from DELAY_MIN to DELAY_MAX microseconds at random, so that the time of a call tells nothing of what it
+     * compared.
      */
     protected function sleep(): void
     {
-        usleep(
-            mt_rand(
-                (1 * 1_000),
-                (5 * 1_000),
-            ),
-        );
+        usleep(random_int(static::DELAY_MIN, static::DELAY_MAX));
     }
 
     /**

@@ -20,11 +20,9 @@ use RuntimeException;
  */
 class UTCDateTimeType extends DateTimeType
 {
-    protected static ?DateTimeZone $utc = null;
-
     protected static function getUtc(): DateTimeZone
     {
-        return static::$utc ??= new DateTimeZone('UTC');
+        return new DateTimeZone('UTC');
     }
 
     public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string

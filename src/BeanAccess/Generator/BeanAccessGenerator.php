@@ -268,7 +268,7 @@ class BeanAccessGenerator
     }
 
     /**
-     * The types a namespace's files are named for (PSR-4), in the order of their paths.
+     * The types a namespace's files are named for (PSR-4), in the order the directory lists them.
      *
      * @return list<string>
      *
@@ -304,8 +304,6 @@ class BeanAccessGenerator
 
             $types[] = $type;
         }
-
-        sort($types);
 
         return $types;
     }
@@ -491,7 +489,7 @@ class BeanAccessGenerator
 
     protected function shortName(string $type): string
     {
-        return substr($type, (int)strrpos($type, '\\') + 1);
+        return array_last(explode('\\', $type));
     }
 
     protected function baseName(string $type): string

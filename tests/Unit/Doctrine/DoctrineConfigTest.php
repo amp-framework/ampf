@@ -68,6 +68,71 @@ final class DoctrineConfigTest extends TestCase
         new DoctrineConfig()->setConfig($config);
     }
 
+    public function testAConfigMayReadTheBlockItsOwnWay(): void
+    {
+        $config = new class extends DoctrineConfig {
+            /**
+             * @var list<string>
+             */
+            private array $calls = [];
+
+            /**
+             * @return list<string>
+             */
+            public function getCalls(): array
+            {
+                return $this->calls;
+            }
+
+            /**
+             * @param array<mixed> $config
+             *
+             * @return array<string, mixed>
+             */
+
+            protected function blockOf(array $config): array
+            {
+                $this->calls[] = __FUNCTION__;
+
+                return parent::blockOf($config) + ['typeOverrides' => []];
+            }
+
+            /**
+             * @return array<string, mixed>
+             */
+
+            protected function getArrayValue(string $key): array
+            {
+                $this->calls[] = __FUNCTION__ . ' ' . $key;
+
+                return parent::getArrayValue($key);
+            }
+
+            protected function getConfigValue(string $value): mixed
+            {
+                $this->calls[] = __FUNCTION__ . ' ' . $value;
+
+                return $value === 'mappingOverrides'
+                    ? ['enum' => 'string']
+                    : parent::getConfigValue($value);
+            }
+        };
+        $config->setConfig(['doctrine' => ['connectionParams' => ['driver' => 'pdo_sqlite']]]);
+
+        self::assertSame([], $config->getTypeOverrides(), 'what the block lacks, the subclass adds');
+        self::assertSame(['enum' => 'string'], $config->getMappingOverrides());
+        self::assertSame(
+            [
+                'blockOf',
+                'getArrayValue typeOverrides',
+                'getConfigValue typeOverrides',
+                'getArrayValue mappingOverrides',
+                'getConfigValue mappingOverrides',
+            ],
+            $config->getCalls(),
+        );
+    }
+
     public function testAConfigurationThatIsNoOrmConfigurationIsRefused(): void
     {
         $config = new DoctrineConfig();

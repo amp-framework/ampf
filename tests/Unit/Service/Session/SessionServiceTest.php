@@ -6,6 +6,7 @@ namespace ampf\Tests\Unit\Service\Session;
 
 use ampf\Bean\BeanFactory;
 use ampf\Service\Session\SessionService;
+use ampf\Tests\Support\SeamSessionService;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -218,7 +219,8 @@ final class SessionServiceTest extends TestCase
 
     public function testTheConfigurationMaySwitchStrictModeOffButNotCookiesOnly(): void
     {
-        ini_set('session.use_only_cookies', '1');
+        // @: PHP deprecated switching it off, which is what the service undoes
+        @ini_set('session.use_only_cookies', '0');
         $this->newSession(['session' => ['use_strict_mode' => false, 'use_only_cookies' => false]])->hasAttribute('a');
 
         self::assertSame('0', ini_get('session.use_strict_mode'));
@@ -304,6 +306,154 @@ final class SessionServiceTest extends TestCase
         self::assertSame('1', ini_get('session.use_strict_mode'));
     }
 
+    public function testASubclassChangesTheStepsOfTheSession(): void
+    {
+        $session = $this->seamSession([]);
+        $session->setAttribute('user', 42);
+        $session->destroy();
+
+        self::assertSame(
+            ['getCookieParameters', 'getSessionConfig', 'isHttpsRequest', 'openSession', 'sendCookie', 'start'],
+            $session->getCalledMethods(),
+        );
+    }
+
+    public function testTheSessionStartsOnceAndNotAgainAfterItsClose(): void
+    {
+        $session = $this->seamSession([]);
+        $session->setAttribute('user', 42);
+        $session->getAttribute('user');
+        $session->hasAttribute('user');
+        $session->removeAttribute('user');
+        $session->close();
+        $session->getAttribute('user');
+
+        self::assertSame(1, $session->getStarts());
+    }
+
+    public function testASessionPhpDoesNotStartIsAnError(): void
+    {
+        $session = $this->seamSession([]);
+        $session->refuseToStart();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'PHP did not start the session: output before it keeps its cookie from going out.',
+        );
+
+        $session->setAttribute('user', 42);
+    }
+
+    public function testTheDeletedCookieCarriesTheAttributesOfTheSessionCookie(): void
+    {
+        $session = $this->seamSession(['session' => ['cookie' => ['path' => '/app', 'samesite' => 'Strict']]]);
+        $session->setAttribute('user', 42);
+
+        $session->destroy();
+
+        self::assertSame(
+            [[
+                'name' => 'PHPSESSID',
+                'value' => '',
+                'options' => [
+                    'expires' => 1,
+                    'path' => '/app',
+                    'domain' => '',
+                    'secure' => false,
+                    'httponly' => true,
+                    'samesite' => 'Strict',
+                ],
+            ]],
+            $session->getSentCookies(),
+        );
+    }
+
+    public function testASessionWithoutCookiesDeletesNone(): void
+    {
+        $session = $this->seamSession([]);
+        $session->setAttribute('user', 42);
+        $session->close();
+        ini_set('session.use_cookies', '0');
+
+        $session->destroy();
+
+        self::assertSame([], $session->getSentCookies());
+    }
+
+    public function testCloseReleasesASessionStartedElsewhere(): void
+    {
+        session_start();
+        $session = $this->newSession([]);
+
+        $session->close();
+
+        self::assertSame(PHP_SESSION_NONE, session_status());
+    }
+
+    public function testANewIdAsTheFirstThingStartsTheSession(): void
+    {
+        $id = $this->storedSession(['user' => 42]);
+        $session = $this->newSession([]);
+
+        $session->regenerateId();
+
+        self::assertNotSame($id, session_id());
+        self::assertSame(42, $session->getAttribute('user'));
+    }
+
+    public function testAnAttributeReadAsTheFirstThingIsTheStoredSessions(): void
+    {
+        $this->storedSession(['user' => 42]);
+
+        self::assertSame(42, $this->newSession([])->getAttribute('user'));
+    }
+
+    public function testAnAttributeRemovedAsTheFirstThingIsGoneFromTheStoredSession(): void
+    {
+        $this->storedSession(['user' => 42, 'theme' => 'dark']);
+        $session = $this->newSession([]);
+
+        $session->removeAttribute('user');
+
+        self::assertFalse($session->hasAttribute('user'));
+        self::assertSame('dark', $session->getAttribute('theme'));
+    }
+
+    public function testADestroyAsTheFirstThingDestroysTheStoredSession(): void
+    {
+        $id = $this->storedSession(['user' => 42]);
+
+        $this->newSession([])->destroy();
+
+        self::assertFileDoesNotExist(session_save_path() . '/sess_' . $id);
+    }
+
+    public function testALifetimeOfZeroMayBeNamed(): void
+    {
+        $this->newSession(['session' => ['cookie' => ['lifetime' => 0, 'path' => '/app']]])->hasAttribute('a');
+
+        self::assertSame(0, session_get_cookie_params()['lifetime']);
+        self::assertSame('/app', session_get_cookie_params()['path']);
+    }
+
+    public function testEveryKeyOfTheSessionBlockCounts(): void
+    {
+        $this->newSession(['session' => ['use_strict_mode' => false, 'cookie' => ['path' => '/app']]])->hasAttribute(
+            'a',
+        );
+
+        self::assertSame('0', ini_get('session.use_strict_mode'));
+        self::assertSame('/app', session_get_cookie_params()['path']);
+    }
+
+    public function testHttpsOffInCapitalsIsPlainHttp(): void
+    {
+        $_SERVER['HTTPS'] = 'OFF';
+        $this->newSession([])->hasAttribute('a');
+
+        self::assertFalse(session_get_cookie_params()['secure']);
+    }
+
     protected function setUp(): void
     {
         $directory = sys_get_temp_dir() . '/ampf-session-test-' . getmypid();
@@ -313,6 +463,33 @@ final class SessionServiceTest extends TestCase
         }
 
         ini_set('session.save_path', $directory);
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function seamSession(array $config): SeamSessionService
+    {
+        $session = new SeamSessionService();
+        $session->setBeanFactory(new BeanFactory($config));
+
+        return $session;
+    }
+
+    /**
+     * A session an earlier request stored: its id is the one the next start takes up, its data is on the disk only.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function storedSession(array $data): string
+    {
+        session_start();
+        $_SESSION = $data;
+        $id = (string)session_id();
+        session_write_close();
+        $_SESSION = [];
+
+        return $id;
     }
 
     /**

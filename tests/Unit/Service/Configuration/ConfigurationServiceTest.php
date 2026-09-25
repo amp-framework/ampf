@@ -43,6 +43,20 @@ final class ConfigurationServiceTest extends TestCase
         self::assertNull($service->get('missing'));
     }
 
+    public function testAFalseValueOfANarrowerDomainWins(): void
+    {
+        $service = new ConfigurationService();
+        $service->setConfig(['configuration.service' => [
+            '.app' => ['feature' => true, 'limit' => 10, 'title' => 'app'],
+            '.app.de' => ['feature' => false, 'limit' => 0, 'title' => ''],
+        ]]);
+        $service->setDomain('.app.de');
+
+        self::assertFalse($service->get('feature'));
+        self::assertSame(0, $service->get('limit'));
+        self::assertSame('', $service->get('title'));
+    }
+
     public function testAKeySetToNullFallsThroughToABroaderDomain(): void
     {
         self::assertSame('https://app.example', $this->service()->setDomain('.app.de')->get('url'));

@@ -293,17 +293,19 @@ Every exception the framework throws says in a sentence what is wrong and names 
 [`AGENTS.md`](AGENTS.md) has the conventions and the working rules; the tests live under `tests/` (`ampf\Tests\`): a unit suite, and an integration suite that runs a small application on the framework (`tests/Fixtures/App`) in process, as commands and behind PHP's built-in web server. The development container needs nothing but Docker — PHP 8.5 with the framework's extensions, PCOV and Composer, as throwaway containers that run as the calling user, without a network unless one is needed:
 
 ```sh
-sh docker/ci                 # everything: dependencies, lint, PHPCS, PHP-CS-Fixer, PHPStan, the tests with the coverage
-sh docker/ci static          # all but the tests
+sh docker/ci                 # everything: dependencies, lint, PHPCS, PHP-CS-Fixer, PHPStan, the tests with the coverage,
+                             # the mutation testing
+sh docker/ci static          # all but the tests and the mutation testing
 sh docker/phpcs              # PHP_CodeSniffer (phpcs.xml.dist, the standard applications extend); docker/phpcbf fixes
 sh docker/php-cs-fixer       # PHP-CS-Fixer, dry run (sh docker/php-cs-fixer fix applies it)
 sh docker/phpstan            # PHPStan at the maximum level
 sh docker/phpunit            # PHPUnit; arguments go through (--testsuite unit, --filter …)
+sh docker/infection          # Infection, the mutation testing (--filter=src/View/HttpView.php for one file)
 sh docker/composer update    # Composer, with the network
 sh docker/run php -v         # anything else in the container
 ```
 
-Each check stands at zero findings. On a machine with PHP 8.5, the Composer scripts run the same tools: `composer phpcs`, `composer cs:check`, `composer phpstan`, `composer test`.
+Each check stands at zero findings, and the mutation testing at 100 %: Infection changes the code under `src/` in some two thousand small ways — every mutator of its default profile and of the ones it leaves out, on covered and uncovered code alike — and the unit suite fails for each of them (`infection.json5.dist` says what is left out, and why; the reports land in `cache/infection/`). On a machine with PHP 8.5, the Composer scripts run the same tools: `composer phpcs`, `composer cs:check`, `composer phpstan`, `composer test`.
 
 ## License
 

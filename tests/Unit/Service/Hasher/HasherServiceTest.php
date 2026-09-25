@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ampf\Tests\Unit\Service\Hasher;
 
 use ampf\Service\Hasher\HasherService;
+use ampf\Tests\Support\CheapHasherService;
 use ampf\Tests\Support\CountingHasherService;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -15,6 +16,9 @@ use RuntimeException;
 #[CoversClass(HasherService::class)]
 final class HasherServiceTest extends TestCase
 {
+    /** The hash a check without anything to compare verifies against. */
+    private const string DUMMY = '$2y$12$7bXzdUEuvvooZkWPLBbTCux4VdVOJfTv2uLCS2ysoHhDOgVFRE3Q2';
+
     /**
      * @return array<string, array{string}>
      */
@@ -31,6 +35,7 @@ final class HasherServiceTest extends TestCase
             'sixty characters of something else' => [str_repeat('x', 60)],
             'a bcrypt prefix with an impossible cost' => ['$2y$99$' . substr(self::bcrypt('secret'), 7)],
             'an argon2 hash' => [password_hash('secret', PASSWORD_ARGON2ID)],
+            'a bcrypt hash after something else' => ['x' . self::bcrypt('secret')],
         ];
     }
 
@@ -57,10 +62,14 @@ final class HasherServiceTest extends TestCase
         $hash = self::bcrypt('secret');
 
         foreach (['', ' ', "\t\n"] as $blank) {
-            $before = $hasher->getVerifications();
             self::assertFalse($hasher->check($blank, $hash), json_encode($blank, JSON_THROW_ON_ERROR));
-            self::assertSame($before + 1, $hasher->getVerifications(), 'the time of one check all the same');
         }
+
+        self::assertSame(
+            [self::DUMMY, self::DUMMY, self::DUMMY],
+            $hasher->getVerifiedHashes(),
+            'one check\'s time each',
+        );
     }
 
     #[DataProvider('provideStoredValuesThatAreNoBcryptHash')]
@@ -71,7 +80,12 @@ final class HasherServiceTest extends TestCase
         // Even the stored value itself does not open it: it is not compared as text
         self::assertFalse($hasher->check('secret', $stored));
         self::assertFalse($hasher->check($stored === '' ? 'x' : $stored, $stored));
-        self::assertSame(2, $hasher->getVerifications(), 'each refusal took one check\'s time');
+        self::assertSame(
+            [self::DUMMY, self::DUMMY],
+            $hasher->getVerifiedHashes(),
+            'each refusal took one check\'s time',
+        );
+        self::assertSame([$stored, $stored], $hasher->getCheckedShapes());
         self::assertTrue($hasher->needsRehash($stored));
     }
 
@@ -99,6 +113,30 @@ final class HasherServiceTest extends TestCase
         $this->expectExceptionMessage('A blank string is no secret to hash.');
 
         new HasherService()->hash(" \n");
+    }
+
+    public function testAnApplicationsCostIsTheCostOfItsHashes(): void
+    {
+        $hasher = new CheapHasherService();
+        $hash = $hasher->hash('secret');
+
+        self::assertStringStartsWith('$2y$04$', $hash);
+        self::assertTrue($hasher->check('secret', $hash));
+        self::assertFalse($hasher->needsRehash($hash));
+        self::assertTrue($hasher->needsRehash(password_hash('secret', PASSWORD_BCRYPT, ['cost' => 12])));
+    }
+
+    public function testEveryCallWaitsAMillisecondAtLeast(): void
+    {
+        $hasher = new CountingHasherService();
+        $hasher->check('secret', self::bcrypt('secret'));
+        $hasher->hash('secret');
+
+        self::assertCount(2, $hasher->getSleeps(), 'a check and a hash wait once each');
+
+        foreach ($hasher->getSleeps() as $nanoseconds) {
+            self::assertGreaterThanOrEqual(1_000_000, $nanoseconds);
+        }
     }
 
     public function testAvoidingATimingAttackSpendsOneCheck(): void

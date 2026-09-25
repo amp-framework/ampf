@@ -29,8 +29,6 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
      */
     protected array $memory = [];
 
-    protected ?DateTimeZone $timezoneLocal = null;
-
     /**
      * The time as a DateTimeImmutable: a DateTimeInterface as it is, a Unix timestamp in UTC. A template may hand in
      * anything, so anything is checked.
@@ -156,8 +154,6 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
     /**
      * What the callable prints, taken out of the output — all of it, and whatever buffer the callable left open,
      * when it fails.
-     *
-     * @throws RuntimeException when the callable closed the buffer it printed into
      */
     protected function capture(callable $print, mixed ...$arguments): string
     {
@@ -166,23 +162,22 @@ abstract class AbstractView implements BeanFactoryAccessInterface, ViewInterface
 
         try {
             $print(...$arguments);
-            $output = ob_get_contents();
+
+            // The buffer started here is there: ob_get_contents() is false without any
+            return (string)ob_get_contents();
         } finally {
             while (ob_get_level() > $level) {
                 ob_end_clean();
             }
         }
-
-        if ($output === false) {
-            throw new RuntimeException('The output was printed into no buffer: its buffer was closed while printing.');
-        }
-
-        return $output;
     }
 
-    /** The time zone formatTime() shows a time in: PHP's default time zone. */
+    /**
+     * The time zone formatTime() shows a time in: PHP's default time zone at the time — a view for a user of another
+     * zone returns that one.
+     */
     protected function getTimeZoneLocal(): DateTimeZone
     {
-        return $this->timezoneLocal ??= new DateTimeZone(date_default_timezone_get());
+        return new DateTimeZone(date_default_timezone_get());
     }
 }

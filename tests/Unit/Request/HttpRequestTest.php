@@ -11,6 +11,7 @@ use ampf\Router\RouteResolverInterface;
 use ampf\Service\XsrfToken\XsrfTokenService;
 use ampf\Tests\Support\ArraySessionService;
 use ampf\Tests\Support\RecordingHttpRequest;
+use ampf\Tests\Support\SeamHttpRequest;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -30,6 +31,7 @@ final class HttpRequestTest extends TestCase
         return [
             'a page of this site' => ['https://app.example/articles?page=2', 'articles?page=2'],
             'the host in capitals' => ['https://APP.example/dashboard', 'dashboard'],
+            'the scheme in capitals' => ['HTTPS://app.example/dashboard', 'dashboard'],
             'http on this host' => ['http://app.example/dashboard', 'dashboard'],
             'the default port named' => ['https://app.example:443/dashboard', 'dashboard'],
             'the site\'s root' => ['https://app.example/', null],
@@ -65,6 +67,7 @@ final class HttpRequestTest extends TestCase
             [['j', 1.0]],
         ];
         yield 'further parameters' => ['de;q=0.5;x=y', [['de', 0.5]]];
+        yield 'a parameter that only ends like a weight' => ['de;xq=0.5, en', [['en', 1.0]]];
         yield 'empty ranges' => [' , ;q=0.5,,en', [['en', 1.0]]];
     }
 
@@ -187,22 +190,23 @@ final class HttpRequestTest extends TestCase
     {
         foreach (
             [
-                ['samesite' => 'lax-ish'],
-                ['secure' => 'yes'],
-                ['httponly' => 1],
-                ['path' => "/\r\nX: y"],
-                ['domain' => "app.example\r\nX: y"],
-                ['domain' => 1],
-                ['expires' => 5],
-                ['samesite' => 'None', 'secure' => false],
-            ] as $options
+                [['samesite' => 'lax-ish'], 'Unknown or malformed cookie attribute samesite.'],
+                [['secure' => 'yes'], 'Unknown or malformed cookie attribute secure.'],
+                [['httponly' => 1], 'Unknown or malformed cookie attribute httponly.'],
+                [['path' => "/\r\nX: y"], 'Unknown or malformed cookie attribute path.'],
+                [['domain' => "app.example\r\nX: y"], 'Unknown or malformed cookie attribute domain.'],
+                [['domain' => 1], 'Unknown or malformed cookie attribute domain.'],
+                [['expires' => 5], 'Unknown or malformed cookie attribute expires.'],
+                [['samesite' => 'None', 'secure' => false], 'A SameSite=None cookie must be Secure.'],
+            ] as [$options, $message]
         ) {
             $request = new RecordingHttpRequest();
 
             try {
                 $request->setCookieParam('a', 'b', 0, $options);
                 self::fail('accepted ' . json_encode($options, JSON_THROW_ON_ERROR));
-            } catch (InvalidArgumentException) {
+            } catch (InvalidArgumentException $e) {
+                self::assertSame($message, $e->getMessage());
                 self::assertSame([], $request->getSentCookies());
             }
         }
@@ -220,6 +224,7 @@ final class HttpRequestTest extends TestCase
                 ['X-Test', "value\0"],
                 ['X-Test', "value\x7F"],
                 ["X-Test\r\nX", 'value'],
+                ["X-Test\n", 'value'],
                 ['X Test', 'value'],
                 ['X-Test:', 'value'],
             ] as [$name, $value]
@@ -278,6 +283,37 @@ final class HttpRequestTest extends TestCase
         self::assertSame('dashboard', $https->getRefererLocalized());
         self::assertSame('dashboard', $http->getRefererLocalized());
         self::assertNull($otherPort->getRefererLocalized());
+    }
+
+    public function testTheHostHeaderIsComparedWithoutItsBlanksAndItsCase(): void
+    {
+        $request = new RecordingHttpRequest(
+            ['HTTP_HOST' => ' App.Example ', 'HTTP_REFERER' => 'https://app.example/x'],
+        );
+
+        self::assertSame('x', $request->getRefererLocalized());
+    }
+
+    public function testASubclassChangesTheStepsOfTheRequest(): void
+    {
+        $request = new SeamHttpRequest([
+            'HTTP_HOST' => 'app.example',
+            'HTTP_REFERER' => 'https://app.example/app/x',
+            'REQUEST_URI' => '/app/article/7',
+            'SCRIPT_NAME' => '/app/index.php',
+        ]);
+        $request->setRouteResolver($this->resolver([
+            'article' => ['pattern' => 'article/(?P<id>[0-9]+)', 'controller' => 'ArticleController'],
+        ]));
+
+        $request->setCookieParam('a', 'b');
+
+        self::assertSame('ArticleController', $request->getController());
+        self::assertSame('x', $request->getRefererLocalized());
+        self::assertSame(
+            ['getCookieDefaults', 'getCookieOptions', 'getDirname', 'getRefererPathOnThisHost', 'getRoute', 'isHttpsRequest'],
+            $request->getCalledMethods(),
+        );
     }
 
     public function testNoHostHeaderMeansNoLocalReferer(): void
@@ -340,7 +376,7 @@ final class HttpRequestTest extends TestCase
 
     public function testARequestComesFromThisSiteUnlessTheBrowserSaysOtherwise(): void
     {
-        foreach (['same-origin' => true, 'none' => true, 'Same-Origin' => true, '' => true] as $site => $expected) {
+        foreach (['same-origin' => true, 'none' => true, ' Same-Origin ' => true, '' => true] as $site => $expected) {
             $request = new RecordingHttpRequest(['HTTP_SEC_FETCH_SITE' => (string)$site]);
             self::assertSame($expected, $request->comesFromThisSite(), 'Sec-Fetch-Site: ' . $site);
         }
@@ -733,6 +769,17 @@ final class HttpRequestTest extends TestCase
         $this->expectExceptionMessage('A redirect target must not contain a control character.');
 
         $request->setRedirect('broken');
+    }
+
+    public function testAnEmptyBodyIsABodyARedirectCannotFollow(): void
+    {
+        $request = $this->routed([]);
+        $request->setResponse('');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A redirect cannot follow a response body.');
+
+        $request->setRedirect('article', ['id' => 1]);
     }
 
     public function testARedirectAndABodyExcludeEachOther(): void

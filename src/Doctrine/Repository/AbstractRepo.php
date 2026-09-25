@@ -142,18 +142,11 @@ abstract class AbstractRepo extends EntityRepository
      */
     protected function entityList(Query $query): array
     {
-        $rows = $query->getResult();
-
-        if (!is_array($rows)) {
-            throw new RuntimeException(
-                'The query\'s result is no list of entities, but ' . get_debug_type($rows) . '.',
-            );
-        }
-
         $class = $this->getClassName();
         $result = [];
 
-        foreach ($rows as $row) {
+        // An object hydration's result is an array of rows: what else could come is taken as a row, and refused
+        foreach ((array)$query->getResult() as $row) {
             if (!($row instanceof $class)) {
                 throw new RuntimeException(
                     'The query\'s result holds something other than a ' . $class . ': ' . get_debug_type($row) . '.',

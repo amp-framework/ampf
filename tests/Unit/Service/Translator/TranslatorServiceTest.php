@@ -84,6 +84,19 @@ final class TranslatorServiceTest extends TestCase
         $this->expectOutputString('');
     }
 
+    public function testALanguageWithoutTextsIsReadOnce(): void
+    {
+        $beanFactory = new BeanFactory(['translation.dir' => self::DIRECTORY]);
+        $translator = new TranslatorService();
+        $translator->setBeanFactory($beanFactory);
+        $translator->setLanguage('empty');
+        self::assertSame('FAREWELL', $translator->translate('FAREWELL'));
+
+        $beanFactory->set('Config', ['translation.dir' => '/nowhere']);
+
+        self::assertSame('FAREWELL', $translator->translate('FAREWELL'), 'no second look for its file');
+    }
+
     public function testTheSameLanguageKeepsItsTexts(): void
     {
         $beanFactory = new BeanFactory(['translation.dir' => self::DIRECTORY]);
@@ -103,9 +116,51 @@ final class TranslatorServiceTest extends TestCase
         $translator = $this->translator('de');
 
         self::assertSame('FAREWELL', $translator->getKey('tschüss'));
+        self::assertSame('OVER', $translator->getKey('ÜBER'), 'the case of every letter');
+        self::assertSame('OVER', $translator->getKey('über'));
         self::assertSame('FAREWELL', $translator->getKey('Tschüss', false));
         self::assertNull($translator->getKey('tschüss', false), 'the case counts');
         self::assertNull($translator->getKey('Servus'));
+    }
+
+    public function testATranslatorMayLoadTheTextsItsOwnWay(): void
+    {
+        $translator = new class extends TranslatorService {
+            private int $loads = 0;
+
+            public function getLoads(): int
+            {
+                return $this->loads;
+            }
+
+            /**
+             * @return array<string, string>
+             */
+
+            protected function getConfig(): array
+            {
+                return ['EXTRA' => 'Noch was'] +
+
+                parent::getConfig();
+            }
+
+            /**
+             * @return array<string, string>
+             */
+
+            protected function loadTexts(string $directory): array
+            {
+                $this->loads++;
+
+                return parent::loadTexts($directory);
+            }
+        };
+        $translator->setBeanFactory(new BeanFactory(['translation.dir' => self::DIRECTORY]));
+        $translator->setLanguage('de');
+
+        self::assertSame('Noch was', $translator->translate('EXTRA'));
+        self::assertSame('Tschüss', $translator->translate('FAREWELL'));
+        self::assertSame(1, $translator->getLoads(), 'once for the language');
     }
 
     public function testWithoutALanguageThereAreNoTexts(): void

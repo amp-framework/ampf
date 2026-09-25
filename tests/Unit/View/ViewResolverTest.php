@@ -70,6 +70,56 @@ final class ViewResolverTest extends TestCase
         $this->resolver()->getViewFilename('missing.txt.php');
     }
 
+    public function testABackslashSeparatesSegmentsAsASlashDoes(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('There is no template nested\page.txt.php.');
+
+        $this->resolver()->getViewFilename('nested\page.txt.php');
+    }
+
+    public function testAResolverMayCheckNamesAndDirectoriesItsOwnWay(): void
+    {
+        $resolver = new class extends ViewResolver {
+            /**
+             * @var list<string>
+             */
+            private array $resolved = [];
+
+            /**
+             * @return list<string>
+             */
+            public function getResolved(): array
+            {
+                return $this->resolved;
+            }
+
+            protected function isValidFilename(string $filename): bool
+            {
+                // Partials, named with a leading underscore, are no templates of their own
+                return !str_starts_with($filename, '_') && parent::isValidFilename($filename);
+            }
+
+            protected function resolveDirectory(string $directory): string
+            {
+                $this->resolved[] = $directory;
+
+                return parent::resolveDirectory($directory);
+            }
+        };
+        $resolver->setConfig(['viewDirectory' => self::VIEWS]);
+
+        self::assertSame([self::VIEWS], $resolver->getResolved());
+        self::assertStringEndsWith('/greeting.txt.php', $resolver->getViewFilename('greeting.txt.php'));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'The template name _greeting.txt.php has a segment other than letters, digits and _.-, or with "..".',
+        );
+
+        $resolver->getViewFilename('_greeting.txt.php');
+    }
+
     public function testADirectoryIsNoTemplate(): void
     {
         $this->expectException(RuntimeException::class);

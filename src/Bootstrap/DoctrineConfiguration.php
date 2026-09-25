@@ -6,6 +6,7 @@ namespace ampf\Bootstrap;
 
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\ORMSetup;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\PhpFilesAdapter;
 
 /**
@@ -24,10 +25,10 @@ class DoctrineConfiguration
     {
         $configuration = ORMSetup::createAttributeMetadataConfig(
             paths: $entityPaths,
-            isDevMode: $cacheDirectory === null,
+            // The process's memory, whatever cache extension the machine has; or the directory's files, for ever
             cache: $cacheDirectory === null
-                ? null
-                : new PhpFilesAdapter('orm', 0, $cacheDirectory),
+                ? new ArrayAdapter()
+                : new PhpFilesAdapter('orm', directory: $cacheDirectory),
         );
         $configuration->enableNativeLazyObjects(true);
 

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace ampf\Tests\Unit\Service\XsrfToken;
 
+use ampf\Service\Session\SessionServiceInterface;
 use ampf\Service\XsrfToken\XsrfTokenService;
 use ampf\Tests\Support\ArraySessionService;
+use ampf\Tests\Support\CopyingSessionService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use SplQueue;
@@ -42,6 +44,62 @@ final class XsrfTokenServiceTest extends TestCase
 
         self::assertTrue($this->newRequest()->isCorrectToken($token));
         self::assertFalse($this->newRequest()->isCorrectToken($token), 'a used token is spent');
+    }
+
+    public function testATokenIsAcceptedOnceByASessionThatKeepsCopies(): void
+    {
+        $session = new CopyingSessionService();
+        $token = $this->newRequest($session)->getNewToken();
+
+        self::assertTrue($this->newRequest($session)->isCorrectToken($token));
+        self::assertFalse($this->newRequest($session)->isCorrectToken($token), 'the queue without it was stored');
+    }
+
+    public function testAServiceMayKeepTheTokensItsOwnWay(): void
+    {
+        $service = new class extends XsrfTokenService {
+            /**
+             * @var list<string>
+             */
+            private array $calls = [];
+
+            /**
+             * @return list<string>
+             */
+            public function getCalls(): array
+            {
+                return $this->calls;
+            }
+
+            protected function issueToken(): string
+            {
+                $this->calls[] = __FUNCTION__;
+
+                return parent::issueToken();
+            }
+
+            protected function getTokenQueue(): SplQueue
+            {
+                $this->calls[] = __FUNCTION__;
+
+                return parent::getTokenQueue();
+            }
+
+            protected function setTokenQueue(): void
+            {
+                $this->calls[] = __FUNCTION__;
+
+                parent::setTokenQueue();
+            }
+        };
+        $service->setSessionService($this->session);
+
+        $service->isCorrectToken($service->getNewToken());
+
+        self::assertSame(
+            ['issueToken', 'getTokenQueue', 'setTokenQueue', 'getTokenQueue', 'setTokenQueue'],
+            $service->getCalls(),
+        );
     }
 
     public function testOneRequestHandsOutOneToken(): void
@@ -96,10 +154,10 @@ final class XsrfTokenServiceTest extends TestCase
     }
 
     /** A service as a request has one: its own instance over the shared session. */
-    private function newRequest(): XsrfTokenService
+    private function newRequest(?SessionServiceInterface $session = null): XsrfTokenService
     {
         $service = new XsrfTokenService();
-        $service->setSessionService($this->session);
+        $service->setSessionService($session ?? $this->session);
 
         return $service;
     }

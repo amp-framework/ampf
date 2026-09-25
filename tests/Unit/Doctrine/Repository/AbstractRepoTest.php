@@ -6,6 +6,7 @@ namespace ampf\Tests\Unit\Doctrine\Repository;
 
 use ampf\Bootstrap\DoctrineConfiguration;
 use ampf\Doctrine\Repository\AbstractRepo;
+use ampf\Tests\Support\Doctrine\FlushRecordingEntityManager;
 use ampf\Tests\Support\Doctrine\PlainEntity;
 use ampf\Tests\Support\Doctrine\SampleEntity;
 use ampf\Tests\Support\Doctrine\SampleRepo;
@@ -84,6 +85,17 @@ final class AbstractRepoTest extends TestCase
         self::assertSame(1, $this->repository->bulkRemoveBy(['name' => 'beta', 'id' => $beta]));
         self::assertSame(1, $this->repository->findAllCount());
         self::assertSame('gamma', $this->repository->findOneNamed('gamma')?->getName());
+    }
+
+    public function testTheRemovalsAreFlushedTwentyAtATimeAndTheEntityManagerClearedBetween(): void
+    {
+        $this->store(...array_fill(0, 45, 'alpha'));
+        $entityManager = new FlushRecordingEntityManager($this->entityManager);
+        $repository = new SampleRepo($entityManager, $entityManager->getClassMetadata(SampleEntity::class));
+
+        self::assertSame(45, $repository->bulkRemoveBy(['name' => 'alpha']));
+        self::assertSame([20, 20, 5], $entityManager->getFlushedRemovals());
+        self::assertSame(2, $entityManager->getClears());
     }
 
     public function testARemovalWithoutCriteriaIsRefused(): void

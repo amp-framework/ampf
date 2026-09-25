@@ -102,6 +102,19 @@ final class HttpViewTest extends TestCase
         self::assertSame('/app/', $view->getAssetLink('css/..'));
     }
 
+    public function testAViewMayResolveTheAssetPathsItsOwnWay(): void
+    {
+        $view = new class extends HttpView {
+            protected function solveSymbolicPath(string $path): string
+            {
+                return 'v2/' . parent::solveSymbolicPath($path);
+            }
+        };
+        $view->setRequest(new RecordingHttpRequest(['SCRIPT_NAME' => '/app/index.php']));
+
+        self::assertSame('/app/v2/img/logo.png', $view->getAssetLink('css/../img/logo.png'));
+    }
+
     public function testAnAssetLinkNeedsAPath(): void
     {
         $this->expectException(RuntimeException::class);

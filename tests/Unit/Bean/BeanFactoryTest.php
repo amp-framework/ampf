@@ -8,6 +8,7 @@ use ampf\Bean\BeanFactory;
 use ampf\Tests\Support\Bean\AbstractBean;
 use ampf\Tests\Support\Bean\PlainBean;
 use ampf\Tests\Support\Bean\RecordingBean;
+use ampf\Tests\Support\Bean\SeamBeanFactory;
 use ArrayObject;
 use Countable;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -45,6 +46,10 @@ final class BeanFactoryTest extends TestCase
             ['class' => RecordingBean::class, 'scope' => 'request'],
             'The bean bean has a scope other than singleton and prototype.',
         ];
+        yield 'a scope of another type' => [
+            ['class' => RecordingBean::class, 'scope' => true],
+            'The bean bean has a scope other than singleton and prototype.',
+        ];
         yield 'properties of another type' => [
             ['class' => RecordingBean::class, 'properties' => 'Config'],
             'The bean bean must list its properties in an array.',
@@ -77,13 +82,28 @@ final class BeanFactoryTest extends TestCase
 
     public function testTheFactoryAndTheConfigurationAreBeans(): void
     {
-        $factory = new BeanFactory(['beans' => []]);
+        $factory = new BeanFactory(['beans' => [], 'routes' => []]);
 
         self::assertSame($factory, $factory->get('BeanFactory'));
-        self::assertSame(['beans' => []], $factory->get('Config'));
-        self::assertSame(['beans' => []], $factory->getConfig());
+        self::assertSame(['beans' => [], 'routes' => []], $factory->get('Config'));
+        self::assertSame(['beans' => [], 'routes' => []], $factory->getConfig());
         self::assertTrue($factory->has('BeanFactory'));
         self::assertTrue($factory->has('Config'));
+    }
+
+    public function testASubclassChangesTheStepsOfTheCreation(): void
+    {
+        $factory = new SeamBeanFactory(['beans' => [
+            'base' => ['class' => PlainBean::class],
+            'bean' => ['class' => RecordingBean::class, 'parent' => 'base'],
+        ]]);
+
+        $factory->get('bean');
+
+        self::assertSame(
+            ['getDefinition bean', 'getDefinitions', 'configure bean', 'getDefinition base', 'getDefinitions', 'configure base'],
+            $factory->getCalls(),
+        );
     }
 
     public function testASingletonIsCreatedOnce(): void
