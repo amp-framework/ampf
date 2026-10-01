@@ -60,9 +60,29 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     protected array $headers = [];
 
     /**
+     * The names of the headers to take out of what PHP holds for the response at flush(), by their lower-case form: the
+     * name as it was first given.
+     *
+     * @var array<string, string>
+     */
+    protected array $removedHeaders = [];
+
+    /**
      * The raw body, read at the first getBody().
      */
     protected ?string $body = null;
+
+    /**
+     * A header's name is a token: nothing a client sent reaches header() otherwise.
+     *
+     * @throws RuntimeException for a name that is no token
+     */
+    protected static function requireHeaderName(string $key): void
+    {
+        if (preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/D', $key) !== 1) {
+            throw new RuntimeException('A header name must be a token.');
+        }
+    }
 
     /** Whether the text holds a C0 control character or DEL, a horizontal tab excepted. */
     protected static function hasControlCharacter(string $text): bool
@@ -129,16 +149,27 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
             throw new RuntimeException('A header needs a name and a value.');
         }
 
-        // A header's name is a token, and its value one line: nothing a client sent reaches header() otherwise
-        if (preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/D', $key) !== 1) {
-            throw new RuntimeException('A header name must be a token.');
-        }
+        // A header's name is a token, and its value one line
+        static::requireHeaderName($key);
 
         if (static::hasControlCharacter($value)) {
             throw new RuntimeException('A header value must not contain a control character.');
         }
 
         $this->headers[] = "{$key}: {$value}";
+
+        return $this;
+    }
+
+    public function removeHeader(string $key): self
+    {
+        static::requireHeaderName($key);
+
+        $this->headers = array_values(array_filter(
+            $this->headers,
+            static fn (string $header): bool => strcasecmp(explode(':', $header)[0], $key) !== 0,
+        ));
+        $this->removedHeaders[strtolower($key)] ??= $key;
 
         return $this;
     }
@@ -179,7 +210,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function flush(): self
     {
         // PHP's own header, which a development php.ini's expose_php adds: nothing a client needs to know
-        $this->removeHeader('X-Powered-By');
+        $this->withdrawHeader('X-Powered-By');
 
         // Everything is checked before the first byte goes out: a refused header ends the request as an error
         foreach ($this->headers as $header) {
@@ -191,6 +222,12 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         if ($this->responseRedirect !== null && static::hasControlCharacter($this->responseRedirect['target'])) {
             throw new RuntimeException('A redirect target must not contain a control character.');
         }
+
+        // What the application removed, out of what PHP holds too (the session's cache limiter added its headers at the start)
+        foreach ($this->removedHeaders as $name) {
+            $this->withdrawHeader($name);
+        }
+        $this->removedHeaders = [];
 
         $this->sendStatusCode($this->responseStatusCode);
 
@@ -721,7 +758,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
 
     /**
      * Hands a header line to PHP, replacing an earlier one of the name; $statusCode is the status that goes with it
-     * (a redirect's), 0 for none. With sendStatusCode() and removeHeader() the place a response's head leaves the
+     * (a redirect's), 0 for none. With sendStatusCode() and withdrawHeader() the place a response's head leaves the
      * request, so that a test can record it instead.
      */
     protected function sendHeader(string $header, int $statusCode): void
@@ -735,8 +772,8 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         http_response_code($statusCode);
     }
 
-    /** Takes a header PHP added by itself out of the response (see sendHeader()). */
-    protected function removeHeader(string $name): void
+    /** Takes a header out of what PHP holds for the response: one it added by itself, or one sent before (see sendHeader()). */
+    protected function withdrawHeader(string $name): void
     {
         header_remove($name);
     }

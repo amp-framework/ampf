@@ -138,7 +138,7 @@ class RecordingHttpRequest extends HttpRequest
         $this->sent[] = 'status ' . $statusCode;
     }
 
-    protected function removeHeader(string $name): void
+    protected function withdrawHeader(string $name): void
     {
         $this->sent[] = 'remove ' . $name;
     }

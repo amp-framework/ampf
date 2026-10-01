@@ -2,6 +2,14 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## Removing a header
+
+A response that may be kept needs the headers against caching gone, and a controller could only replace them: `Pragma: no-cache` stayed, which Chromium takes for `Cache-Control: no-cache` whatever else is said, and so did the `Pragma` and `Expires` that PHP's session cache limiter adds by itself once the session started.
+
+- **`HttpRequestInterface::removeHeader(string $key): self`** (new, and `HttpRequest` implements it): drops every line of the name added so far — the defaults every response starts with too —, and at `flush()` takes the header out of what PHP holds for the response as well. A header added afterwards is sent. A name that is no token is a `RuntimeException` (`A header name must be a token.`). **An application's own implementation of the interface adds the method.**
+- **`HttpRequest`'s protected seam `removeHeader(string $name): void` is now `withdrawHeader(string $name): void`** (it still does `header_remove()`, and `flush()` still calls it for `X-Powered-By`). A subclass that overrides the seam — a test request that records the response's head — renames its override; left as it is, it is a fatal error, since `removeHeader()` is public and returns the request now.
+- `HttpRequest::requireHeaderName()` (protected, static) is the check of a header's name that `addHeader()` made and `removeHeader()` makes too.
+
 ## Mutation testing
 
 Infection now changes the framework's code in some two thousand ways, and a test fails for every one of them. What that took is mostly tests; the code changed where it had a branch no input reaches, a number no test can tell from its neighbour, or state a test could not reach. A subclass notices these:

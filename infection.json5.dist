@@ -33,7 +33,7 @@
         "FunctionCallRemoval": {
             "ignore": [
                 "ampf\\Request\\HttpRequest::sendCookie",
-                "ampf\\Request\\HttpRequest::removeHeader",
+                "ampf\\Request\\HttpRequest::withdrawHeader",
                 "ampf\\Service\\Session\\SessionService::sendCookie",
             ],
         },

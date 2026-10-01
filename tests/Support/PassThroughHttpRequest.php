@@ -58,10 +58,10 @@ final class PassThroughHttpRequest extends HttpRequest
         parent::sendStatusCode($statusCode);
     }
 
-    protected function removeHeader(string $name): void
+    protected function withdrawHeader(string $name): void
     {
         $this->calls[] = 'remove ' . $name;
 
-        parent::removeHeader($name);
+        parent::withdrawHeader($name);
     }
 }

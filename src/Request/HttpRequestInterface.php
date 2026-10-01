@@ -142,6 +142,16 @@ interface HttpRequestInterface
     public function isRedirect(): bool;
 
     /**
+     * The response does not carry a header of this name: the lines added so far are dropped — the defaults every response
+     * starts with too (a file that may be kept drops `Pragma: no-cache`) —, and when the response is flushed PHP is told to
+     * take out the header it added by itself, as the session's cache limiter does. A header added afterwards is sent.
+     * Names are compared without regard to case.
+     *
+     * @throws RuntimeException for a name that is no token
+     */
+    public function removeHeader(string $key): self;
+
+    /**
      * @param ?array<string, scalar|null> $params
      */
     public function setRedirect(

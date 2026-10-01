@@ -43,6 +43,27 @@ final class HttpRequestFlushTest extends TestCase
         );
     }
 
+    public function testARemovedHeaderIsTakenOutOfPhpsOwnListBeforeTheOthersAreSent(): void
+    {
+        $request = new PassThroughHttpRequest();
+        $request->removeHeader('Pragma')->addHeader('Cache-Control', 'public, max-age=60');
+
+        $request->flush();
+
+        self::assertSame(
+            [
+                'remove X-Powered-By',
+                'remove Pragma',
+                'status 200',
+                'header Content-Type: text/html; charset=UTF-8',
+                'header Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
+                'header Expires: Thu, 01 Jan 1970 00:00:00 GMT',
+                'header Cache-Control: public, max-age=60',
+            ],
+            $request->getCalls(),
+        );
+    }
+
     public function testARedirectGoesOutWithItsStatus(): void
     {
         $request = new PassThroughHttpRequest();

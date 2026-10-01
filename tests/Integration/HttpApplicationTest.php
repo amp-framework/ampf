@@ -135,6 +135,23 @@ final class HttpApplicationTest extends TestCase
         self::assertSame('Visits: 1', $this->request('GET', '/counter')['body'], 'another browser, another session');
     }
 
+    public function testAResponseThatMayBeKeptCarriesNoHeaderAgainstCaching(): void
+    {
+        $kept = $this->request('GET', '/kept');
+        $counted = $this->request('GET', '/counter');
+
+        self::assertSame('Kept', $kept['body']);
+        self::assertSame('public, max-age=3600', $this->header($kept, 'Cache-Control'));
+        self::assertNull(
+            $this->header($kept, 'Pragma'),
+            'neither the request\'s nor the one the session\'s cache limiter added',
+        );
+        self::assertNull($this->header($kept, 'Expires'), 'nor the date in the past, whoever added it');
+        // What does not ask for it stays uncached, the session started or not
+        self::assertSame('no-cache', $this->header($counted, 'Pragma'));
+        self::assertStringStartsWith('no-store', (string)$this->header($counted, 'Cache-Control'));
+    }
+
     public function testACookieAndARedirectGoOutTogether(): void
     {
         $response = $this->request('GET', '/theme/dark');

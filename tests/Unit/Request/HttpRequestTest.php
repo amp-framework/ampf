@@ -514,6 +514,146 @@ final class HttpRequestTest extends TestCase
         new RecordingHttpRequest()->addHeader('X-Test', "a\nb");
     }
 
+    public function testAHeaderIsRemovedWithEveryLineOfItsName(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->addHeader('X-Test', 'one')->addHeader('X-Other', 'kept')->addHeader('X-Test', 'two');
+
+        self::assertSame($request, $request->removeHeader('X-Test'));
+
+        self::assertSame(
+            [
+                'Content-Type: text/html; charset=UTF-8',
+                'Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
+                'Pragma: no-cache',
+                'Expires: Thu, 01 Jan 1970 00:00:00 GMT',
+                'X-Other: kept',
+            ],
+            $request->getHeaders(),
+            'The others stay in their order, in a list.',
+        );
+    }
+
+    public function testTheHeadersEveryResponseStartsWithCanBeRemovedToo(): void
+    {
+        $request = new RecordingHttpRequest();
+
+        $request->removeHeader('Pragma')->removeHeader('Expires');
+
+        self::assertSame(
+            [
+                'Content-Type: text/html; charset=UTF-8',
+                'Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
+            ],
+            $request->getHeaders(),
+        );
+    }
+
+    public function testANameIsComparedWithoutRegardToCaseAndNeitherAsAPrefixNorInAValue(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->addHeader('X-Test', 'Pragma: not a header of that name');
+
+        $request->removeHeader('pRAGMA')->removeHeader('Cache')->removeHeader('X-Tes');
+
+        self::assertSame(
+            [
+                'Content-Type: text/html; charset=UTF-8',
+                'Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
+                'Expires: Thu, 01 Jan 1970 00:00:00 GMT',
+                'X-Test: Pragma: not a header of that name',
+            ],
+            $request->getHeaders(),
+        );
+    }
+
+    public function testRemovingWhatIsNotThereChangesNothing(): void
+    {
+        $request = new RecordingHttpRequest();
+        $before = $request->getHeaders();
+
+        $request->removeHeader('X-Not-There');
+
+        self::assertSame($before, $request->getHeaders());
+    }
+
+    public function testARemovedHeaderIsSentAgainWhenItIsAddedAfterwards(): void
+    {
+        $request = new RecordingHttpRequest();
+
+        $request->removeHeader('Pragma')->addHeader('Pragma', 'cache');
+
+        self::assertSame('Pragma: cache', $request->getHeaders()[3]);
+        self::assertCount(4, $request->getHeaders());
+    }
+
+    public function testTheNameOfAHeaderToRemoveMustBeAToken(): void
+    {
+        foreach (['', ' ', 'X Test', "X-Test\n", 'X-Test:', 'Ünder'] as $name) {
+            try {
+                new RecordingHttpRequest()->removeHeader($name);
+                self::fail('removed ' . json_encode($name, JSON_THROW_ON_ERROR));
+            } catch (RuntimeException $e) {
+                self::assertSame('A header name must be a token.', $e->getMessage());
+            }
+        }
+    }
+
+    public function testFlushTakesARemovedHeaderOutOfPhpAsWellAndOnlyOnce(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->removeHeader('Pragma')->removeHeader('Expires')->removeHeader('pragma');
+
+        $this->expectOutputString('');
+        $request->flush();
+
+        self::assertSame(
+            [
+                'remove X-Powered-By',
+                'remove Pragma',
+                'remove Expires',
+                'status 200',
+                'header Content-Type: text/html; charset=UTF-8 0',
+                'header Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0 0',
+            ],
+            $request->getSent(),
+            'PHP holds its own Pragma and Expires when the session started: they go, each once, as first spelled.',
+        );
+
+        $request->flush();
+        self::assertSame(['remove X-Powered-By', 'status 200'], array_slice($request->getSent(), 6));
+    }
+
+    public function testFlushTakesTheRemovedNameOutBeforeItSendsTheHeadersThatCameAfterwards(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->removeHeader('Pragma')->addHeader('Pragma', 'cache');
+
+        $this->expectOutputString('');
+        $request->flush();
+
+        $sent = $request->getSent();
+        self::assertSame(['remove X-Powered-By', 'remove Pragma', 'status 200'], array_slice($sent, 0, 3));
+        self::assertContains('header Pragma: cache 0', $sent);
+        self::assertNotContains('header Pragma: no-cache 0', $sent);
+    }
+
+    public function testFlushWithAHeaderThatIsRefusedTakesNothingOutOfPhpButItsOwnHeader(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->removeHeader('Pragma');
+        $request->addRawHeader("X-Test: a\r\nSet-Cookie: x=y");
+
+        try {
+            $request->flush();
+            self::fail('sent a header with a line break');
+        } catch (RuntimeException $e) {
+            self::assertSame('A header must not contain a control character.', $e->getMessage());
+        }
+
+        self::assertSame(['remove X-Powered-By'], $request->getSent());
+    }
+
     public function testFlushSendsTheStatusTheHeadersAndTheBody(): void
     {
         $request = new RecordingHttpRequest();
