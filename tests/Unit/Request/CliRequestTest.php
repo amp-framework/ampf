@@ -50,6 +50,15 @@ final class CliRequestTest extends TestCase
         self::assertSame('HelpController', $this->request(['bin/index.php', ' '])->getController());
     }
 
+    public function testTheRouteIsWhatWasTypedAndTheStarWhenNothingWas(): void
+    {
+        self::assertSame('cache/clear', $this->request(['bin/index.php', 'cache/clear', 'all'])->getRoute());
+        self::assertSame('--help', $this->request(['bin/index.php', '--help'])->getRoute());
+        self::assertSame('*', $this->request(['bin/index.php'])->getRoute());
+        self::assertSame('*', $this->request(['bin/index.php', ' '])->getRoute());
+        self::assertSame('*', $this->request(['bin/index.php', ''])->getRoute());
+    }
+
     public function testARouteWithoutAMatchIsRefused(): void
     {
         $request = $this->request(

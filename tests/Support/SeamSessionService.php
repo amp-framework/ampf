@@ -8,7 +8,8 @@ use ampf\Service\Session\SessionService;
 
 /**
  * PHP's session behind the framework's service, its protected methods noting their calls before they do their work —
- * the starts of PHP's session counted, the cookies recorded instead of handed to PHP, and a start that may fail.
+ * the starts of PHP's session counted, the cookies recorded instead of handed to PHP, a start that may fail, and the
+ * decision whether there is anything to read that a test may make itself.
  */
 final class SeamSessionService extends SessionService
 {
@@ -24,9 +25,17 @@ final class SeamSessionService extends SessionService
 
     private bool $refusesToStart = false;
 
+    private ?bool $nothingToRead = null;
+
     public function refuseToStart(): void
     {
         $this->refusesToStart = true;
+    }
+
+    /** The decision a test makes in place of the service's: true, there is nothing to read; false, there is. */
+    public function decideNothingToRead(bool $nothingToRead): void
+    {
+        $this->nothingToRead = $nothingToRead;
     }
 
     /**
@@ -83,6 +92,20 @@ final class SeamSessionService extends SessionService
         $this->calls[] = __FUNCTION__;
 
         return parent::getSessionConfig();
+    }
+
+    protected function hasNothingToRead(): bool
+    {
+        $this->calls[] = __FUNCTION__;
+
+        return $this->nothingToRead ?? parent::hasNothingToRead();
+    }
+
+    protected function isLazy(): bool
+    {
+        $this->calls[] = __FUNCTION__;
+
+        return parent::isLazy();
     }
 
     protected function isHttpsRequest(): bool

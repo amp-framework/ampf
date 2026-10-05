@@ -205,6 +205,35 @@ final class HttpApplicationTest extends TestCase
         self::assertStringNotContainsString('forged', $this->request('GET', '/notes')['body']);
     }
 
+    public function testTheFilesOfAFormReachTheController(): void
+    {
+        $boundary = 'ampf-' . bin2hex(random_bytes(8));
+        $response = $this->request(
+            'POST',
+            '/upload',
+            ['Content-Type: multipart/form-data; boundary=' . $boundary],
+            $this->filePart($boundary, 'a.txt', 'alpha')
+            . $this->filePart($boundary, 'b.txt', 'beta!')
+            . $this->filePart($boundary, '', '')
+            . '--' . $boundary . "--\r\n",
+        );
+
+        self::assertSame(200, $response['status']);
+        self::assertSame("a.txt 5 0 alpha\nb.txt 5 0 beta!", $response['body'], 'and the input left empty is none');
+    }
+
+    /**
+     * A file input of a multipart form as a browser sends it; a file input left empty has no name and no content.
+     */
+    private function filePart(string $boundary, string $name, string $content): string
+    {
+        return '--' . $boundary . "\r\n"
+            . 'Content-Disposition: form-data; name="files[]"; filename="' . $name . "\"\r\n"
+            . "Content-Type: application/octet-stream\r\n"
+            . "\r\n"
+            . $content . "\r\n";
+    }
+
     /**
      * @param list<string> $headers
      *

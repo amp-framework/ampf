@@ -10,6 +10,8 @@ use ampf\Doctrine\EntityManagerFactoryInterface;
 use ampf\Doctrine\Type\UTCDateTimeType;
 use ampf\Router\RouteResolver;
 use ampf\Router\RouteResolverInterface;
+use ampf\Service\Asset\AssetService;
+use ampf\Service\Asset\AssetServiceInterface;
 use ampf\Service\Configuration\ConfigurationService;
 use ampf\Service\Configuration\ConfigurationServiceInterface;
 use ampf\Service\Hasher\HasherService;
@@ -52,6 +54,7 @@ return [
         /**
          * Services
          */
+        AssetServiceInterface::class => ['class' => AssetService::class],
         ConfigurationServiceInterface::class => [
             'class' => ConfigurationService::class,
             'properties' => ['Config' => 'config'],
@@ -130,6 +133,8 @@ return [
             'samesite' => 'Lax',
         ],
         'use_strict_mode' => true,
+        // A read that brings no session cookie starts no session (SessionService): off, as the framework always was
+        'lazy' => false,
     ],
 
     // The string cache (FileStringCacheService): its directory, the default time to live in seconds (an hour when
@@ -139,6 +144,11 @@ return [
         'defaultttl' => null,
         'enabled' => true,
     ],
+
+    // The block `assets` (AssetService) is not here on purpose. An array that two files define must be a map and is
+    // merged key by key, so a block of the framework's would put its keys into an application's own block of that name,
+    // and refuse an application that wrote anything else under it. The service has the defaults of its keys in code, and
+    // README.md lists the keys.
 
     // The application's settings by domain (ConfigurationService): '.app' => [...], '.app.de' => [...]. A later file
     // replaces a whole domain, so an override repeats every key the domain needs.

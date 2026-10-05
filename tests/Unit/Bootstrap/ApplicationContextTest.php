@@ -177,6 +177,25 @@ final class ApplicationContextTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{string, mixed}> what an application may write under the name of a block that only
+     *                                                a service reads
+     */
+    public static function provideWhatAnApplicationWritesUnderTheNameOfAServicesBlock(): iterable
+    {
+        foreach (['assets'] as $key) {
+            yield $key . ' as a list' => [$key, ['app.css']];
+            yield $key . ' as a text' => [$key, '/srv/assets'];
+            yield $key . ' as null' => [$key, null];
+            yield $key . ' as a number' => [$key, 7];
+            yield $key . ' as no entries' => [$key, []];
+            yield $key . ' as a map of its own' => [
+                $key,
+                ['directory' => '/srv/assets', 'template' => 'failure.html.php'],
+            ];
+        }
+    }
+
+    /**
      * @param array<string, mixed> $config1
      * @param array<string, mixed> $config2
      * @param array<string, mixed> $expectedResult
@@ -185,6 +204,21 @@ final class ApplicationContextTest extends TestCase
     public function testMergeConfig(array $config1, array $config2, array $expectedResult): void
     {
         self::assertSame($expectedResult, ApplicationContext::boot([$this->file($config1), $this->file($config2)]));
+    }
+
+    /**
+     * The framework's defaults name no block that only one of its services reads and an application may or may not
+     * name: the merge would put the framework's keys into the application's own block, or refuse a value that is no
+     * map.
+     */
+    #[DataProvider('provideWhatAnApplicationWritesUnderTheNameOfAServicesBlock')]
+    public function testTheFrameworksDefaultsLeaveTheBlockOfAServiceToTheApplication(string $key, mixed $value): void
+    {
+        $config = ApplicationContext::boot(
+            [dirname(__DIR__, 3) . '/config/default.php', $this->file([$key => $value])],
+        );
+
+        self::assertSame($value, $config[$key]);
     }
 
     public function testNoFilesAreNoConfiguration(): void

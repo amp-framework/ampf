@@ -2,6 +2,41 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## Test support for applications
+
+Additions; **nothing has to change**. `ampf\Testing` is new and nothing loads it but a test (README, section 13); it builds on PHPUnit, which `composer.json` suggests: an application that uses it has PHPUnit among its development dependencies. Its own copies of these classes can go.
+
+- **Doubles:** `TestHttpRequest` (the real request with its input — the files among it — given by the test; `flush()` sends nothing; the cookies, status, headers and redirect recorded; `assertRedirect()`, `requireResponse()`), `TestCliRequest`, `TestUploadedFile`, `MemorySessionService` (serialized copies, PHP's session's rules after `close()` and `destroy()`, `open()`, `id()`), `CheapHasherService` (bcrypt's lowest cost, no wait), and the trait `ExpectsExactMessage` (`expectExceptionMessageExactly()`).
+- **`ApplicationTestCase`:** boots the application's configuration for a transport with its `tests/Support/config/integration.php` in place of `config/local.php`, runs each simulated request in a bean factory of its own with the doubles in place (`get()`, `post()` with the one-time token, `dispatch()`, `cli()`, `bean()`, `useBean()`, `configure()`, `useSession()`), and fails a test when the application wrote to PHP's error log unexpectedly (`errorLog()`, `expectLoggedFailure()`). A subclass names `projectRoot()` and may override `configurationFiles()` and the hooks `scopeCreated()`, `scopeReleased()` and `beforeDispatch()`.
+- **Guards** (`ampf\Testing\Guard`), each extended in a small class of the application's tests: `ClassLoadingGuard` (every source file declares the type its path names), `BeanConfigurationGuard` (beans keyed by their types, singletons by interfaces; routes name controller beans; nothing after a catch-all), `RouteConstantsGuard` (the route constants are the routes; the catch-alls last), `BeanAccessGuard` (the access traits are the generator's output).
+- **README:** the new section 13, "Testing an application", moves "Working on ampf" to section 14: a link to the anchor `#13-working-on-ampf` is `#14-working-on-ampf` now. The sections before 13 keep their numbers.
+
+## Uploaded files
+
+Additions; **nothing has to change**. The new methods are on `HttpRequest` only, not on `HttpRequestInterface`: an application's own implementation of the interface would have to add them, which no addition may ask of it. A controller reaches them on the request it has (`assert($request instanceof HttpRequest)`).
+
+- **`HttpRequest::getUploadedFiles(string $key): list<UploadedFile>`:** the files of a form field, from `$_FILES`, in the order they came — one for a single input, each of `name="photos[]"`, every one below a field of nested names; an input left empty is none, a file PHP refused comes with its error. **`ampf\Request\UploadedFile`** carries `clientName` (what the browser sent: text, never a path), `size`, `temporaryPath` and `error`, and has `isOk()`, `isUploadedFile()` and `moveTo($target)`; PHP's `is_uploaded_file()` and `move_uploaded_file()` are its protected `isUploaded()` and `moveUploaded()`, and the request makes it in the protected `createUploadedFile()`: the seams a test overrides. The request reads `$_FILES` in its constructor into the protected `$files`, as it reads `$_GET`.
+- **`HttpRequest::isPostTooLarge(): bool`:** whether the request's body is bigger than PHP's `post_max_size` and so was dropped — PHP then leaves `$_POST` and `$_FILES` empty, and an application that finds no file cannot tell a form that was sent empty from one that was too big. It compares the `Content-Length` the client announced with the limit (`post_max_size` of 0 is no limit); the protected `postMaxSize()` reads the limit, the seam a test's request overrides.
+
+## Assets that carry their content's version
+
+Additions; **nothing has to change**. The service and the configuration block are new, and nothing uses them until an application names its folder; no existing class, bean id or key changed. The framework serves no asset: the web server does, from the folder below the document root (`public/assets`), and ampf only says the version of each file.
+
+- **`ampf\Service\Asset\AssetServiceInterface`** and its default `AssetService`, a bean in `config/default.php` with `AssetServiceAccess` (`getAssetService()`): `link($request, 'css/app.css')` is the file's address — the request's base path, `assets` (or the configuration's `assets.path`), the path — with the version as the query parameter `v`: the first 16 hex characters of the SHA-256 of the content, the same on every machine and another when the content is, so that a browser may keep the file for a year and fetch the new one the day it changes. A file is read once for a request. A file that is not there, and a lookup before the folder is named, are a `RuntimeException`.
+- **The configuration block `assets`**, which the application names in its own configuration (`config/default.php` does not, so that the application's block is merged as it is written): `directory` (the absolute path of the folder the web server serves) and `path` (the address the web server serves it under, default `assets`).
+
+## A lazy session
+
+Addition; **nothing has to change**. `session.lazy` is a setting of the `session` block that `SessionService` reads (`config/default.php` has it `false`: the behaviour is as it always was). On, `getAttribute()` and `hasAttribute()` answer null and false, without starting a session, when the request brought no plausible session cookie (the one `session.name` names, its value 22 to 256 of the characters `A-Z`, `a-z`, `0-9`, `,` and `-`: a forged cookie of another value is none) and none was started in the request, so that a visitor's page, a crawler's and a flood's leave no session file and no cookie behind; anything but a read starts a session as before. It finds the cookie in the bean `Request`; a setting that is no boolean is refused. The new protected methods `hasNothingToRead()` and `isLazy()` are the seams.
+
+## Trace settings, taking back a redirect
+
+Additions; **nothing has to change**.
+
+- **`ampf\Bootstrap\TraceSettings::apply()`:** keeps the arguments of the calls in a stack trace (`zend.exception_ignore_args` off), so that a failure of production can be debugged from its log; what is marked `#[SensitiveParameter]` is the one thing PHP leaves out of it. An entry point calls it right after `ErrorSettings::applyDefaults()`; one that does not behaves as before.
+- **`HttpRequest::dropRedirect(): self`:** takes back a redirect already set, so that `setResponse()` can follow (a failure after a controller set one). It is a method of the class only, not of `HttpRequestInterface`, so that no implementation of the interface has to change.
+- **`#[SensitiveParameter]`** on the password parameters of `HasherServiceInterface::avoidTimingAttack()`, `check()` and `hash()`, and of `HasherService`'s implementation and its `verify()`: a stack trace shows a `SensitiveParameterValue` in place of what was typed whatever the php.ini says — and shows the other arguments as the php.ini says: nothing in ampf hides them. The attribute on an interface's parameter does nothing at run time — PHP looks at the function that runs —, so every implementation marks its own parameters: `HasherService` does, and so must an application's own implementation of the interface or a subclass that overrides one of them.
+
 ## Removing a header
 
 A response that may be kept needs the headers against caching gone, and a controller could only replace them: `Pragma: no-cache` stayed, which Chromium takes for `Cache-Control: no-cache` whatever else is said, and so did the `Pragma` and `Expires` that PHP's session cache limiter adds by itself once the session started.
@@ -90,7 +125,7 @@ A definition is checked when its bean is first created. What was ignored or fail
 
 ### 8. The tools
 
-- `docker/` runs every check in a container (README, section 13); the Composer scripts stay.
+- `docker/` runs every check in a container (README, section 14); the Composer scripts stay.
 - `phpunit.xml.dist` has an `integration` suite besides `unit`, and the coverage counts `src/` only.
 
 ampf's source tree now follows one set of conventions: PascalCase, singular namespaces directly under `src/`, interfaces with the `Interface` suffix and their implementation next to them, access traits under `ampf\BeanAccess`, and the framework's services keyed by their interface. Every class keeps what it did; the names changed, and a few features that applications had to write themselves moved into the framework.

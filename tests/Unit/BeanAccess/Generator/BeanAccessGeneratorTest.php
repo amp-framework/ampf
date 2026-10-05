@@ -106,7 +106,12 @@ final class BeanAccessGeneratorTest extends TestCase
 
         $files = $generator->generate($config['beans']);
 
-        self::assertCount(11, $files);
+        $interfaces = array_filter(
+            array_keys($config['beans']),
+            static fn (mixed $id): bool => is_string($id) && interface_exists($id),
+        );
+
+        self::assertCount(count($interfaces), $files, 'one trait for each bean keyed by an interface');
         self::assertSame([], $generator->changedFiles($files), 'generate them anew');
         self::assertSame([], $generator->staleFiles($files), 'traits nothing generates any more');
     }

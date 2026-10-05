@@ -33,6 +33,9 @@
     "slevomat/coding-standard": "^8.31",
     "squizlabs/php_codesniffer": "^4.0"
   },
+  "suggest": {
+    "phpunit/phpunit": "^13.3, for ampf\\Testing: the doubles, ApplicationTestCase and the guards an application's tests use"
+  },
   "scripts": {
     "phpcs": "@php vendor/bin/phpcs src config tests",
     "phpcbf": "@php vendor/bin/phpcbf src config tests",

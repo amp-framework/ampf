@@ -14,6 +14,7 @@ namespace ampf\Service\Hasher;
 
 use InvalidArgumentException;
 use RuntimeException;
+use SensitiveParameter;
 
 use const PASSWORD_BCRYPT;
 
@@ -36,14 +37,19 @@ class HasherService implements HasherServiceInterface
     protected const int DELAY_MIN = 1_000;
     protected const int DELAY_MAX = 5_000;
 
-    public function avoidTimingAttack(string $input): void
-    {
+    public function avoidTimingAttack(
+        #[SensitiveParameter]
+        string $input,
+    ): void {
         // Burn some CPU time by doing an useless check
         $this->check($input, static::TOKEN_TIMING_ATT);
     }
 
-    public function check(string $string, string $storedHash): bool
-    {
+    public function check(
+        #[SensitiveParameter]
+        string $string,
+        string $storedHash,
+    ): bool {
         // Randomly sleep some milliseconds
         $this->sleep();
 
@@ -57,8 +63,10 @@ class HasherService implements HasherServiceInterface
         return $this->verify($string, $storedHash);
     }
 
-    public function hash(string $string): string
-    {
+    public function hash(
+        #[SensitiveParameter]
+        string $string,
+    ): string {
         if (trim($string) === '') {
             throw new RuntimeException('A blank string is no secret to hash.');
         }
@@ -99,8 +107,11 @@ class HasherService implements HasherServiceInterface
     /**
      * The one place a string is verified against a hash (the expensive part).
      */
-    protected function verify(string $string, string $hash): bool
-    {
+    protected function verify(
+        #[SensitiveParameter]
+        string $string,
+        string $hash,
+    ): bool {
         return password_verify($string, $hash);
     }
 }

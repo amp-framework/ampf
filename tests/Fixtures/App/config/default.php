@@ -14,6 +14,7 @@ return [
     'viewDirectory' => __DIR__ . '/../views',
     'translation.dir' => __DIR__ . '/../translations',
     'stringfilecache' => ['cachedir' => sys_get_temp_dir()],
+    'assets' => ['directory' => __DIR__ . '/../public/assets'],
 
     'doctrine' => [
         'configuration' => DoctrineConfiguration::create([__DIR__ . '/../Doctrine/Entity']),

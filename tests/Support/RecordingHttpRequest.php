@@ -19,7 +19,7 @@ class RecordingHttpRequest extends HttpRequest
     private array $sentCookies = [];
 
     /**
-     * What flush() handed to PHP, in its order: `status <code>`, `header <line> <code>`, `remove <name>`.
+     * What flush() handed to PHP, in its order: `status <code>`, `header <line> <code>` and `remove <name>`.
      *
      * @var list<string>
      */
@@ -31,6 +31,7 @@ class RecordingHttpRequest extends HttpRequest
      * @param array<string, string|array<mixed>> $get
      * @param array<string, string|array<mixed>> $post
      * @param ?string $body the raw body, in place of php://input
+     * @param array<string, string|array<mixed>> $files the uploaded files, in place of `$_FILES` (its shape)
      */
     public function __construct(
         array $server = [],
@@ -38,6 +39,7 @@ class RecordingHttpRequest extends HttpRequest
         array $get = [],
         array $post = [],
         ?string $body = null,
+        array $files = [],
     ) {
         parent::__construct();
 
@@ -46,6 +48,7 @@ class RecordingHttpRequest extends HttpRequest
         $this->get = $get;
         $this->post = $post;
         $this->body = $body;
+        $this->files = $files;
     }
 
     /**

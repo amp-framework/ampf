@@ -45,6 +45,13 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
      */
     protected ?array $server = null;
 
+    /**
+     * PHP's `$_FILES`: for each field, the names, sizes, temporary paths and errors of its files (getUploadedFiles()).
+     *
+     * @var ?array<string, string|array<mixed, mixed>>
+     */
+    protected ?array $files = null;
+
     protected ?string $responseBody = null;
 
     /**
@@ -129,12 +136,51 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         return $path;
     }
 
+    /**
+     * The files of one field of `$_FILES` as name, size, temporary path and error, in their order. PHP keeps a field's
+     * names, sizes, paths and errors in trees of one shape — a value for a file, a list for `name[]`, a map for
+     * `name[key]` —, walked here along the errors. What has another shape is none, as is an input left empty
+     * (UPLOAD_ERR_NO_FILE).
+     *
+     * @return list<array{string, int, string, int}>
+     */
+    protected static function uploadedFileEntries(mixed $name, mixed $size, mixed $path, mixed $error): array
+    {
+        if (is_array($error)) {
+            $entries = [];
+
+            foreach ($error as $key => $nestedError) {
+                $entries = [...$entries, ...static::uploadedFileEntries(
+                    is_array($name) ? $name[$key] ?? null : null,
+                    is_array($size) ? $size[$key] ?? null : null,
+                    is_array($path) ? $path[$key] ?? null : null,
+                    $nestedError,
+                )];
+            }
+
+            return $entries;
+        }
+
+        if (
+            !is_int($error)
+            || $error === UPLOAD_ERR_NO_FILE
+            || !is_string($name)
+            || !is_int($size)
+            || !is_string($path)
+        ) {
+            return [];
+        }
+
+        return [[$name, $size, $path, $error]];
+    }
+
     public function __construct()
     {
         $this->get = Functions::cleanGPCSLists($_GET);
         $this->post = Functions::cleanGPCSLists($_POST);
         $this->cookie = Functions::cleanGPCSLists($_COOKIE);
         $this->server = Functions::cleanGPCSLists($_SERVER);
+        $this->files = Functions::cleanGPCSLists($_FILES);
 
         // Set some default headers regarding browser caching
         $this->addHeader('Content-Type', 'text/html; charset=UTF-8');
@@ -318,6 +364,53 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         return $this->body ??= (string)file_get_contents('php://input');
     }
 
+    /**
+     * Whether the request's body is bigger than PHP's `post_max_size`, and so was dropped: PHP then leaves the form and
+     * the files of the request empty, so that an application that finds none cannot tell a form that was sent empty from
+     * one that was too big. It is the size the client announced (`Content-Length`) against the limit; `post_max_size` 0
+     * is no limit, and no request is too large for it. A method of this class only: an implementation of
+     * HttpRequestInterface does not have to offer it.
+     */
+    public function isPostTooLarge(): bool
+    {
+        $announced = $this->getServerParam('CONTENT_LENGTH');
+        $limit = $this->postMaxSize();
+
+        return $limit > 0 && is_numeric($announced) && $announced > $limit;
+    }
+
+    /**
+     * The files uploaded under the form field $key — its name before any brackets — in the order they came: a single
+     * file input gives a list of one, a multiple one (`name="photos[]"`) its files, a field of nested names (`a[b]`,
+     * `a[b][]`) every file below it. An input left empty (UPLOAD_ERR_NO_FILE) gives none; a file PHP refused comes with
+     * its error (UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_PARTIAL, ...), so that the application can say why. An absent field,
+     * and one of another shape than PHP gives, has none. A method of this class only: an implementation of
+     * HttpRequestInterface does not have to offer it.
+     *
+     * @return list<UploadedFile>
+     */
+    public function getUploadedFiles(string $key): array
+    {
+        $field = $this->files[$key] ?? null;
+        $field = is_array($field)
+            ? $field
+            : [];
+        $files = [];
+
+        foreach (
+            static::uploadedFileEntries(
+                $field['name'] ?? null,
+                $field['size'] ?? null,
+                $field['tmp_name'] ?? null,
+                $field['error'] ?? null,
+            ) as [$name, $size, $path, $error]
+        ) {
+            $files[] = $this->createUploadedFile($name, $size, $path, $error);
+        }
+
+        return $files;
+    }
+
     public function getGetString(string $key): string
     {
         return static::asString($this->getGetParam($key));
@@ -463,6 +556,18 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     public function isRedirect(): bool
     {
         return $this->responseRedirect !== null;
+    }
+
+    /**
+     * Takes back the redirect set so far, so that a response body can follow it (a failure after a controller set one).
+     * Nothing happens when there is none. A method of this class only: an implementation of HttpRequestInterface does
+     * not have to offer it.
+     */
+    public function dropRedirect(): self
+    {
+        $this->responseRedirect = null;
+
+        return $this;
     }
 
     /**
@@ -776,6 +881,28 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     protected function withdrawHeader(string $name): void
     {
         header_remove($name);
+    }
+
+    /**
+     * PHP's `post_max_size` in bytes, 0 or less for no limit: what isPostTooLarge() compares the announced length with. The seam a
+     * request overrides to answer in PHP's place, as a test's must, which cannot set a limit PHP reads when it starts.
+     */
+    protected function postMaxSize(): int
+    {
+        return ini_parse_quantity((string)ini_get('post_max_size'));
+    }
+
+    /**
+     * Makes the file of one upload (getUploadedFiles()): the seam a request overrides to hand out its own kind of
+     * UploadedFile — a test's, whose moveTo() moves a file the test wrote.
+     */
+    protected function createUploadedFile(
+        string $clientName,
+        int $size,
+        string $temporaryPath,
+        int $error,
+    ): UploadedFile {
+        return new UploadedFile($clientName, $size, $temporaryPath, $error);
     }
 
     /**

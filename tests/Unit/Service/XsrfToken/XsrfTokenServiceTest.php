@@ -6,8 +6,7 @@ namespace ampf\Tests\Unit\Service\XsrfToken;
 
 use ampf\Service\Session\SessionServiceInterface;
 use ampf\Service\XsrfToken\XsrfTokenService;
-use ampf\Tests\Support\ArraySessionService;
-use ampf\Tests\Support\CopyingSessionService;
+use ampf\Testing\MemorySessionService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use SplQueue;
@@ -15,7 +14,7 @@ use SplQueue;
 #[CoversClass(XsrfTokenService::class)]
 final class XsrfTokenServiceTest extends TestCase
 {
-    private ArraySessionService $session;
+    private MemorySessionService $session;
 
     public function testATokenCarries128RandomBitsAsHex(): void
     {
@@ -48,7 +47,7 @@ final class XsrfTokenServiceTest extends TestCase
 
     public function testATokenIsAcceptedOnceByASessionThatKeepsCopies(): void
     {
-        $session = new CopyingSessionService();
+        $session = new MemorySessionService();
         $token = $this->newRequest($session)->getNewToken();
 
         self::assertTrue($this->newRequest($session)->isCorrectToken($token));
@@ -150,7 +149,7 @@ final class XsrfTokenServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->session = new ArraySessionService();
+        $this->session = new MemorySessionService();
     }
 
     /** A service as a request has one: its own instance over the shared session. */

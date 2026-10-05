@@ -11,6 +11,7 @@ use ampf\BeanAccess\Doctrine\DoctrineEntityManagerAccess;
 use ampf\BeanAccess\Doctrine\EntityManagerFactoryAccess;
 use ampf\BeanAccess\Doctrine\Repository\AbstractRepoAccess;
 use ampf\BeanAccess\RouteResolverAccess;
+use ampf\BeanAccess\Service\AssetServiceAccess;
 use ampf\BeanAccess\Service\ConfigurationServiceAccess;
 use ampf\BeanAccess\Service\HasherServiceAccess;
 use ampf\BeanAccess\Service\SessionServiceAccess;
@@ -22,6 +23,7 @@ use ampf\BeanAccess\ViewResolverAccess;
 use ampf\Doctrine\DoctrineConfigInterface;
 use ampf\Doctrine\EntityManagerFactoryInterface;
 use ampf\Router\RouteResolverInterface;
+use ampf\Service\Asset\AssetServiceInterface;
 use ampf\Service\Configuration\ConfigurationServiceInterface;
 use ampf\Service\Hasher\HasherServiceInterface;
 use ampf\Service\Session\SessionServiceInterface;
@@ -45,6 +47,7 @@ use PHPUnit\Framework\TestCase;
  * handed in through its setter without a factory at all.
  */
 #[CoversTrait(AbstractRepoAccess::class)]
+#[CoversTrait(AssetServiceAccess::class)]
 #[CoversTrait(BeanFactoryAccess::class)]
 #[CoversTrait(ConfigurationServiceAccess::class)]
 #[CoversTrait(DoctrineConfigAccess::class)]
@@ -65,6 +68,7 @@ final class AccessTraitsTest extends TestCase
      */
     public static function provideAccessors(): iterable
     {
+        yield 'AssetServiceAccess' => ['getAssetService', 'setAssetService', AssetServiceInterface::class];
         yield 'ConfigurationServiceAccess' => [
             'getConfigurationService',
             'setConfigurationService',

@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  * The framework's bean configuration: every service in config/default.php is keyed by an interface its class
  * implements (an application replaces it under the same key), and each transport file fills the four roles —
  * 'Router', 'Request', 'RequestStub', 'View' — with classes of that transport (the command line has the generator's
- * controller besides). A typo on either side would only show
+ * controller and the help besides). A typo on either side would only show
  * as a "No configuration for bean" or a TypeError at the first use.
  */
 #[CoversNothing]

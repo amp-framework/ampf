@@ -6,6 +6,7 @@ namespace ampf\Service\Session;
 
 use ampf\Bean\BeanFactoryAccessInterface;
 use ampf\BeanAccess\BeanFactoryAccess;
+use ampf\Request\HttpRequestInterface;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -14,6 +15,15 @@ use RuntimeException;
  * `session` block (config/default.php) in place: an HttpOnly, SameSite=Lax cookie for the whole site, Secure when the
  * configuration says so or — `secure` null — when the request came over https; strict mode (an id the server never
  * issued is replaced, not adopted) and cookies only.
+ *
+ * With `session.lazy` on (off without it) a request that brings no session cookie has nothing to read, so reading
+ * starts no session — otherwise a visitor's page that only leads on to the login (or a crawler's, or a flood's) leaves
+ * a session file behind for every request. Everything but a read starts one as always (a write, a removal, a new id, a
+ * destroy), and a session started in this request, by a write or elsewhere, is read as always. The cookie is the one PHP
+ * names (`session.name`) in the request the bean `Request` holds, and its value must be one a session id can be: the
+ * characters of PHP's ids (letters, digits, `,` and `-`), 22 to 256 of them. A cookie of any other value — forged,
+ * mistyped, an array — is no cookie of a session, and a read it brings starts none; one that looks like an id but is
+ * none the server issued starts a session as before (strict mode gives it a new id). A command line has no cookie.
  *
  * @phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
  */
@@ -64,6 +74,9 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function getAttribute(string $key): mixed
     {
+        if ($this->hasNothingToRead()) {
+            return null;
+        }
         $this->start();
 
         return $_SESSION[$key] ?? null;
@@ -71,6 +84,9 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
 
     public function hasAttribute(string $key): bool
     {
+        if ($this->hasNothingToRead()) {
+            return false;
+        }
         $this->start();
 
         return isset($_SESSION[$key]);
@@ -108,6 +124,44 @@ class SessionService implements BeanFactoryAccessInterface, SessionServiceInterf
         $this->start();
 
         $_SESSION[$key] = $value;
+    }
+
+    /**
+     * Whether there is no session to read: the configuration's `session.lazy` is on, none was started in this request
+     * (by a write, which is then what is read, or elsewhere), and the request has no cookie of one that can be a
+     * session id.
+     */
+    protected function hasNothingToRead(): bool
+    {
+        if (!$this->isLazy() || $this->started || session_status() === PHP_SESSION_ACTIVE) {
+            return false;
+        }
+
+        $request = $this->getBeanFactory()->get('Request');
+        $id = $request instanceof HttpRequestInterface
+            ? $request->getCookieParam((string)session_name())
+            : null;
+
+        return !is_string($id) || preg_match('/^[A-Za-z0-9,-]{22,256}$/D', $id) !== 1;
+    }
+
+    /**
+     * Whether a read that brings no session cookie starts no session: the configuration's `session.lazy`, off without
+     * it.
+     *
+     * @throws InvalidArgumentException for a value that is no boolean
+     */
+    protected function isLazy(): bool
+    {
+        $lazy = $this->getSessionConfig()['lazy'] ?? false;
+
+        if (!is_bool($lazy)) {
+            throw new InvalidArgumentException(
+                'The configuration\'s session.lazy must be true or false, not ' . get_debug_type($lazy) . '.',
+            );
+        }
+
+        return $lazy;
     }
 
     /**

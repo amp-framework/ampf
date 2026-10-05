@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace ampf\Tests\Unit\Service\Hasher;
 
 use ampf\Service\Hasher\HasherService;
-use ampf\Tests\Support\CheapHasherService;
+use ampf\Testing\CheapHasherService;
 use ampf\Tests\Support\CountingHasherService;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;

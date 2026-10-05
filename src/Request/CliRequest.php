@@ -48,11 +48,20 @@ class CliRequest implements BeanFactoryAccessInterface, CliRequestInterface
         $this->argv = $argv;
     }
 
-    public function getController(): string
+    /**
+     * The route as it was typed: the first argument, `*` when there is none or it is blank. A method of this class
+     * only, not of CliRequestInterface, so that no implementation of the interface has to offer it.
+     */
+    public function getRoute(): string
     {
-        $route = trim($this->argv[1] ?? '') === ''
+        return trim($this->argv[1] ?? '') === ''
             ? '*'
             : $this->argv[1];
+    }
+
+    public function getController(): string
+    {
+        $route = $this->getRoute();
 
         return $this->getRouteResolver()->getControllerByRoutePattern($route)
             ?? throw new RuntimeException('No route matches the command line\'s route ' . $route . '.');

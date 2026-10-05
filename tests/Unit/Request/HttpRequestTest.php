@@ -9,7 +9,7 @@ use ampf\Request\HttpRequest;
 use ampf\Router\RouteResolver;
 use ampf\Router\RouteResolverInterface;
 use ampf\Service\XsrfToken\XsrfTokenService;
-use ampf\Tests\Support\ArraySessionService;
+use ampf\Testing\MemorySessionService;
 use ampf\Tests\Support\RecordingHttpRequest;
 use ampf\Tests\Support\SeamHttpRequest;
 use InvalidArgumentException;
@@ -943,6 +943,44 @@ final class HttpRequestTest extends TestCase
         $request->setResponse('<p>body</p>');
     }
 
+    public function testARedirectCanBeTakenBackSoThatABodyCanFollow(): void
+    {
+        $request = $this->routed([]);
+        $request->setRedirect('article', ['id' => 1], 303);
+
+        self::assertSame($request, $request->dropRedirect());
+        self::assertFalse($request->isRedirect());
+        self::assertNull($request->getRedirect());
+        self::assertSame($request, $request->setResponse('<p>body</p>'));
+        self::assertSame('<p>body</p>', $request->getResponse());
+    }
+
+    public function testTakingBackWhatWasNeverSetChangesNothing(): void
+    {
+        $request = $this->routed([]);
+        $request->setResponse('<p>body</p>');
+
+        self::assertSame($request, $request->dropRedirect());
+        self::assertFalse($request->isRedirect());
+        self::assertSame('<p>body</p>', $request->getResponse());
+    }
+
+    public function testFlushSendsNoLocationForARedirectThatWasTakenBack(): void
+    {
+        $request = new RecordingHttpRequest();
+        $request->setRawRedirect('/login');
+        $request->dropRedirect()->setResponse('failed');
+
+        $this->expectOutputString('failed');
+        $request->flush();
+
+        self::assertCount(6, $request->getSent());
+        self::assertSame([], array_filter(
+            $request->getSent(),
+            static fn (string $sent): bool => str_contains($sent, 'Location'),
+        ));
+    }
+
     public function testTheResponseIsTheBodySoFar(): void
     {
         $request = new RecordingHttpRequest();
@@ -973,7 +1011,7 @@ final class HttpRequestTest extends TestCase
 
     public function testATokenIsCheckedFromTheQueryString(): void
     {
-        $session = new ArraySessionService();
+        $session = new MemorySessionService();
         $token = $this->tokens($session)->getNewToken();
 
         self::assertFalse($this->tokened($session, [])->hasCorrectToken(), 'no token');
@@ -1048,7 +1086,7 @@ final class HttpRequestTest extends TestCase
             'article' => ['pattern' => 'article/(?P<id>[0-9]+)', 'controller' => 'ArticleController'],
             'page' => ['pattern' => '(?P<path>.*)', 'controller' => 'PageController'],
         ]));
-        $request->setXsrfTokenService($this->tokens(new ArraySessionService()));
+        $request->setXsrfTokenService($this->tokens(new MemorySessionService()));
 
         return $request;
     }
@@ -1064,7 +1102,7 @@ final class HttpRequestTest extends TestCase
         return $resolver;
     }
 
-    private function tokens(ArraySessionService $session): XsrfTokenService
+    private function tokens(MemorySessionService $session): XsrfTokenService
     {
         $tokens = new XsrfTokenService();
         $tokens->setSessionService($session);
@@ -1077,7 +1115,7 @@ final class HttpRequestTest extends TestCase
      *
      * @param array<string, string|array<mixed>> $get
      */
-    private function tokened(ArraySessionService $session, array $get): RecordingHttpRequest
+    private function tokened(MemorySessionService $session, array $get): RecordingHttpRequest
     {
         $request = new RecordingHttpRequest(get: $get);
         $request->setXsrfTokenService($this->tokens($session));
