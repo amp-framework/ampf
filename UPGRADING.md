@@ -2,6 +2,17 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## The upload methods and `dropRedirect()` on the request interface
+
+`HttpRequest::getUploadedFiles()`, `isPostTooLarge()` and `dropRedirect()` were added to the class only, so that no implementation of `HttpRequestInterface` had to change (the entries "Uploaded files" and "Trace settings, taking back a redirect" below say so, as they stood at their release), and a controller that used them had to `assert($request instanceof HttpRequest)`. They are on the interface from now on.
+
+- **`HttpRequestInterface::getUploadedFiles(string $key): list<UploadedFile>`, `isPostTooLarge(): bool` and `dropRedirect(): self`** are new on the interface; `HttpRequest` implements them as before, and so does every request that extends it, `TestHttpRequest` among them. **An application's own implementation of the interface adds the three methods**; an application that has none, or whose request extends `HttpRequest`, changes nothing.
+- A controller reaches the methods through the request it has, as it does every other one: an `assert($request instanceof HttpRequest)` that only served them can go.
+
+## A cheaper stand-in hash in the test hasher
+
+Addition; **nothing has to change**. `HasherService::check()` verifies a blank string, or a stored value that is no bcrypt hash, against a stand-in hash — its protected constant `TOKEN_TIMING_ATT` —, and `avoidTimingAttack()` does too, so that such a check takes the time of a real one. `ampf\Testing\CheapHasherService` inherited the framework's, a hash of cost 12, so that each of these checks took a seventh of a second or so in a test, for nothing the test could tell, and a test suite that checks unknown names or blank passwords many times was slow for it. It has a stand-in of its own now: a bcrypt hash of cost 4 of a text nobody types. `HasherService` itself is unchanged: its stand-in is still the hash of cost 12. An application's own cheap hasher that sets `TOKEN_TIMING_ATT` for this reason can drop it.
+
 ## Test support for applications
 
 Additions; **nothing has to change**. `ampf\Testing` is new and nothing loads it but a test (README, section 13); it builds on PHPUnit, which `composer.json` suggests: an application that uses it has PHPUnit among its development dependencies. Its own copies of these classes can go.

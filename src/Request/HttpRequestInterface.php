@@ -39,6 +39,12 @@ interface HttpRequestInterface
     public function destroyCookieParam(string $key, array $options = []): self;
 
     /**
+     * Takes back the redirect set so far, so that a response body can follow it (a failure after a controller set one).
+     * Nothing happens when there is none.
+     */
+    public function dropRedirect(): self;
+
+    /**
      * Sends the response: the status code, the headers, then the redirect or the body. Every header is checked
      * before the first byte goes out; PHP's own `X-Powered-By` is not sent.
      */
@@ -127,6 +133,17 @@ interface HttpRequestInterface
 
     public function getServerParam(string $key): mixed;
 
+    /**
+     * The files uploaded under the form field $key — its name before any brackets — in the order they came: a single
+     * file input gives a list of one, a multiple one (`name="photos[]"`) its files, a field of nested names (`a[b]`,
+     * `a[b][]`) every file below it. An input left empty (UPLOAD_ERR_NO_FILE) gives none; a file PHP refused comes with
+     * its error (UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_PARTIAL, ...), so that the application can say why. An absent field,
+     * and one of another shape than PHP gives, has none.
+     *
+     * @return list<UploadedFile>
+     */
+    public function getUploadedFiles(string $key): array;
+
     public function hasCookieParam(string $key): bool;
 
     public function hasCorrectToken(): bool;
@@ -138,6 +155,14 @@ interface HttpRequestInterface
     public function hasServerParam(string $key): bool;
 
     public function isPostRequest(): bool;
+
+    /**
+     * Whether the request's body is bigger than PHP's `post_max_size`, and so was dropped: PHP then leaves the form and
+     * the files of the request empty, so that an application that finds none cannot tell a form that was sent empty from
+     * one that was too big. It is the size the client announced (`Content-Length`) against the limit; `post_max_size` 0
+     * is no limit, and no request is too large for it.
+     */
+    public function isPostTooLarge(): bool;
 
     public function isRedirect(): bool;
 

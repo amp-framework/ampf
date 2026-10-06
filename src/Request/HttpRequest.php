@@ -364,13 +364,6 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         return $this->body ??= (string)file_get_contents('php://input');
     }
 
-    /**
-     * Whether the request's body is bigger than PHP's `post_max_size`, and so was dropped: PHP then leaves the form and
-     * the files of the request empty, so that an application that finds none cannot tell a form that was sent empty from
-     * one that was too big. It is the size the client announced (`Content-Length`) against the limit; `post_max_size` 0
-     * is no limit, and no request is too large for it. A method of this class only: an implementation of
-     * HttpRequestInterface does not have to offer it.
-     */
     public function isPostTooLarge(): bool
     {
         $announced = $this->getServerParam('CONTENT_LENGTH');
@@ -380,13 +373,6 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     }
 
     /**
-     * The files uploaded under the form field $key — its name before any brackets — in the order they came: a single
-     * file input gives a list of one, a multiple one (`name="photos[]"`) its files, a field of nested names (`a[b]`,
-     * `a[b][]`) every file below it. An input left empty (UPLOAD_ERR_NO_FILE) gives none; a file PHP refused comes with
-     * its error (UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_PARTIAL, ...), so that the application can say why. An absent field,
-     * and one of another shape than PHP gives, has none. A method of this class only: an implementation of
-     * HttpRequestInterface does not have to offer it.
-     *
      * @return list<UploadedFile>
      */
     public function getUploadedFiles(string $key): array
@@ -558,11 +544,6 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
         return $this->responseRedirect !== null;
     }
 
-    /**
-     * Takes back the redirect set so far, so that a response body can follow it (a failure after a controller set one).
-     * Nothing happens when there is none. A method of this class only: an implementation of HttpRequestInterface does
-     * not have to offer it.
-     */
     public function dropRedirect(): self
     {
         $this->responseRedirect = null;

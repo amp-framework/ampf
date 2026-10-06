@@ -80,6 +80,22 @@ final class AssetServiceTest extends TestCase
         );
     }
 
+    public function testTheVersionOfAFileIsWorkedOutByAMethodASubclassMayOverride(): void
+    {
+        $service = new class extends AssetService {
+            protected function versionOf(string $file): string
+            {
+                return 'version of ' . $file;
+            }
+        };
+        $service->setBeanFactory(new BeanFactory(['assets' => ['directory' => '/served']]));
+
+        self::assertSame(
+            '/assets/site.css?v=version of /served/site.css',
+            $service->link(new TestHttpRequest(), 'site.css'),
+        );
+    }
+
     public function testAFileThatIsNotThereIsRefused(): void
     {
         $this->expectException(RuntimeException::class);

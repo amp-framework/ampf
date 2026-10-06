@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace ampf\Request;
 
 /**
- * A file the client uploaded with a form, as PHP received it (HttpRequest::getUploadedFiles()). The client's name is
- * untrusted text, never a path to use; the type the client claims is left out: an application looks at the content.
+ * A file the client uploaded with a form, as PHP received it (HttpRequestInterface::getUploadedFiles()). The client's
+ * name is untrusted text, never a path to use; the type the client claims is left out: an application looks at the
+ * content.
  */
 class UploadedFile
 {

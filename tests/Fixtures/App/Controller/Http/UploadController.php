@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ampf\Tests\Fixtures\App\Controller\Http;
 
 use ampf\Controller\Http\AbstractController;
-use ampf\Request\HttpRequest;
 
 /**
  * The files of the form's field `files`, a line each: the name the browser sent, the size, PHP's error, and the content
@@ -16,7 +15,6 @@ final class UploadController extends AbstractController
     public function execute(): void
     {
         $request = $this->getRequest();
-        assert($request instanceof HttpRequest);
         $lines = [];
 
         foreach ($request->getUploadedFiles('files') as $file) {
