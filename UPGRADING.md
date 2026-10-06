@@ -2,6 +2,10 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## Trailing whitespace in the HTML of a template
+
+Addition; **nothing has to change**. PHP-CS-Fixer's fixers for trailing whitespace work on PHP code, and PHP_CodeSniffer does not look at the text between `?>` and `<?php`, so a template could keep spaces and tabs at the end of the lines of its HTML (a blank line that held its indentation). `.php-cs-fixer.dist.php` registers a custom fixer for it, `Ampf/no_trailing_whitespace_in_inline_html` (`tests/Support/CodeStyle/`, read by its path, so that an application that requires the configuration from `vendor/` needs no autoloader for it), and the rule is on: an application that builds its configuration on ampf's finds those lines in the dry run, and `cs:fix` removes them. Whitespace before a tag on the same line is the tag's indentation and stays.
+
 ## The upload methods and `dropRedirect()` on the request interface
 
 `HttpRequest::getUploadedFiles()`, `isPostTooLarge()` and `dropRedirect()` were added to the class only, so that no implementation of `HttpRequestInterface` had to change (the entries "Uploaded files" and "Trace settings, taking back a redirect" below say so, as they stood at their release), and a controller that used them had to `assert($request instanceof HttpRequest)`. They are on the interface from now on.

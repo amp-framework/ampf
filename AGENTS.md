@@ -75,7 +75,7 @@ sh docker/ci mutation         # the mutation testing as the pipeline runs it
 | `config/` | `default.php` (the services, the Doctrine defaults, cookies, session, string cache, configuration domains, error handling), `http.php` and `cli.php` (the transports' roles), `translations/` (empty; applications name their own). |
 | `tests/Unit/` | The unit suite, mirroring `src/`, plus the guards `ClassLoadingTest` and `BeanConfigurationTest`. |
 | `tests/Integration/` | The integration suite over the fixture application. |
-| `tests/Support/`, `tests/Fixtures/` | The doubles, and the fixtures (above). |
+| `tests/Support/`, `tests/Fixtures/` | The doubles, and the fixtures (above); `tests/Support/CodeStyle/` is PHP-CS-Fixer's fixer for the HTML of a template, which `.php-cs-fixer.dist.php` registers and applications get with it. |
 | `docker/` | The development container: `Dockerfile`, `run` (the one `docker run` every script goes through), `build`, `composer`, the tools' scripts and `ci`. |
 | `phpcs.xml.dist`, `.php-cs-fixer.dist.php`, `phpstan.neon.dist`, `phpunit.xml.dist`, `infection.json5.dist` | The tools' configuration. |
 | `cache/`, `vendor/` | Ignored; each keeps a `CACHEDIR.TAG`, so backups skip them. |

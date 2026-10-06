@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use ampf\Tests\Support\CodeStyle\NoTrailingWhitespaceInInlineHtmlFixer;
 use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
+
+// The fixers of the HTML of a template are not part of PHP-CS-Fixer: the file is read here, by its path, because an application
+// that takes this configuration from vendor/ has no autoloader for ampf's tests.
+require_once __DIR__ . '/tests/Support/CodeStyle/NoTrailingWhitespaceInInlineHtmlFixer.php';
 
 $finder = Finder::create()
     ->in([__DIR__ . '/src', __DIR__ . '/config', __DIR__ . '/tests'])
@@ -12,6 +17,7 @@ $finder = Finder::create()
 
 return new Config()
     ->setRiskyAllowed(true)
+    ->registerCustomFixers([new NoTrailingWhitespaceInInlineHtmlFixer()])
     ->setRules([
         '@PhpCsFixer' => true,
         '@Symfony' => true,
@@ -22,6 +28,7 @@ return new Config()
         '@PHP8x4Migration' => true,
         '@PHP8x5Migration' => true,
         '@PHPUnit11x0Migration:risky' => true,
+        'Ampf/no_trailing_whitespace_in_inline_html' => true,
         'cast_spaces' => ['space' => 'none'],
         'class_attributes_separation' => false,
         // PHPCS owns method ordering and PHPDoc layout; PHPUnit uses attributes.
