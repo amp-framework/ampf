@@ -146,6 +146,11 @@ interface HttpRequestInterface
 
     public function hasCookieParam(string $key): bool;
 
+    /**
+     * Whether the request carries a one-time token of the session — the form's field first (a form sends it as one:
+     * HttpViewInterface::getTokenField()), else the query string's parameter (a link made with `addToken`); both are
+     * named by XsrfTokenServiceInterface::getTokenIDForRequest(). A correct token is spent.
+     */
     public function hasCorrectToken(): bool;
 
     public function hasGetParam(string $key): bool;

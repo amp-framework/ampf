@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace ampf\View;
 
+use ampf\BeanAccess\Service\XsrfTokenServiceAccess;
 use ampf\Controller\ControllerInterface;
 use ampf\Request\HttpRequestInterface;
 use ampf\Router\HttpRouterInterface;
 use RuntimeException;
 
-/** The HTML view: escaping for HTML, links through the request, sub-requests through the router. */
+/** The HTML view: escaping for HTML, links through the request, a form's token field, sub-requests through the router. */
 class HttpView extends AbstractView implements HttpViewInterface
 {
+    use XsrfTokenServiceAccess;
+
     protected ?HttpRequestInterface $request = null;
 
     protected ?HttpRouterInterface $router = null;
@@ -53,6 +56,14 @@ class HttpView extends AbstractView implements HttpViewInterface
     public function getParamString(string $name): string
     {
         return $this->getRequest()->getParamString($name);
+    }
+
+    public function getTokenField(): string
+    {
+        $tokenService = $this->getXsrfTokenService();
+
+        return '<input type="hidden" name="' . $this->escape($tokenService->getTokenIDForRequest())
+            . '" value="' . $this->escape($tokenService->getNewToken()) . '">';
     }
 
     /**

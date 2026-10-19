@@ -19,4 +19,11 @@ interface HttpViewInterface extends ViewInterface
      * puts back into its fields.
      */
     public function getParamString(string $name): string;
+
+    /**
+     * The request's one-time token as a hidden field, for a form to send along in its body: the token a link made with
+     * `addToken` carries in its query string. A browser's privacy protection may strip a parameter of a URL that looks
+     * like an identifier, never a form's field.
+     */
+    public function getTokenField(): string;
 }

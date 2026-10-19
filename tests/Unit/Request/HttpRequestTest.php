@@ -1020,6 +1020,30 @@ final class HttpRequestTest extends TestCase
         self::assertFalse($this->tokened($session, ['stkn' => $token])->hasCorrectToken(), 'spent');
     }
 
+    /**
+     * A form sends its token as a field of its body — some browsers strip a URL's query parameters that look like
+     * an identifier, never a form's field —, and the field decides where it came: a token in the query string of
+     * the same request does not stand in for a wrong one there.
+     */
+    public function testATokenIsCheckedFromTheFormFirst(): void
+    {
+        $session = new MemorySessionService();
+        $inForm = $this->tokens($session)->getNewToken();
+        $inQuery = $this->tokens($session)->getNewToken();
+
+        self::assertTrue($this->tokened($session, [], ['stkn' => $inForm])->hasCorrectToken(), 'the form\'s field');
+        self::assertFalse($this->tokened($session, [], ['stkn' => $inForm])->hasCorrectToken(), 'spent');
+        self::assertFalse($this->tokened($session, [], ['stkn' => [$inQuery]])->hasCorrectToken(), 'a list');
+        self::assertFalse(
+            $this->tokened($session, ['stkn' => $inQuery], ['stkn' => 'forged'])->hasCorrectToken(),
+            'the form\'s field decides',
+        );
+        self::assertTrue(
+            $this->tokened($session, ['stkn' => $inQuery], ['text' => 'a note'])->hasCorrectToken(),
+            'no field: the query string\'s, not spent by the refusal before',
+        );
+    }
+
     public function testTheRefererUnderTheBasePathIsItsRoute(): void
     {
         $request = new RecordingHttpRequest([
@@ -1111,13 +1135,14 @@ final class HttpRequestTest extends TestCase
     }
 
     /**
-     * A request of the session with this query.
+     * A request of the session with this query and this form.
      *
      * @param array<string, string|array<mixed>> $get
+     * @param array<string, string|array<mixed>> $post
      */
-    private function tokened(MemorySessionService $session, array $get): RecordingHttpRequest
+    private function tokened(MemorySessionService $session, array $get, array $post = []): RecordingHttpRequest
     {
-        $request = new RecordingHttpRequest(get: $get);
+        $request = new RecordingHttpRequest(get: $get, post: $post);
         $request->setXsrfTokenService($this->tokens($session));
 
         return $request;

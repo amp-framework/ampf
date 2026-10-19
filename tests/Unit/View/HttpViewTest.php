@@ -9,6 +9,8 @@ use ampf\Request\CliRequest;
 use ampf\Router\CliRouter;
 use ampf\Router\HttpRouter;
 use ampf\Router\RouteResolver;
+use ampf\Service\XsrfToken\XsrfTokenService;
+use ampf\Testing\MemorySessionService;
 use ampf\Tests\Support\ArrayTranslatorService;
 use ampf\Tests\Support\Bean\PlainBean;
 use ampf\Tests\Support\Controller\BrokenHeaderHttpController;
@@ -151,6 +153,51 @@ final class HttpViewTest extends TestCase
 
         self::assertSame('/app/show/7?page=2', $view->getActionLink('show', ['id' => 7, 'page' => 2]));
         self::assertSame('/app/show/7', $view->getActionLink('show', ['id' => '7']));
+    }
+
+    public function testTheTokenFieldCarriesTheRequestsToken(): void
+    {
+        $tokens = new XsrfTokenService();
+        $tokens->setSessionService(new MemorySessionService());
+        $resolver = new RouteResolver();
+        $resolver->setConfig(['routes' => ['notes' => ['pattern' => 'notes', 'controller' => 'NotesController']]]);
+        $request = new RecordingHttpRequest();
+        $request->setRouteResolver($resolver);
+        $request->setXsrfTokenService($tokens);
+        $view = new HttpView();
+        $view->setRequest($request);
+        $view->setXsrfTokenService($tokens);
+
+        $field = $view->getTokenField();
+
+        self::assertSame(
+            1,
+            preg_match('~^<input type="hidden" name="stkn" value="([0-9a-f]{32})">$~D', $field, $token),
+        );
+        self::assertSame(
+            '/notes?stkn=' . $token[1],
+            $view->getActionLink('notes', [], true),
+            'the request\'s one token',
+        );
+        self::assertTrue($tokens->isCorrectToken($token[1]), 'a token of the session');
+    }
+
+    public function testTheTokenFieldIsEscapedForHtml(): void
+    {
+        $view = new HttpView();
+        $view->setXsrfTokenService(new class extends XsrfTokenService {
+            public function getNewToken(): string
+            {
+                return 'a"b&c';
+            }
+
+            public function getTokenIDForRequest(): string
+            {
+                return 'x"y';
+            }
+        });
+
+        self::assertSame('<input type="hidden" name="x&quot;y" value="a&quot;b&amp;c">', $view->getTokenField());
     }
 
     public function testTheRequestAndTheRouterAreTheBeansFetchedAtTheirFirstUse(): void

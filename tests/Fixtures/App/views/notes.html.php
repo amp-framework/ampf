@@ -11,6 +11,7 @@ declare(strict_types=1);
     <li><?= $this->escape($note->getText()); ?> (<?= $this->formatTime($note->getWrittenAt(), 'Y-m-d'); ?>)</li>
 <?php endforeach; ?>
 </ul>
-<form method="post" action="<?= $this->escape($this->getActionLink('notes', null, true)); ?>">
+<form method="post" action="<?= $this->escape($this->getActionLink('notes')); ?>">
+    <?= $this->getTokenField(); ?>
     <input name="text" value="<?= $this->escape($this->getParamString('text')); ?>">
 </form>

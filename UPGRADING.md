@@ -2,6 +2,16 @@
 
 What an application changes when it moves to a newer ampf. The newest change comes first.
 
+## A form's token in its body
+
+`HttpRequest::hasCorrectToken()` reads the token from the form first: a request whose body has a field of the token's name (`stkn`) is checked by that field, and only one without such a field by its query parameter, as before. `HttpView::getTokenField()` writes the request's token as a hidden field, the way a form sends it along now: a browser's privacy protection may strip a parameter of a URL that looks like an identifier — Safari's link tracking protection did so to ogmem's forms —, never a form's field, and the token stays out of logs and Referer headers.
+
+- **Nothing has to change** for a form whose address carries the token (`getActionLink(…, addToken: true)`): it keeps working. To move a form's token into its body, drop `addToken` from its action and print `getTokenField()` inside it.
+- A form that posts a field of that name for a purpose of its own has it checked as the token from now on: rename the field.
+- **`HttpViewInterface::getTokenField(): string`** is new: an application's own implementation of the interface adds it; a view that extends `HttpView` has it.
+- `HttpView` uses `XsrfTokenServiceAccess` (`getXsrfTokenService()`, `setXsrfTokenService()`): a view made outside a bean factory gets its token service through the setter.
+- `ampf\Testing\ApplicationTestCase::post()` still puts the token into the query string, which the check reads where the form has no field.
+
 ## Trailing whitespace in the HTML of a template
 
 Addition; **nothing has to change**. PHP-CS-Fixer's fixers for trailing whitespace work on PHP code, and PHP_CodeSniffer does not look at the text between `?>` and `<?php`, so a template could keep spaces and tabs at the end of the lines of its HTML (a blank line that held its indentation). `.php-cs-fixer.dist.php` registers a custom fixer for it, `Ampf/no_trailing_whitespace_in_inline_html` (`tests/Support/CodeStyle/`, read by its path, so that an application that requires the configuration from `vendor/` needs no autoloader for it), and the rule is on: an application that builds its configuration on ampf's finds those lines in the dry run, and `cs:fix` removes them. Whitespace before a tag on the same line is the tag's indentation and stays.

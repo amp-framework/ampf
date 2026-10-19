@@ -166,13 +166,21 @@ final class HttpApplicationTest extends TestCase
     {
         $page = $this->request('GET', '/notes');
         $session = explode(';', (string)$this->header($page, 'Set-Cookie'))[0];
-        self::assertSame(1, preg_match('/action="(\/notes\?stkn=[0-9a-f]{32})"/', $page['body'], $action));
+        self::assertStringContainsString(
+            '<form method="post" action="/notes">',
+            $page['body'],
+            'no token in its address',
+        );
+        self::assertSame(
+            1,
+            preg_match('/<input type="hidden" name="stkn" value="([0-9a-f]{32})">/', $page['body'], $token),
+        );
 
         $posted = $this->request(
             'POST',
-            html_entity_decode($action[1]),
+            '/notes',
             ['Cookie: ' . $session, 'Content-Type: application/x-www-form-urlencoded'],
-            'text=' . rawurlencode('<b>Buy milk</b>'),
+            'stkn=' . $token[1] . '&text=' . rawurlencode('<b>Buy milk</b>'),
         );
 
         self::assertSame(303, $posted['status']);
@@ -184,9 +192,9 @@ final class HttpApplicationTest extends TestCase
 
         $again = $this->request(
             'POST',
-            html_entity_decode($action[1]),
+            '/notes',
             ['Cookie: ' . $session, 'Content-Type: application/x-www-form-urlencoded'],
-            'text=twice',
+            'stkn=' . $token[1] . '&text=twice',
         );
         self::assertSame(403, $again['status'], 'a token is accepted once');
     }

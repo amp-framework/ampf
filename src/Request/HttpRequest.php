@@ -521,7 +521,7 @@ class HttpRequest implements BeanFactoryAccessInterface, HttpRequestInterface
     {
         $tokenService = $this->getXsrfTokenService();
 
-        return $tokenService->isCorrectToken($this->getGetString($tokenService->getTokenIDForRequest()));
+        return $tokenService->isCorrectToken($this->getParamString($tokenService->getTokenIDForRequest()));
     }
 
     public function hasGetParam(string $key): bool
